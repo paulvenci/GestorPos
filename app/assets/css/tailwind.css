@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #6366f1;
+  --color-brand-secondary: #4f46e5;
+  
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
+}
+
+@layer base {
+  :root {
+    --bg-app: #f8fafc;
+    --text-app: #0f172a;
+    --text-muted: #64748b;
+    --bg-sidebar: #ffffff;
+    --border-sidebar: #e2e8f0;
+    --bg-surface: #ffffff;
+    --border-subtle: #f1f5f9;
+  }
+
+  .dark {
+    --bg-app: #020617;
+    --text-app: #f1f5f9;
+    --text-muted: #94a3b8;
+    --bg-sidebar: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+    --border-sidebar: rgba(99, 102, 241, 0.2);
+    --bg-surface: #0f172a;
+    --border-subtle: rgba(99, 102, 241, 0.1);
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-app);
+    transition: background-color 0.4s ease, color 0.4s ease;
+    @apply antialiased;
+  }
+
+  /* Transiciones globales para elementos comunes */
+  *:not(.p-dialog):not(.p-dialog-mask):not(.p-overlay):not(.p-component-overlay):not([class*="p-dialog"]) {
+    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+  }
+}
