@@ -140,6 +140,26 @@
               </div>
               <InputNumber v-model="configGeneral.iva" suffix=" %" :min="0" :max="100" style="width: 300px" />
             </div>
+
+            <div class="config-item" v-if="globalConfig">
+              <div class="config-item-info">
+                <label>Margen de Ganancia (%) por Defecto</label>
+                <p>Añadido al calcular el precio de venta si no se especifica otro.</p>
+              </div>
+              <InputNumber v-model="globalConfig.margen_ganancia_defecto" suffix=" %" :min="0" style="width: 300px" />
+            </div>
+
+            <div class="config-item" v-if="globalConfig">
+              <div class="config-item-info">
+                <label>Stock Mínimo por Defecto</label>
+                <p>Se usará para alertarte cuando un producto se esté agotando.</p>
+              </div>
+              <InputNumber v-model="globalConfig.stock_minimo_defecto" :min="0" style="width: 300px" />
+            </div>
+
+            <div class="flex justify-end mt-2">
+              <Button label="Guardar Configuración" icon="pi pi-save" :loading="configLoading" @click="guardarConfiguracion" />
+            </div>
           </div>
         </div>
 
@@ -211,6 +231,7 @@
 <script setup lang="ts">
 import { useToast } from 'primevue/usetoast'
 import { useFormatMonto } from '~/composables/useFormatMonto'
+import { useConfigStore } from '~/stores/config'
 import type { Database } from '~/types/database.types'
 
 interface Perfil {
@@ -232,6 +253,8 @@ interface UsuarioForm {
 const supabase = useSupabaseClient<Database>()
 const toast = useToast()
 const { formatFecha } = useFormatMonto()
+const configStore = useConfigStore()
+const { configuracion: globalConfig, loading: configLoading } = storeToRefs(configStore)
 
 const usuarios = ref<Perfil[]>([])
 const loading = ref(false)
@@ -261,7 +284,23 @@ const configGeneral = ref({
 
 onMounted(() => {
   fetchUsuarios()
+  configStore.fetchConfig()
 })
+
+// Función para guardar globales
+async function guardarConfiguracion() {
+  if (!globalConfig.value) return
+  try {
+    await configStore.saveConfig({
+      margen_ganancia_defecto: globalConfig.value.margen_ganancia_defecto,
+      stock_minimo_defecto: globalConfig.value.stock_minimo_defecto
+    })
+    toast.add({ severity: 'success', summary: 'Guardado', detail: 'Configuración actualizada en todos los dispositivos.', life: 3000 })
+  } catch (error: any) {
+    toast.add({ severity: 'error', summary: 'Error interno', detail: 'No tienes permiso o error validando', life: 4000 })
+  }
+}
+
 
 async function fetchUsuarios() {
   loading.value = true
@@ -376,7 +415,7 @@ async function generarVentasDePrueba() {
       ])
 
       if (!productos || productos.length === 0) throw new Error('No hay productos con stock disponibles.')
-      if (!turnos || turnos.length === 0) throw new Error('Necesitas Abrir Caja (en el POS) antes de generar ventas.')
+      if (!turnos || turnos.length === 0 || !turnos[0]) throw new Error('Necesitas Abrir Caja (en el POS) antes de generar ventas.')
 
       const turno_id = turnos[0].id
       

@@ -77,7 +77,7 @@
         <h2><i class="pi pi-history" /> Historial de Turnos</h2>
         <div class="caja-historial-filtros">
           <DatePicker v-model="filtroFecha" showIcon placeholder="Filtrar por fecha" date-format="dd/mm/yy" showButtonBar class="historial-datepicker" />
-          <Button icon="pi pi-print" label="Imprimir" outlined severity="secondary" size="small" @click="imprimirHistorial" />
+          <Button icon="pi pi-print" label="Imprimir" outlined severity="secondary" size="small" @click="abrirDialogoImpresion" />
         </div>
       </div>
 
@@ -121,6 +121,11 @@
         <Column header="Ventas">
           <template #body="slotProps">
             <Tag :value="(slotProps.data.ventas_registradas ?? 0).toString()" severity="info" />
+          </template>
+        </Column>
+        <Column header="Acciones" style="width: 7rem">
+          <template #body="slotProps">
+            <Button icon="pi pi-print" text severity="secondary" size="small" title="Imprimir detalle del turno" @click="imprimirDetalleTurno80mm(slotProps.data.id)" />
           </template>
         </Column>
         <template #empty>
@@ -228,6 +233,45 @@
         />
       </template>
     </Dialog>
+
+    <Dialog
+      v-model:visible="mostrarImpresionTurnos"
+      modal
+      header="Imprimir Turnos"
+      :style="{ width: '420px' }"
+      class="pos-dialog"
+    >
+      <div class="dialog-body">
+        <div class="dialog-field">
+          <label class="dialog-label">¿Qué deseas imprimir?</label>
+          <div class="flex flex-col gap-2">
+            <label class="flex items-center gap-2">
+              <RadioButton v-model="modoImpresionTurnos" inputId="opt-historial" value="historial" />
+              <span>Historial mostrado (filtro actual)</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <RadioButton v-model="modoImpresionTurnos" inputId="opt-detalle" value="detalle" />
+              <span>Detalle de un turno específico</span>
+            </label>
+          </div>
+        </div>
+        <div v-if="modoImpresionTurnos === 'detalle'" class="dialog-field">
+          <label class="dialog-label">Seleccionar turno</label>
+          <Select
+            v-model="turnoSeleccionadoId"
+            :options="turnosHistorial"
+            optionLabel="etiqueta_impresion"
+            optionValue="id"
+            placeholder="Seleccionar turno"
+            class="w-full"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancelar" text severity="secondary" @click="mostrarImpresionTurnos = false" />
+        <Button label="Imprimir" icon="pi pi-print" @click="confirmarImpresionTurnos" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -252,6 +296,9 @@ const observacionesCierre = ref('')
 const turnosHistorial = ref<any[]>([])
 const loadingHistorial = ref(false)
 const filtroFecha = ref<Date | null>(null)
+const mostrarImpresionTurnos = ref(false)
+const modoImpresionTurnos = ref<'historial' | 'detalle'>('historial')
+const turnoSeleccionadoId = ref<string | null>(null)
 
 // Inicializar: buscar turno activo y cargar historial
 onMounted(async () => {
@@ -295,7 +342,8 @@ async function fetchHistorial() {
         ...t,
         apertura_at: t.fecha_apertura,
         cierre_at: t.fecha_cierre,
-        usuario_nombre: perfilMap.get(t.id_usuario) || null
+        usuario_nombre: perfilMap.get(t.id_usuario) || null,
+        etiqueta_impresion: `${formatFechaLarga(t.fecha_apertura)} - ${perfilMap.get(t.id_usuario) || t.id_usuario?.substring(0, 8) || 'N/A'}`
       }))
     } else {
       turnosHistorial.value = []
@@ -307,40 +355,126 @@ async function fetchHistorial() {
   }
 }
 
-function imprimirHistorial() {
-  const printWindow = window.open('', '_blank', 'width=900,height=700')
-  if (!printWindow) return
+function abrirDialogoImpresion() {
+  modoImpresionTurnos.value = 'historial'
+  turnoSeleccionadoId.value = turnosHistorial.value[0]?.id || null
+  mostrarImpresionTurnos.value = true
+}
 
-  let rows = turnosHistorial.value.map(t => `
-    <tr>
-      <td>${t.usuario_nombre || '-'}</td>
-      <td>${formatFechaLarga(t.apertura_at)}</td>
-      <td>${t.cierre_at ? formatFechaLarga(t.cierre_at) : 'Activo'}</td>
-      <td>${formatMonto(t.monto_inicial)}</td>
-      <td>${t.monto_cierre !== null ? formatMonto(t.monto_cierre) : '—'}</td>
-      <td>${t.ventas_registradas ?? 0}</td>
-    </tr>
-  `).join('')
+async function confirmarImpresionTurnos() {
+  if (modoImpresionTurnos.value === 'historial') {
+    imprimirHistorial80mm(turnosHistorial.value)
+    mostrarImpresionTurnos.value = false
+    return
+  }
+
+  if (!turnoSeleccionadoId.value) {
+    toast.add({ severity: 'warn', summary: 'Selecciona un turno', detail: 'Debes seleccionar un turno para imprimir su detalle.', life: 3000 })
+    return
+  }
+
+  await imprimirDetalleTurno80mm(turnoSeleccionadoId.value)
+  mostrarImpresionTurnos.value = false
+}
+
+function abrirVentanaImpresion80mm(title: string, bodyHtml: string) {
+  const printWindow = window.open('', '_blank', 'width=380,height=760')
+  if (!printWindow) {
+    toast.add({ severity: 'warn', summary: 'Popup bloqueado', detail: 'Permite ventanas emergentes para imprimir.', life: 4000 })
+    return
+  }
 
   printWindow.document.write(`
-    <html><head><title>Historial de Turnos</title>
-    <style>
-      body { font-family: sans-serif; padding: 20px; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
-      th { background: #f5f5f5; font-weight: 600; }
-      h1 { font-size: 18px; }
-    </style></head>
-    <body>
-      <h1>Historial de Turnos — GestorPOS</h1>
-      <table>
-        <thead><tr><th>Usuario</th><th>Apertura</th><th>Cierre</th><th>Monto Inicial</th><th>Monto Cierre</th><th>Ventas</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <script>window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }<\/script>
-    </body></html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          @page { size: 80mm auto; margin: 2mm; }
+          body { font-family: "Courier New", monospace; width: 76mm; margin: 0 auto; font-size: 12px; color: #111; }
+          .title { text-align: center; font-weight: 700; font-size: 15px; margin-top: 6px; }
+          .line { border-top: 1px dashed #555; margin: 6px 0; }
+          .row { display: flex; justify-content: space-between; gap: 6px; }
+          .muted { color: #444; font-size: 11px; }
+          .item { padding: 4px 0; border-bottom: 1px dotted #ccc; }
+          .item:last-child { border-bottom: 0; }
+          .strong { font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        ${bodyHtml}
+        <script>
+          window.onload = () => {
+            window.print();
+            setTimeout(() => window.close(), 700);
+          };
+        <\/script>
+      </body>
+    </html>
   `)
   printWindow.document.close()
+}
+
+function imprimirHistorial80mm(turnos: any[]) {
+  const rows = turnos.map((t) => `
+    <div class="item">
+      <div class="strong">${t.usuario_nombre || '-'}</div>
+      <div class="muted">${formatFechaLarga(t.apertura_at)}</div>
+      <div class="row"><span>Ventas</span><span>${t.ventas_registradas ?? 0}</span></div>
+      <div class="row"><span>Inicial</span><span>${formatMonto(t.monto_inicial || 0)}</span></div>
+      <div class="row"><span>Cierre</span><span>${t.monto_cierre !== null ? formatMonto(t.monto_cierre) : '—'}</span></div>
+    </div>
+  `).join('')
+
+  const body = `
+    <div class="title">Historial de Turnos</div>
+    <div class="muted" style="text-align:center">${new Date().toLocaleString('es-CL')}</div>
+    <div class="line"></div>
+    ${rows || '<div class="muted">Sin datos para imprimir.</div>'}
+    <div class="line"></div>
+    <div class="muted">Registros: ${turnos.length}</div>
+  `
+  abrirVentanaImpresion80mm('Historial de Turnos', body)
+}
+
+async function imprimirDetalleTurno80mm(turnoId: string) {
+  const turno = turnosHistorial.value.find((t) => t.id === turnoId)
+  if (!turno) return
+
+  const { data: ventas, error } = await supabase
+    .from('ventas')
+    .select('id, fecha, total, metodo_pago')
+    .eq('id_turno', turnoId)
+    .order('fecha', { ascending: true })
+
+  if (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 4000 })
+    return
+  }
+
+  const ventasHtml = (ventas || []).map((v: any) => `
+    <div class="item">
+      <div class="row"><span>ID</span><span>${String(v.id).substring(0, 8)}</span></div>
+      <div class="row"><span>${new Date(v.fecha).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</span><span>${formatMonto(v.total)}</span></div>
+      <div class="muted">Pago: ${v.metodo_pago}</div>
+    </div>
+  `).join('')
+
+  const body = `
+    <div class="title">Detalle de Turno</div>
+    <div class="line"></div>
+    <div class="row"><span>Cajero</span><span>${turno.usuario_nombre || '-'}</span></div>
+    <div class="row"><span>Apertura</span><span>${formatFechaLarga(turno.apertura_at)}</span></div>
+    <div class="row"><span>Cierre</span><span>${turno.cierre_at ? formatFechaLarga(turno.cierre_at) : 'Activo'}</span></div>
+    <div class="row"><span>Inicial</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
+    <div class="row"><span>Cierre</span><span>${turno.monto_cierre !== null ? formatMonto(turno.monto_cierre) : '—'}</span></div>
+    <div class="line"></div>
+    <div class="strong">Ventas del turno</div>
+    ${ventasHtml || '<div class="muted">Sin ventas asociadas.</div>'}
+    <div class="line"></div>
+    <div class="row strong"><span>Total ventas</span><span>${formatMonto((ventas || []).reduce((acc: number, v: any) => acc + (v.total || 0), 0))}</span></div>
+  `
+
+  abrirVentanaImpresion80mm('Detalle de Turno', body)
 }
 
 // Calcular diferencia en cierre

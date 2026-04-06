@@ -14,6 +14,7 @@
         <Tab value="1"><i class="pi pi-receipt text-emerald-500 mr-2"></i>Ventas de Hoy</Tab>
         <Tab value="2"><i class="pi pi-chart-bar text-amber-500 mr-2"></i>Rotación y Top 10</Tab>
         <Tab value="3"><i class="pi pi-dollar text-primary mr-2"></i>Rentabilidad</Tab>
+        <Tab value="4"><i class="pi pi-calendar text-cyan-500 mr-2"></i>Historial de Ventas</Tab>
       </TabList>
 
       <TabPanels class="pt-6 px-0 pb-0">
@@ -21,7 +22,8 @@
              TAB 0: TURNOS
         ======================== -->
         <TabPanel value="0">
-          <div class="flex justify-end mb-4">
+          <div class="flex justify-end gap-2 mb-4">
+            <Button icon="pi pi-print" label="Imprimir" @click="imprimirTurnos" size="small" variant="outlined" severity="secondary" />
             <Button icon="pi pi-refresh" label="Actualizar" @click="fetchTurnos" :loading="loadingTurnos" size="small" variant="outlined" />
           </div>
           <DataTable
@@ -86,7 +88,10 @@
         <TabPanel value="1">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-bold">Ventas de Hoy</h2>
-            <Button icon="pi pi-refresh" label="Actualizar" @click="fetchVentasHoy" :loading="loadingVentasHoy" size="small" variant="outlined" />
+            <div class="flex gap-2">
+              <Button icon="pi pi-print" label="Imprimir" @click="imprimirVentasHoy" size="small" variant="outlined" severity="secondary" />
+              <Button icon="pi pi-refresh" label="Actualizar" @click="fetchVentasHoy" :loading="loadingVentasHoy" size="small" variant="outlined" />
+            </div>
           </div>
           <DataTable
             :value="ventasHoy"
@@ -173,7 +178,8 @@
              TAB 2: ROTACIÓN Y TOP 10
         ======================== -->
         <TabPanel value="2">
-          <div class="flex justify-end mb-4">
+          <div class="flex justify-end gap-2 mb-4">
+             <Button icon="pi pi-print" label="Imprimir" @click="imprimirRotacion" size="small" variant="outlined" severity="secondary" />
              <Button icon="pi pi-refresh" label="Actualizar" @click="fetchRotacion" :loading="loadingRotacion" size="small" variant="outlined" />
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -242,7 +248,10 @@
               <h2 class="text-lg font-bold">Resumen de Rentabilidad</h2>
               <p class="text-sm text-muted">Beneficio bruto calculado de los últimos 30 días.</p>
             </div>
-            <Button icon="pi pi-refresh" label="Actualizar" @click="fetchRentabilidad" :loading="loadingRentabilidad" size="small" variant="outlined" />
+            <div class="flex gap-2">
+              <Button icon="pi pi-print" label="Imprimir" @click="imprimirRentabilidad" size="small" variant="outlined" severity="secondary" />
+              <Button icon="pi pi-refresh" label="Actualizar" @click="fetchRentabilidad" :loading="loadingRentabilidad" size="small" variant="outlined" />
+            </div>
           </div>
 
           <div v-if="loadingRentabilidad" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -278,6 +287,58 @@
           <Message severity="info" icon="pi pi-lightbulb">Existen muchos factores en la rentabilidad de tu negocio, sin embargo este cálculo rápido te otorga una visión global aproximada utilizando los precios de costo declarados sobre los productos vendidos.</Message>
 
         </TabPanel>
+
+        <!-- =======================
+             TAB 4: HISTORIAL DE VENTAS
+        ======================== -->
+        <TabPanel value="4">
+          <div class="flex flex-wrap justify-between items-end gap-3 mb-4">
+            <div class="flex flex-wrap gap-2 items-end">
+              <div>
+                <label class="text-xs text-muted">Desde</label>
+                <DatePicker v-model="fechaDesde" showIcon date-format="dd/mm/yy" class="w-44" />
+              </div>
+              <div>
+                <label class="text-xs text-muted">Hasta</label>
+                <DatePicker v-model="fechaHasta" showIcon date-format="dd/mm/yy" class="w-44" />
+              </div>
+              <Button icon="pi pi-search" label="Buscar" @click="fetchHistorialVentas" :loading="loadingHistorialVentas" size="small" />
+            </div>
+            <Button icon="pi pi-print" label="Imprimir" @click="imprimirHistorialVentas" size="small" variant="outlined" severity="secondary" />
+          </div>
+
+          <DataTable
+            :value="historialVentas"
+            :loading="loadingHistorialVentas"
+            paginator
+            :rows="15"
+            responsiveLayout="scroll"
+            class="p-datatable-sm modern-table"
+            sortField="fecha"
+            :sortOrder="-1"
+          >
+            <Column field="fecha" header="Fecha" sortable>
+              <template #body="slotProps">
+                {{ formatDate(slotProps.data.fecha) }}
+              </template>
+            </Column>
+            <Column field="id" header="Boleta">
+              <template #body="slotProps">
+                <span class="text-xs font-mono text-slate-500">{{ slotProps.data.id.substring(0, 8) }}</span>
+              </template>
+            </Column>
+            <Column field="metodo_pago" header="Pago">
+              <template #body="slotProps">
+                <span class="capitalize">{{ slotProps.data.metodo_pago }}</span>
+              </template>
+            </Column>
+            <Column field="total" header="Total" sortable>
+              <template #body="slotProps">
+                <span class="font-bold text-emerald-500">{{ formatMonto(slotProps.data.total) }}</span>
+              </template>
+            </Column>
+          </DataTable>
+        </TabPanel>
       </TabPanels>
     </Tabs>
   </div>
@@ -312,6 +373,10 @@ const loadingRotacion = ref(false)
 // Tab 3
 const rentabilidad = ref<any>({})
 const loadingRentabilidad = ref(false)
+const historialVentas = ref<any[]>([])
+const loadingHistorialVentas = ref(false)
+const fechaDesde = ref<Date | null>(new Date(new Date().setDate(new Date().getDate() - 7)))
+const fechaHasta = ref<Date | null>(new Date())
 
 onMounted(() => {
   // Carga inicial solo del primer tab para optimizar
@@ -320,6 +385,7 @@ onMounted(() => {
   fetchVentasHoy()
   fetchRotacion()
   fetchRentabilidad()
+  fetchHistorialVentas()
 })
 
 // === MÉTODOS DE CONSULTA ===
@@ -406,6 +472,28 @@ async function fetchRentabilidad() {
   }
 }
 
+async function fetchHistorialVentas() {
+  loadingHistorialVentas.value = true
+  try {
+    const inicio = fechaDesde.value ? new Date(fechaDesde.value.getFullYear(), fechaDesde.value.getMonth(), fechaDesde.value.getDate()) : new Date(new Date().setDate(new Date().getDate() - 7))
+    const fin = fechaHasta.value ? new Date(fechaHasta.value.getFullYear(), fechaHasta.value.getMonth(), fechaHasta.value.getDate() + 1) : new Date()
+
+    const { data, error } = await supabase
+      .from('ventas')
+      .select('id, fecha, total, metodo_pago, subtotal')
+      .gte('fecha', inicio.toISOString())
+      .lt('fecha', fin.toISOString())
+      .order('fecha', { ascending: false })
+
+    if (error) throw error
+    historialVentas.value = data || []
+  } catch (error: any) {
+    toast.add({ severity: 'error', summary: 'Error Historial', detail: error.message, life: 3000 })
+  } finally {
+    loadingHistorialVentas.value = false
+  }
+}
+
 // === UTILS ===
 
 function formatDate(dateStr: string) {
@@ -450,6 +538,103 @@ function getMetodoIcon(metodo: string) {
 function getPercentage(value: number, max: number) {
   if (!max || max === 0) return 0
   return Math.round((value / max) * 100)
+}
+
+function abrirVentanaReporte(title: string, bodyHtml: string) {
+  const printWindow = window.open('', '_blank', 'width=980,height=760')
+  if (!printWindow) return
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 18px; color: #111827; }
+          h1 { font-size: 18px; margin: 0 0 12px; }
+          h2 { font-size: 14px; margin: 16px 0 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+          th, td { border: 1px solid #e5e7eb; padding: 6px; font-size: 12px; text-align: left; }
+          th { background: #f3f4f6; }
+          .meta { color: #4b5563; font-size: 12px; margin-bottom: 8px; }
+          .row { display: flex; justify-content: space-between; margin: 4px 0; }
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div class="meta">Generado: ${new Date().toLocaleString('es-CL')}</div>
+        ${bodyHtml}
+        <script>
+          window.onload = () => {
+            window.print();
+            setTimeout(() => window.close(), 700);
+          };
+        <\/script>
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
+}
+
+function imprimirTurnos() {
+  const rows = turnos.value.map((t: any) => `
+    <tr>
+      <td>${formatDate(t.fecha_apertura)}</td>
+      <td>${formatDate(t.fecha_cierre)}</td>
+      <td>${perfiles.value[t.id_usuario]?.nombre || t.id_usuario?.substring(0, 6) || '-'}</td>
+      <td>${formatMonto(t.monto_inicial || 0)}</td>
+      <td>${t.monto_declarado !== null ? formatMonto(t.monto_declarado) : '—'}</td>
+      <td>${t.estado}</td>
+    </tr>
+  `).join('')
+  abrirVentanaReporte('Reporte de Turnos', `<table><thead><tr><th>Apertura</th><th>Cierre</th><th>Cajero</th><th>Inicial</th><th>Declarado</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table>`)
+}
+
+function imprimirVentasHoy() {
+  const rows = ventasHoy.value.map((v: any) => `
+    <tr>
+      <td>${v.id.substring(0, 8)}</td>
+      <td>${formatDate(v.fecha)}</td>
+      <td>${v.metodo_pago}</td>
+      <td>${formatMonto(v.total)}</td>
+    </tr>
+  `).join('')
+  abrirVentanaReporte('Ventas de Hoy', `<table><thead><tr><th>Boleta</th><th>Fecha</th><th>Pago</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>`)
+}
+
+function imprimirRotacion() {
+  const topRows = topProductos.value.map((p: any) => `<tr><td>${p.nombre}</td><td>${p.total_cantidad}</td><td>${formatMonto(p.total_ingreso || 0)}</td></tr>`).join('')
+  const sinRows = productosSinRotacion.value.map((p: any) => `<tr><td>${p.nombre}</td><td>${p.stock}</td><td>${formatMonto(p.precio || 0)}</td></tr>`).join('')
+  abrirVentanaReporte(
+    'Rotación y Top Productos',
+    `<h2>Top 10 Vendidos</h2><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Ingreso</th></tr></thead><tbody>${topRows}</tbody></table>
+     <h2>Sin Rotación</h2><table><thead><tr><th>Producto</th><th>Stock</th><th>Precio</th></tr></thead><tbody>${sinRows}</tbody></table>`
+  )
+}
+
+function imprimirRentabilidad() {
+  abrirVentanaReporte(
+    'Rentabilidad',
+    `<div class="row"><strong>Ingresos Totales</strong><span>${formatMonto(rentabilidad.value.total_ventas || 0)}</span></div>
+     <div class="row"><strong>Costo de Ventas</strong><span>${formatMonto(rentabilidad.value.total_costos || 0)}</span></div>
+     <div class="row"><strong>Ganancia Bruta</strong><span>${formatMonto(rentabilidad.value.utilidad_bruta || 0)}</span></div>
+     <div class="row"><strong>Margen</strong><span>${rentabilidad.value.margen_porcentaje || 0}%</span></div>`
+  )
+}
+
+function imprimirHistorialVentas() {
+  const rows = historialVentas.value.map((v: any) => `
+    <tr>
+      <td>${formatDate(v.fecha)}</td>
+      <td>${v.id.substring(0, 8)}</td>
+      <td>${v.metodo_pago}</td>
+      <td>${formatMonto(v.total)}</td>
+    </tr>
+  `).join('')
+
+  abrirVentanaReporte(
+    'Historial de Ventas',
+    `<div class="meta">Rango: ${fechaDesde.value ? fechaDesde.value.toLocaleDateString('es-CL') : '-'} a ${fechaHasta.value ? fechaHasta.value.toLocaleDateString('es-CL') : '-'}</div>
+     <table><thead><tr><th>Fecha</th><th>Boleta</th><th>Pago</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>`
+  )
 }
 </script>
 

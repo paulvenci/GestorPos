@@ -10,6 +10,7 @@ export interface ItemCarrito {
   precio: number
   cantidad: number
   descuento: number // % de descuento
+  es_pesable?: boolean
 }
 
 export const usePosStore = defineStore('pos', () => {
@@ -22,12 +23,25 @@ export const usePosStore = defineStore('pos', () => {
   const buscando = ref(false)
   const procesando = ref(false)
 
+  function esErrorDeRed(error: any) {
+    if (import.meta.client && !navigator.onLine) return true
+    const status = error?.status ?? error?.code
+    const msg = String(error?.message || '').toLowerCase()
+    return (
+      status === 0 ||
+      msg.includes('failed to fetch') ||
+      msg.includes('networkerror') ||
+      msg.includes('network request failed') ||
+      msg.includes('load failed')
+    )
+  }
+
   // ─── Catálogo Local (Dexie) ───────────────────────────
   async function sincronizarCatalogo() {
     try {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, nombre, sku, precio, stock, imagen_url, updated_at')
+        .select('id, nombre, sku, precio, stock, imagen_url, es_pesable, updated_at')
         .eq('activo', true)
       if (error) return // Puede estar offline, no pasa nada
       if (data) {
@@ -61,18 +75,20 @@ export const usePosStore = defineStore('pos', () => {
   }
 
   // ─── Carrito ──────────────────────────────────────────
-  function agregarItem(producto: ProductoLocal) {
-    const existente = carrito.value.find(i => i.id_producto === producto.id)
-    if (existente) {
-      existente.cantidad += 1
+  function agregarItem(producto: ProductoLocal, cantidadEspecial: number = 1, overridePrecio?: number) {
+    const pPrecio = overridePrecio !== undefined ? overridePrecio : producto.precio;
+    const existente = carrito.value.find(i => i.id_producto === producto.id && i.precio === pPrecio)
+    if (existente && !producto.es_pesable) {
+      existente.cantidad += cantidadEspecial
     } else {
       carrito.value.push({
         id_producto: producto.id,
         nombre: producto.nombre,
         sku: producto.sku,
-        precio: producto.precio,
-        cantidad: 1,
-        descuento: 0
+        precio: pPrecio,
+        cantidad: cantidadEspecial,
+        descuento: 0,
+        es_pesable: producto.es_pesable
       })
     }
     resultados.value = []
@@ -132,17 +148,22 @@ export const usePosStore = defineStore('pos', () => {
       })
 
       if (error) {
-        // ── Offline: guardar en cola Dexie ──
-        await db.ventas_offline.add({
-          turno_id: idTurno as string,
-          subtotal: subtotal.value,
-          total: total.value,
-          detalles: items,
-          sync_status: 'pending',
-          created_at: new Date().toISOString()
-        })
-        vaciarCarrito()
-        throw new Error('OFFLINE') // señal especial para la UI
+        if (esErrorDeRed(error)) {
+          // Offline real: guardar en cola Dexie
+          await db.ventas_offline.add({
+            turno_id: idTurno as string,
+            subtotal: subtotal.value,
+            total: total.value,
+            detalles: items,
+            sync_status: 'pending',
+            created_at: new Date().toISOString()
+          })
+          vaciarCarrito()
+          throw new Error('OFFLINE')
+        }
+
+        // Si hay internet y falla el RPC, no debe mostrarse como "sin conexión"
+        throw new Error(error.message || 'No se pudo registrar la venta.')
       }
 
       vaciarCarrito()

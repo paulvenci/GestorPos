@@ -10,6 +10,9 @@ export interface ProductoLocal {
   categoria: string | null;
   activo: boolean;
   imagen_url: string | null;
+  es_pesable?: boolean;
+  stock_minimo?: number;
+  margen_ganancia?: number | null;
   updated_at: string;
 }
 

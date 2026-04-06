@@ -8,6 +8,33 @@ export const useProductosStore = defineStore('productos', () => {
   const productos = ref<ProductoLocal[]>([])
   const loading = ref(false)
 
+  function toNumberOrDefault(value: unknown, fallback = 0) {
+    const num = typeof value === 'number' ? value : Number(value)
+    return Number.isFinite(num) ? num : fallback
+  }
+
+  function normalizarPayloadProducto(prod: Partial<ProductoLocal>) {
+    const esPesable = prod.es_pesable ?? false
+    const stockNormalizado = toNumberOrDefault(prod.stock, 0)
+    // Compatibilidad con el RPC actual de ventas: siempre descuenta stock.
+    // Para pesables mantenemos un stock "virtual" alto para evitar bloqueos.
+    const stockParaGuardar = esPesable ? Math.max(stockNormalizado, 1000000) : stockNormalizado
+
+    return {
+      nombre: (prod.nombre || 'Producto Nuevo').trim(),
+      sku: prod.sku?.trim() || null,
+      precio: toNumberOrDefault(prod.precio, 0),
+      costo: toNumberOrDefault(prod.costo, 0),
+      stock: stockParaGuardar,
+      categoria: prod.categoria?.trim() || null,
+      activo: prod.activo ?? true,
+      imagen_url: prod.imagen_url ?? null,
+      es_pesable: esPesable,
+      stock_minimo: toNumberOrDefault(prod.stock_minimo, 0),
+      margen_ganancia: toNumberOrDefault(prod.margen_ganancia, 0)
+    }
+  }
+
   async function fetchProductos() {
     loading.value = true
     try {
@@ -35,22 +62,16 @@ export const useProductosStore = defineStore('productos', () => {
   async function saveProducto(prod: Partial<ProductoLocal>) {
     loading.value = true
     try {
+      const payload = normalizarPayloadProducto(prod)
       let resultData
       if (prod.id) {
          // Update
          const { data, error } = await supabase
            .from('productos')
            .update({
-             nombre: prod.nombre,
-             sku: prod.sku,
-             precio: prod.precio,
-             costo: prod.costo,
-             stock: prod.stock,
-             categoria: prod.categoria,
-             activo: prod.activo,
-             imagen_url: prod.imagen_url,
+             ...payload,
              updated_at: new Date().toISOString()
-           } as any)
+           })
            .eq('id', prod.id)
            .select()
            .single()
@@ -60,16 +81,7 @@ export const useProductosStore = defineStore('productos', () => {
          // Insert
          const { data, error } = await supabase
            .from('productos')
-           .insert({
-             nombre: prod.nombre || 'Producto Nuevo',
-             sku: prod.sku,
-             precio: prod.precio,
-             costo: prod.costo,
-             stock: prod.stock,
-             categoria: prod.categoria,
-             activo: prod.activo,
-             imagen_url: prod.imagen_url
-           } as any)
+           .insert(payload)
            .select()
            .single()
          if (error) throw error

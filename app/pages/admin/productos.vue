@@ -145,7 +145,10 @@
           <div class="producto-field-row">
             <div class="producto-field">
               <label for="sku">Cód. Barras (SKU)</label>
-              <InputText id="sku" v-model.trim="productoActual.sku" />
+              <div class="p-inputgroup flex-1">
+                <InputText id="sku" v-model.trim="productoActual.sku" />
+                <Button icon="pi pi-camera" @click="abrirScanner" />
+              </div>
             </div>
             <div class="producto-field">
               <label for="categoria">Categoría</label>
@@ -173,9 +176,29 @@
             </div>
           </div>
 
-          <div class="producto-field" style="max-width: 50%;">
-            <label for="stock">Stock Inicial</label>
-            <InputNumber id="stock" v-model="productoActual.stock" />
+          <div class="producto-field-row">
+            <div class="producto-field" style="max-width: 50%;">
+              <label for="stock">Stock Inicial</label>
+              <InputNumber id="stock" v-model="productoActual.stock" />
+            </div>
+            <div class="producto-field" style="max-width: 50%;">
+              <label for="stock_minimo">Stock Mínimo</label>
+              <InputNumber id="stock_minimo" v-model="productoActual.stock_minimo" />
+            </div>
+          </div>
+
+          <div class="producto-field-row">
+            <div class="producto-field">
+              <label>¿Se vende por peso?</label>
+              <div class="flex items-center gap-2 mt-2">
+                <ToggleSwitch v-model="productoActual.es_pesable" />
+                <span class="text-sm font-medium">{{ productoActual.es_pesable ? 'Sí (Ej. Pan, Queso)' : 'No (Unidades)' }}</span>
+              </div>
+            </div>
+            <div class="producto-field">
+              <label for="margen_ganancia">Margen Ganancia (%)</label>
+              <InputNumber id="margen_ganancia" v-model="productoActual.margen_ganancia" suffix=" %" :min="0" />
+            </div>
           </div>
         </div>
       </div>
@@ -184,6 +207,32 @@
         <Button label="Cancelar" icon="pi pi-times" text severity="secondary" @click="cerrarDialogo" />
         <Button label="Guardar" icon="pi pi-check" @click="guardarProducto" :loading="productosStore.loading || subiendoFoto" />
       </template>
+    </Dialog>
+
+    <!-- Modal Cámara de Foto -->
+    <Dialog v-model:visible="mostrarCamaraFoto" header="Capturar Foto" :modal="true" :style="{ width: '480px' }" @hide="cerrarCamaraFoto">
+      <div class="flex flex-col items-center gap-3 p-2">
+        <div class="relative w-full rounded overflow-hidden bg-black aspect-video flex items-center justify-center">
+          <video ref="videoFotoRef" class="w-full h-full object-cover" autoplay muted playsinline></video>
+        </div>
+        <canvas ref="canvasFotoRef" class="hidden-input"></canvas>
+      </div>
+      <template #footer>
+        <Button label="Cancelar" text severity="secondary" @click="cerrarCamaraFoto" />
+        <Button label="Usar Foto" icon="pi pi-check" @click="tomarFotoCamara" />
+      </template>
+    </Dialog>
+
+    <!-- Modal Scanner de Código de Barras -->
+    <Dialog v-model:visible="mostrarScanner" header="Escanear Código" :modal="true" :style="{ width: '400px' }" @hide="cerrarScanner">
+      <div class="flex flex-col items-center justify-center p-2">
+        <div class="relative w-full rounded overflow-hidden bg-black aspect-video flex items-center justify-center">
+          <video ref="videoScannerRef" class="w-full h-full object-cover" autoplay muted playsinline></video>
+          <!-- Overlay de escaneo -->
+          <div class="absolute inset-x-4 top-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+        </div>
+        <p class="mt-4 text-center text-sm text-slate-500">Apunta la cámara al código de barras.</p>
+      </div>
     </Dialog>
 
     <!-- Modal Generador de Etiquetas -->
@@ -213,18 +262,24 @@
 </template>
 
 <script setup lang="ts">
-import { FilterMatchMode } from '@primevue/core/api'
 import { useToast } from 'primevue/usetoast'
 import { useProductosStore } from '~/stores/productos'
 import { useCategoriasStore } from '~/stores/categorias'
+import { useConfigStore } from '~/stores/config'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import type { ProductoLocal } from '~/db'
 import JsBarcode from 'jsbarcode'
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
+import { BarcodeFormat, DecodeHintType } from '@zxing/library'
+import { FilterMatchMode } from '@primevue/core/api'
 
 const productosStore = useProductosStore()
 const categoriasStore = useCategoriasStore()
+const configStore = useConfigStore()
 const toast = useToast()
 const { formatMonto } = useFormatMonto()
+const route = useRoute()
+const router = useRouter()
 
 // ----- DataTable & Filters -----
 const filters = ref({
@@ -238,12 +293,47 @@ const categoriasOptions = computed(() =>
     .map((c: any) => ({ label: c.nombre, value: c.nombre }))
 )
 
-onMounted(() => {
-  productosStore.fetchProductos()
-  categoriasStore.fetchCategorias()
+onMounted(async () => {
+  await Promise.all([
+    productosStore.fetchProductos(),
+    categoriasStore.fetchCategorias(),
+    configStore.fetchConfig()
+  ])
+  await seleccionarProductoDesdeRuta()
+})
+
+onUnmounted(() => {
+  if (mostrarScanner.value) {
+    cerrarScanner()
+  }
+  if (mostrarCamaraFoto.value) {
+    cerrarCamaraFoto()
+  }
 })
 // ----- Selección para impresión masiva -----
 const selectedProducts = ref<ProductoLocal[]>([])
+
+async function seleccionarProductoDesdeRuta() {
+  const selId = String(route.query.sel || '').trim()
+  if (!selId) return
+
+  const producto = productosStore.productos.find((p) => p.id === selId)
+  if (!producto) return
+
+  selectedProducts.value = [producto]
+  filters.value.global.value = producto.nombre
+
+  await nextTick()
+  router.replace({ query: { ...route.query, sel: undefined } })
+}
+
+watch(
+  () => route.query.sel,
+  async (nuevoSel) => {
+    if (!nuevoSel) return
+    await seleccionarProductoDesdeRuta()
+  }
+)
 
 function imprimirSeleccionados() {
   const items = selectedProducts.value.filter(p => p.sku)
@@ -324,7 +414,7 @@ function imprimirSeleccionados() {
 
 // ----- Formulario CRUD -----
 const productoVacio: Partial<ProductoLocal> = {
-  nombre: '', sku: '', precio: 0, costo: 0, stock: 0, categoria: '', activo: true, imagen_url: null
+  nombre: '', sku: '', precio: 0, costo: 0, stock: 0, categoria: '', activo: true, imagen_url: null, es_pesable: false, stock_minimo: 5, margen_ganancia: 30
 }
 
 const mostrarDialogo = ref(false)
@@ -337,9 +427,17 @@ const cameraInputRef = ref<HTMLInputElement | null>(null)
 const fotoPreview = ref<string | null>(null)
 const archivoFoto = ref<File | null>(null)
 const subiendoFoto = ref(false)
+const mostrarCamaraFoto = ref(false)
+const videoFotoRef = ref<HTMLVideoElement | null>(null)
+const canvasFotoRef = ref<HTMLCanvasElement | null>(null)
+let streamCamaraFoto: MediaStream | null = null
 
 function abrirNuevo() {
-  productoActual.value = { ...productoVacio }
+  productoActual.value = { 
+    ...productoVacio,
+    margen_ganancia: configStore.configuracion.margen_ganancia_defecto,
+    stock_minimo: configStore.configuracion.stock_minimo_defecto
+  }
   fotoPreview.value = null
   archivoFoto.value = null
   submitted.value = false
@@ -355,14 +453,80 @@ function abrirEditar(prod: ProductoLocal) {
 }
 
 function cerrarDialogo() {
+  if (mostrarScanner.value) {
+    cerrarScanner()
+  }
+  if (mostrarCamaraFoto.value) {
+    cerrarCamaraFoto()
+  }
   mostrarDialogo.value = false
   submitted.value = false
   fotoPreview.value = null
   archivoFoto.value = null
 }
 
-function capturarFoto() {
-  cameraInputRef.value?.click()
+async function capturarFoto() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    cameraInputRef.value?.click()
+    return
+  }
+
+  try {
+    streamCamaraFoto = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    })
+    mostrarCamaraFoto.value = true
+    await nextTick()
+
+    if (videoFotoRef.value) {
+      videoFotoRef.value.srcObject = streamCamaraFoto
+      await videoFotoRef.value.play().catch(() => {})
+    }
+  } catch (err) {
+    console.warn('No se pudo abrir cámara directa, usando selector de archivos.', err)
+    toast.add({ severity: 'warn', summary: 'Cámara', detail: 'No se pudo abrir la cámara directa. Selecciona una imagen.', life: 3000 })
+    cameraInputRef.value?.click()
+  }
+}
+
+function cerrarCamaraFoto() {
+  if (streamCamaraFoto) {
+    streamCamaraFoto.getTracks().forEach((t) => t.stop())
+    streamCamaraFoto = null
+  }
+  if (videoFotoRef.value) {
+    if (videoFotoRef.value.srcObject instanceof MediaStream) {
+      videoFotoRef.value.srcObject.getTracks().forEach((t) => t.stop())
+    }
+    videoFotoRef.value.srcObject = null
+  }
+  mostrarCamaraFoto.value = false
+}
+
+async function tomarFotoCamara() {
+  if (!videoFotoRef.value || !canvasFotoRef.value) return
+  const video = videoFotoRef.value
+  const canvas = canvasFotoRef.value
+
+  const width = video.videoWidth || 1280
+  const height = video.videoHeight || 720
+  canvas.width = width
+  canvas.height = height
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.drawImage(video, 0, 0, width, height)
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+  fotoPreview.value = dataUrl
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92))
+  if (blob) {
+    archivoFoto.value = new File([blob], `producto_${Date.now()}.jpg`, { type: 'image/jpeg' })
+  }
+
+  cerrarCamaraFoto()
 }
 
 function seleccionarArchivo() {
@@ -517,6 +681,181 @@ function imprimirEtiquetas() {
   printWindow.document.write(html)
   printWindow.document.close()
 }
+// ----- Scanner Logica -----
+const mostrarScanner = ref(false)
+const videoScannerRef = ref<HTMLVideoElement | null>(null)
+let codeReader: BrowserMultiFormatReader | null = null
+let activeStream: MediaStream | null = null
+let scannerControls: IScannerControls | null = null
+let detectorInterval: ReturnType<typeof setInterval> | null = null
+
+function procesarCodigoDetectado(rawCode: string) {
+  if (!mostrarScanner.value) return
+
+  const sku = rawCode.trim()
+  if (!sku) return
+
+  productoActual.value.sku = sku
+  toast.add({ severity: 'success', summary: 'Escaneado', detail: sku, life: 3000 })
+  cerrarScanner()
+}
+
+async function iniciarFallbackBarcodeDetector() {
+  if (!videoScannerRef.value) return
+  if (!(window as any).BarcodeDetector) return
+
+  try {
+    const BarcodeDetectorCtor = (window as any).BarcodeDetector
+    const supported = await BarcodeDetectorCtor.getSupportedFormats?.()
+    const preferred = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code']
+    const formats = Array.isArray(supported) ? preferred.filter((f) => supported.includes(f)) : preferred
+    const detector = new BarcodeDetectorCtor({ formats })
+
+    detectorInterval = setInterval(async () => {
+      if (!mostrarScanner.value || !videoScannerRef.value) return
+      if (videoScannerRef.value.readyState < 2) return
+
+      try {
+        const barcodes = await detector.detect(videoScannerRef.value)
+        const raw = barcodes?.[0]?.rawValue
+        if (raw) procesarCodigoDetectado(raw)
+      } catch (_) {
+        // ignore detector frame errors
+      }
+    }, 250)
+  } catch (_) {
+    // fallback opcional, no bloquea zxing
+  }
+}
+
+async function abrirScanner() {
+  if (mostrarScanner.value) return
+
+  mostrarScanner.value = true
+  await nextTick()
+
+  if (!codeReader) {
+    const hints = new Map()
+    const formats = [
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.QR_CODE,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODABAR,
+      BarcodeFormat.CODE_93
+    ]
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, formats)
+    hints.set(DecodeHintType.TRY_HARDER, true)
+
+    codeReader = new BrowserMultiFormatReader(hints, {
+      delayBetweenScanAttempts: 100,
+      delayBetweenScanSuccess: 500,
+      tryPlayVideoTimeout: 5000
+    })
+  }
+
+  if (!videoScannerRef.value) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo inicializar el visor de camara', life: 3000 })
+    cerrarScanner()
+    return
+  }
+
+  try {
+    scannerControls = await codeReader.decodeFromConstraints(
+      {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      },
+      videoScannerRef.value,
+      (result, error) => {
+        if (result) {
+          procesarCodigoDetectado(result.getText())
+          return
+        }
+
+        // NotFoundException es normal entre frames sin codigo
+        if (error && (error as any).name === 'NotFoundException') return
+      }
+    )
+
+    if (videoScannerRef.value.srcObject instanceof MediaStream) {
+      activeStream = videoScannerRef.value.srcObject
+    }
+
+    await iniciarFallbackBarcodeDetector()
+  } catch (err: any) {
+    console.error('Error camara:', err)
+    toast.add({ severity: 'error', summary: 'Error de camara', detail: 'No se pudo iniciar el escaner.', life: 3000 })
+    cerrarScanner()
+  }
+}
+
+function cerrarScanner() {
+  if (detectorInterval) {
+    clearInterval(detectorInterval)
+    detectorInterval = null
+  }
+
+  if (scannerControls) {
+    try {
+      scannerControls.stop()
+    } catch (_) {}
+    scannerControls = null
+  }
+
+  if (codeReader) {
+    try {
+      codeReader.reset()
+    } catch (_) {}
+  }
+
+  if (activeStream) {
+    activeStream.getTracks().forEach((track) => track.stop())
+    activeStream = null
+  }
+
+  if (videoScannerRef.value) {
+    const stream = videoScannerRef.value.srcObject
+    if (stream instanceof MediaStream) {
+      stream.getTracks().forEach((track) => track.stop())
+    }
+    videoScannerRef.value.srcObject = null
+  }
+
+  mostrarScanner.value = false
+}
+
+watch(mostrarScanner, (visible) => {
+  if (!visible) cerrarScanner()
+})
+// ----- AutoCalc Precio de Venta -----
+watch(
+  () => [productoActual.value.costo, productoActual.value.margen_ganancia],
+  ([newCosto, newMargen]) => {
+    // Si estamos editando y tanto costo como margen son números
+    if (newCosto !== undefined && newCosto !== null && newMargen !== undefined && newMargen !== null) {
+      const costo = Number(newCosto) || 0
+      const margen = Number(newMargen) || 0
+      
+      if (costo > 0) {
+        const precioSugerido = costo * (1 + margen / 100)
+        // Ley de redondeo: Multiplicar por 10, y etc. Mejor: redondear a la decena.
+        // Ej: 1553 ->/10 = 155.3 -> round(155.3)=155 -> *10 = 1550
+        // Ej: 1557 ->/10 = 155.7 -> round(155.7)=156 -> *10 = 1560
+        // Ej: 1555 ->/10 = 155.5 -> round(155.5)=156 -> *10 = 1560
+        productoActual.value.precio = Math.round(precioSugerido / 10) * 10
+      }
+    }
+  }
+)
+
 </script>
 
 <style scoped>
@@ -708,4 +1047,9 @@ function imprimirEtiquetas() {
   width: 100%;
 }
 </style>
+
+
+
+
+
 

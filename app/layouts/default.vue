@@ -90,7 +90,68 @@
     <main class="pos-main-content">
       <!-- Topbar de estado -->
       <div class="pos-topbar">
-        <div class="pos-topbar-info">
+        <div class="pos-topbar-left">
+          <div v-if="mostrarAvisoTurnoPos" class="pos-turno-alerta">
+            <i class="pi pi-info-circle" />
+            <span>Operando fuera de turno</span>
+            <NuxtLink to="/caja">
+              <Button label="Abrir turno" icon="pi pi-play" size="small" text severity="warning" />
+            </NuxtLink>
+          </div>
+        </div>
+        <div class="pos-topbar-info flex items-center gap-4">
+          <Tag
+            :value="isOnline ? 'Online' : 'Offline'"
+            :severity="isOnline ? 'success' : 'danger'"
+            :icon="isOnline ? 'pi pi-wifi' : 'pi pi-wifi'"
+            class="pos-online-tag"
+          />
+
+          <!-- Notificaciones Stock Mínimo -->
+          <div ref="notificacionesRef" class="relative">
+             <button class="pos-bell-btn" type="button" @click="toggleNotificaciones" :aria-expanded="mostrarNotificaciones ? 'true' : 'false'" aria-label="Ver notificaciones de stock">
+               <i class="pi pi-bell text-xl" />
+             </button>
+             <span v-if="productosBajoStock.length > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
+               {{ productosBajoStock.length }}
+             </span>
+             
+             <!-- Panel de notificaciones -->
+             <div v-if="mostrarNotificaciones" class="pos-notif-panel absolute right-0 top-10 w-80 z-50 overflow-hidden">
+                <div class="p-3 border-b font-bold flex justify-between items-center text-sm">
+                  <span>Stock Crítico</span>
+                  <Tag severity="danger" :value="productosBajoStock.length.toString()" />
+                </div>
+                <div class="max-h-60 overflow-y-auto hidden-scrollbar">
+                  <div v-if="productosBajoStock.length === 0" class="p-4 text-center text-sm pos-notif-empty">
+                    Todo en orden. No hay alertas.
+                  </div>
+                  <button
+                    v-for="prod in productosBajoStock"
+                    :key="prod.id"
+                    class="pos-notif-item p-3 border-b transition-colors flex justify-between items-center w-full text-left"
+                    type="button"
+                    @click="irAInventario(prod.id)"
+                  >
+                    <div>
+                      <p class="font-medium text-sm truncate w-40">{{ prod.nombre }}</p>
+                      <p class="text-xs pos-notif-min mt-1">Mínimo: {{ prod.stock_minimo || 5 }}</p>
+                    </div>
+                    <span class="pos-notif-stock font-bold text-sm px-2 py-1 rounded">Stock: {{ prod.stock }}</span>
+                  </button>
+                </div>
+                <div class="p-2 text-center pos-notif-footer">
+                  <NuxtLink to="/admin/productos" class="text-xs hover:underline font-medium" @click="mostrarNotificaciones = false">
+                    Ir al Inventario
+                  </NuxtLink>
+                </div>
+             </div>
+          </div>
+
+          <!-- Divisor -->
+          <div class="h-6 w-px bg-slate-200 dark:bg-slate-700" />
+
+          <!-- Saludo y Turno -->
           <span class="pos-topbar-greeting">
             <i class="pi pi-user" />
             {{ authStore.nombreUsuario }}
@@ -102,7 +163,9 @@
           />
         </div>
       </div>
-      <slot />
+      <div class="pos-content-scroll">
+        <slot />
+      </div>
     </main>
   </div>
 </template>
@@ -110,16 +173,65 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 import { useCajaStore } from '~/stores/caja'
+import { useProductosStore } from '~/stores/productos'
 import { useDarkMode } from '~/composables/useDarkMode'
 
 const authStore = useAuthStore()
 const cajaStore = useCajaStore()
+const productosStore = useProductosStore()
 const { isDark, toggleDark, initDark } = useDarkMode()
 const sidebarOpen = ref(false)
+const isOnline = ref(import.meta.client ? navigator.onLine : true)
+const notificacionesRef = ref<HTMLElement | null>(null)
+const route = useRoute()
 
 const turnoLabel = computed(() =>
   cajaStore.hayTurnoActivo ? 'Turno activo' : 'Sin turno'
 )
+const mostrarAvisoTurnoPos = computed(() =>
+  route.path.startsWith('/pos') && !cajaStore.hayTurnoActivo && !cajaStore.loading
+)
+
+// Notificaciones
+const mostrarNotificaciones = ref(false)
+const productosBajoStock = computed(() => {
+  return productosStore.productos.filter(p => p.stock <= (p.stock_minimo || 5))
+})
+
+function toggleNotificaciones() {
+  mostrarNotificaciones.value = !mostrarNotificaciones.value
+}
+
+function irAInventario(_productoId?: string) {
+  mostrarNotificaciones.value = false
+  if (_productoId) {
+    navigateTo({ path: '/admin/productos', query: { sel: _productoId } })
+    return
+  }
+  navigateTo('/admin/productos')
+}
+
+function onConectado() {
+  isOnline.value = true
+}
+
+function onDesconectado() {
+  isOnline.value = false
+}
+
+function onClickFueraNotificaciones(event: MouseEvent) {
+  if (!mostrarNotificaciones.value) return
+  const target = event.target as Node | null
+  if (target && notificacionesRef.value && !notificacionesRef.value.contains(target)) {
+    mostrarNotificaciones.value = false
+  }
+}
+
+function onKeydownLayout(event: KeyboardEvent) {
+  if (event.key === 'Escape' && mostrarNotificaciones.value) {
+    mostrarNotificaciones.value = false
+  }
+}
 
 function closeMobile() {
   sidebarOpen.value = false
@@ -128,6 +240,18 @@ function closeMobile() {
 onMounted(() => {
   initDark()
   cajaStore.fetchTurnoActivo()
+  productosStore.fetchProductos()
+  window.addEventListener('online', onConectado)
+  window.addEventListener('offline', onDesconectado)
+  document.addEventListener('click', onClickFueraNotificaciones)
+  document.addEventListener('keydown', onKeydownLayout)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('online', onConectado)
+  window.removeEventListener('offline', onDesconectado)
+  document.removeEventListener('click', onClickFueraNotificaciones)
+  document.removeEventListener('keydown', onKeydownLayout)
 })
 </script>
 
@@ -295,10 +419,10 @@ onMounted(() => {
 .pos-main-content {
   flex: 1;
   background: var(--bg-app);
-  overflow-y: auto;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   transition: background-color 0.3s ease;
 }
 
@@ -306,10 +430,24 @@ onMounted(() => {
 .pos-topbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 0.5rem 2rem;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.pos-topbar-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.pos-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .pos-topbar-info {
@@ -329,6 +467,82 @@ onMounted(() => {
 
 .pos-topbar-greeting i {
   font-size: 0.9rem;
+  color: var(--color-brand-primary);
+}
+
+.pos-turno-alerta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid #facc15;
+  background: rgba(254, 249, 195, 0.65);
+  color: #ca8a04;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.pos-bell-btn {
+  border: 1px solid var(--border-sidebar);
+  background: var(--bg-app);
+  color: var(--text-app);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.pos-bell-btn:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  color: var(--color-brand-primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.pos-bell-btn:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
+}
+
+.pos-notif-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-sidebar);
+  border-radius: 0.8rem;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.2);
+  color: var(--text-app);
+}
+
+.pos-notif-empty {
+  color: var(--text-muted);
+}
+
+.pos-notif-item {
+  color: var(--text-app);
+  background: transparent;
+  border-color: var(--border-subtle);
+}
+
+.pos-notif-item:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.pos-notif-min {
+  color: var(--text-muted);
+}
+
+.pos-notif-stock {
+  color: #b91c1c;
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.pos-notif-footer {
+  background: var(--bg-app);
+}
+
+.pos-notif-footer a {
   color: var(--color-brand-primary);
 }
 
