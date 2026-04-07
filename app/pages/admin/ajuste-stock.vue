@@ -1,10 +1,6 @@
 <template>
   <div class="admin-page">
     <div class="admin-header">
-      <div class="admin-header-titles">
-        <h1>Ajuste de Stock</h1>
-        <p>Registra ingresos y egresos de inventario con motivo y trazabilidad.</p>
-      </div>
       <Button label="Nuevo Ajuste" icon="pi pi-plus" severity="success" @click="abrirNuevo" />
     </div>
 
@@ -302,24 +298,11 @@ async function registrarAjuste() {
 
 .admin-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.admin-header-titles h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem;
-  letter-spacing: -0.03em;
-}
-
-.admin-header-titles p {
-  color: var(--text-muted);
-  margin: 0;
-  font-size: 0.95rem;
+  gap: 0.75rem;
 }
 
 /* Ajuste Form */
@@ -406,5 +389,33 @@ async function registrarAjuste() {
 :deep(.p-paginator) {
   background: transparent !important;
   border-top: 1px solid var(--border-subtle) !important;
+}
+
+@media (max-width: 768px) {
+  .admin-page {
+    padding: 0.75rem;
+  }
+
+  .admin-header {
+    margin-bottom: 0.65rem;
+  }
+
+  .admin-header :deep(.p-button) {
+    width: 100%;
+    justify-content: center;
+    padding: 0.52rem 0.7rem !important;
+    font-size: 0.86rem !important;
+  }
+
+  :deep(.p-datatable-thead > tr > th),
+  :deep(.p-datatable-tbody > tr > td) {
+    padding: 0.55rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .ajuste-field-row {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
 }
 </style>

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="pos-layout-wrapper">
     <!-- Backdrop overlay (mobile) -->
     <div 
@@ -7,11 +7,11 @@
       @click="sidebarOpen = false" 
     />
 
-    <!-- Sidebar de Navegación -->
+    <!-- Sidebar de NavegaciÃ³n -->
     <aside class="pos-sidebar" :class="{ 'pos-sidebar--open': sidebarOpen }">
       <div class="pos-sidebar-logo">
         <div class="pos-sidebar-logo-inner">
-          <span class="pos-logo-icon">⚡</span>
+          <span class="pos-logo-icon">âš¡</span>
           <span class="pos-logo-text">GestorPOS</span>
         </div>
         <Button 
@@ -47,7 +47,7 @@
         </NuxtLink>
         <NuxtLink to="/admin/categorias" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-tags" />
-          <span>Categorías</span>
+          <span>CategorÃ­as</span>
         </NuxtLink>
         <NuxtLink to="/admin/reportes" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-chart-bar" />
@@ -58,9 +58,10 @@
 
         <NuxtLink to="/admin/configuracion" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-cog" />
-          <span>Configuración</span>
+          <span>ConfiguraciÃ³n</span>
         </NuxtLink>
       </nav>
+      <div class="pos-sidebar-version">Version v{{ appVersion }}</div>
 
       <div class="pos-sidebar-footer">
         <div class="pos-user-info">
@@ -76,7 +77,7 @@
           severity="danger"
           class="pos-logout-btn"
           @click="authStore.signOut()"
-          title="Cerrar sesión"
+          title="Cerrar sesiÃ³n"
         />
       </div>
     </aside>
@@ -86,10 +87,11 @@
       <!-- Topbar de estado -->
       <div class="pos-topbar" :class="{ 'pos-topbar--pos-route': route.path.startsWith('/pos') }">
         <div class="pos-topbar-left">
-          <button class="pos-topbar-menu" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen ? 'true' : 'false'" aria-label="Abrir menú">
+          <button class="pos-topbar-menu" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen ? 'true' : 'false'" aria-label="Abrir menÃº">
             <i :class="sidebarOpen ? 'pi pi-times' : 'pi pi-bars'" />
           </button>
         </div>
+        <div class="pos-topbar-title">{{ seccionActual }}</div>
         <div class="pos-topbar-info flex items-center gap-4">
           <Tag
             :value="isOnline ? 'Online' : 'Offline'"
@@ -114,7 +116,7 @@
           />
           <span class="pos-app-version">v{{ appVersion }}</span>
 
-          <!-- Notificaciones Stock Mínimo -->
+          <!-- Notificaciones Stock MÃ­nimo -->
           <div ref="notificacionesRef" class="relative">
              <button class="pos-bell-btn" type="button" @click="toggleNotificaciones" :aria-expanded="mostrarNotificaciones ? 'true' : 'false'" aria-label="Ver notificaciones de stock">
                <i class="pi pi-bell text-xl" />
@@ -126,7 +128,7 @@
              <!-- Panel de notificaciones -->
              <div v-if="mostrarNotificaciones" class="pos-notif-panel absolute right-0 top-10 w-80 z-50 overflow-hidden">
                 <div class="p-3 border-b font-bold flex justify-between items-center text-sm">
-                  <span>Stock Crítico</span>
+                  <span>Stock CrÃ­tico</span>
                   <Tag severity="danger" :value="productosBajoStock.length.toString()" />
                 </div>
                 <div class="max-h-60 overflow-y-auto hidden-scrollbar">
@@ -142,7 +144,7 @@
                   >
                     <div>
                       <p class="font-medium text-sm truncate w-40">{{ prod.nombre }}</p>
-                      <p class="text-xs pos-notif-min mt-1">Mínimo: {{ prod.stock_minimo || 5 }}</p>
+                      <p class="text-xs pos-notif-min mt-1">MÃ­nimo: {{ prod.stock_minimo || 5 }}</p>
                     </div>
                     <span class="pos-notif-stock font-bold text-sm px-2 py-1 rounded">Stock: {{ prod.stock }}</span>
                   </button>
@@ -179,6 +181,17 @@ const notificacionesRef = ref<HTMLElement | null>(null)
 const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
 const appVersion = computed(() => String(runtimeConfig.public.appVersion || 'dev'))
+const seccionActual = computed(() => {
+  if (route.path === '/') return 'Dashboard'
+  if (route.path.startsWith('/pos')) return 'Punto de Venta'
+  if (route.path.startsWith('/caja')) return 'Caja'
+  if (route.path.startsWith('/admin/productos')) return 'Inventario'
+  if (route.path.startsWith('/admin/ajuste-stock')) return 'Ajuste Stock'
+  if (route.path.startsWith('/admin/categorias')) return 'Categorias'
+  if (route.path.startsWith('/admin/reportes')) return 'Reportes'
+  if (route.path.startsWith('/admin/configuracion')) return 'Configuracion'
+  return 'GestorPOS'
+})
 
 const turnoLabel = computed(() =>
   cajaStore.hayTurnoActivo ? 'Turno activo' : 'Sin turno'
@@ -255,7 +268,7 @@ onUnmounted(() => {
   position: relative;
 }
 
-/* ─── Backdrop (mobile only) ─── */
+/* â”€â”€â”€ Backdrop (mobile only) â”€â”€â”€ */
 .pos-sidebar-backdrop {
   display: none;
   position: fixed;
@@ -265,7 +278,7 @@ onUnmounted(() => {
   backdrop-filter: blur(2px);
 }
 
-/* ─── Sidebar ─── */
+/* â”€â”€â”€ Sidebar â”€â”€â”€ */
 .pos-sidebar {
   width: 240px;
   height: 100vh;
@@ -363,6 +376,14 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
+.pos-sidebar-version {
+  display: none;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0.1rem 0 0.6rem;
+}
+
 .pos-user-info {
   display: flex;
   align-items: center;
@@ -399,7 +420,7 @@ onUnmounted(() => {
   transition: background-color 0.3s ease;
 }
 
-/* ─── Topbar ─── */
+/* â”€â”€â”€ Topbar â”€â”€â”€ */
 .pos-topbar {
   display: flex;
   align-items: center;
@@ -418,6 +439,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+}
+
+.pos-topbar-title {
+  display: none;
 }
 
 .pos-topbar-menu {
@@ -577,7 +602,7 @@ onUnmounted(() => {
   background: rgba(239, 68, 68, 0.1) !important;
 }
 
-/* ─── Responsive: tablet/mobile ─── */
+/* â”€â”€â”€ Responsive: tablet/mobile â”€â”€â”€ */
 @media (max-width: 768px) {
   .pos-topbar-menu {
     display: flex;
@@ -609,6 +634,7 @@ onUnmounted(() => {
   .pos-topbar {
     padding: 0.4rem 0.6rem;
     gap: 0.4rem;
+    position: relative;
   }
 
   .pos-topbar--pos-route .pos-topbar-greeting {
@@ -619,12 +645,35 @@ onUnmounted(() => {
     display: none;
   }
 
+  .pos-app-version {
+    display: none;
+  }
+
+  .pos-sidebar-version {
+    display: block;
+  }
+
   .pos-topbar-info {
     gap: 0.35rem !important;
+    margin-left: auto;
   }
 
   .pos-topbar-info > div.h-6 {
     display: none;
+  }
+
+  .pos-topbar-greeting,
+  .pos-turno-tag,
+  .pos-app-version {
+    display: none;
+  }
+
+  .pos-topbar-info > .relative {
+    order: 3;
+  }
+
+  .pos-online-tag {
+    order: 1;
   }
 
   .pos-bell-btn {
@@ -643,9 +692,31 @@ onUnmounted(() => {
   }
 
   .pos-online-tag :deep(.p-tag) {
-    padding: 0.18rem 0.42rem !important;
+    padding: 0.2rem !important;
+    min-width: 2rem;
+    justify-content: center;
     font-size: 0.72rem !important;
     gap: 0.2rem !important;
+  }
+
+  .pos-online-tag :deep(.p-tag-label) {
+    display: none;
+  }
+
+  .pos-topbar-title {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 42vw;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-app);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
   }
 
   .pos-topbar-info :deep(.p-tag) {
@@ -664,3 +735,4 @@ onUnmounted(() => {
   }
 }
 </style>
+

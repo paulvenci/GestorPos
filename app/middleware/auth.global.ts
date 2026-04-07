@@ -1,7 +1,16 @@
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   const user = useSupabaseUser()
+  const supabase = useSupabaseClient()
 
-  // Rutas públicas que no requieren autenticación
+  // En refresh (F5), la sesion puede tardar en hidratarse.
+  // Leemos la sesion antes de decidir redireccion.
+  if (!user.value) {
+    const { data } = await supabase.auth.getSession()
+    if (data.session?.user) {
+      user.value = data.session.user
+    }
+  }
+
   const publicRoutes = ['/login']
 
   if (!user.value && !publicRoutes.includes(to.path)) {

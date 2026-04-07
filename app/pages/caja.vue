@@ -846,4 +846,76 @@ async function confirmarCierre() {
   background: transparent !important;
   border-top: 1px solid var(--border-subtle) !important;
 }
+
+@media (max-width: 768px) {
+  .caja-root {
+    padding: 0.75rem;
+  }
+
+  .caja-header {
+    margin-bottom: 0.8rem;
+    justify-content: flex-end;
+  }
+
+  .caja-header > div {
+    display: none;
+  }
+
+  .caja-info-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .caja-info-card {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .caja-info-label {
+    font-size: 0.72rem;
+  }
+
+  .caja-info-value {
+    font-size: 1rem;
+  }
+
+  .caja-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .caja-actions :deep(.p-button) {
+    width: 100%;
+  }
+
+  .caja-historial {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+  }
+
+  .caja-historial-header {
+    margin-bottom: 0.65rem;
+    gap: 0.55rem;
+  }
+
+  .caja-historial-header h2 {
+    font-size: 0.95rem;
+  }
+
+  .caja-historial-filtros {
+    width: 100%;
+    gap: 0.45rem;
+  }
+
+  :deep(.historial-datepicker) {
+    width: 100%;
+  }
+
+  :deep(.caja-historial .p-datatable-thead > tr > th),
+  :deep(.caja-historial .p-datatable-tbody > tr > td) {
+    padding: 0.55rem 0.6rem;
+    font-size: 0.78rem;
+  }
+}
 </style>
