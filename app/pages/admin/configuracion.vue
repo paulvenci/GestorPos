@@ -106,6 +106,32 @@
             </div>
           </div>
         </div>
+
+        <div class="roles-manager">
+          <div class="roles-manager-header">
+            <h3><i class="pi pi-sliders-h" /> Gestor de permisos por rol</h3>
+            <p>Selecciona las secciones que cada rol puede usar en la aplicación.</p>
+          </div>
+          <div class="roles-manager-grid">
+            <div class="role-manager-card" v-for="rol in rolesDisponibles" :key="rol.value">
+              <div class="role-manager-title">
+                <Tag :value="rol.value" :severity="getRolSeverity(rol.value)" :icon="getRolIcon(rol.value)" />
+              </div>
+              <MultiSelect
+                v-model="rolePermissionsDraft[rol.value]"
+                :options="seccionesDisponibles"
+                optionLabel="label"
+                optionValue="value"
+                display="chip"
+                placeholder="Seleccionar secciones"
+                class="w-full"
+              />
+            </div>
+          </div>
+          <div class="flex justify-end mt-3">
+            <Button label="Guardar permisos" icon="pi pi-save" :loading="configLoading" @click="guardarPermisosRoles" />
+          </div>
+        </div>
       </TabPanel>
 
       <!-- Tab General -->
@@ -233,6 +259,12 @@ import { useToast } from 'primevue/usetoast'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import { useConfigStore } from '~/stores/config'
 import type { Database } from '~/types/database.types'
+import {
+  getDefaultRolePermissions,
+  normalizeRolePermissions,
+  type RoleKey,
+  type SectionKey
+} from '~/composables/useRolePermissions'
 
 interface Perfil {
   id: string
@@ -262,7 +294,7 @@ const mostrarDialogo = ref(false)
 const esNuevo = ref(false)
 const usuarioActual = ref<UsuarioForm>({ nombre: '', rol: 'cajero' })
 
-const rolesDisponibles = [
+const rolesDisponibles: { label: string, value: RoleKey }[] = [
   { label: 'Administrador', value: 'admin' },
   { label: 'Cajero', value: 'cajero' },
   { label: 'Supervisor', value: 'supervisor' }
@@ -282,10 +314,34 @@ const configGeneral = ref({
   iva: 19
 })
 
+const seccionesDisponibles: { label: string, value: SectionKey }[] = [
+  { label: 'Dashboard', value: 'dashboard' },
+  { label: 'Punto de Venta', value: 'pos' },
+  { label: 'Caja', value: 'caja' },
+  { label: 'Inventario', value: 'inventario' },
+  { label: 'Ajuste Stock', value: 'ajuste_stock' },
+  { label: 'Categorías', value: 'categorias' },
+  { label: 'Reportes', value: 'reportes' },
+  { label: 'Configuración', value: 'configuracion' }
+]
+
+const rolePermissionsDraft = ref<Record<RoleKey, SectionKey[]>>(getDefaultRolePermissions())
+
 onMounted(() => {
   fetchUsuarios()
-  configStore.fetchConfig()
+  configStore.fetchConfig().then(() => {
+    rolePermissionsDraft.value = normalizeRolePermissions(globalConfig.value?.role_permissions)
+  })
 })
+
+watch(
+  () => globalConfig.value?.role_permissions,
+  (value) => {
+    if (value) {
+      rolePermissionsDraft.value = normalizeRolePermissions(value)
+    }
+  }
+)
 
 // Función para guardar globales
 async function guardarConfiguracion() {
@@ -293,11 +349,26 @@ async function guardarConfiguracion() {
   try {
     await configStore.saveConfig({
       margen_ganancia_defecto: globalConfig.value.margen_ganancia_defecto,
-      stock_minimo_defecto: globalConfig.value.stock_minimo_defecto
+      stock_minimo_defecto: globalConfig.value.stock_minimo_defecto,
+      role_permissions: normalizeRolePermissions(rolePermissionsDraft.value)
     })
     toast.add({ severity: 'success', summary: 'Guardado', detail: 'Configuración actualizada en todos los dispositivos.', life: 3000 })
   } catch (error: any) {
     toast.add({ severity: 'error', summary: 'Error interno', detail: 'No tienes permiso o error validando', life: 4000 })
+  }
+}
+
+async function guardarPermisosRoles() {
+  if (!globalConfig.value) return
+  try {
+    await configStore.saveConfig({
+      margen_ganancia_defecto: globalConfig.value.margen_ganancia_defecto,
+      stock_minimo_defecto: globalConfig.value.stock_minimo_defecto,
+      role_permissions: normalizeRolePermissions(rolePermissionsDraft.value)
+    })
+    toast.add({ severity: 'success', summary: 'Permisos actualizados', detail: 'Los permisos por rol se guardaron correctamente.', life: 3000 })
+  } catch (error: any) {
+    toast.add({ severity: 'error', summary: 'Error', detail: error?.message || 'No se pudieron guardar los permisos.', life: 4000 })
   }
 }
 
@@ -605,6 +676,47 @@ function getRolIcon(rol: string) {
   color: var(--text-muted);
   margin: 0;
   line-height: 1.5;
+}
+
+.roles-manager {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+}
+
+.roles-manager-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-app);
+  margin: 0 0 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.roles-manager-header p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0 0 0.9rem;
+}
+
+.roles-manager-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.8rem;
+}
+
+.role-manager-card {
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+}
+
+.role-manager-title {
+  margin-bottom: 0.5rem;
 }
 
 /* Config Form */

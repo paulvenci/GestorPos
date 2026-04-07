@@ -7,11 +7,11 @@
       @click="sidebarOpen = false" 
     />
 
-    <!-- Sidebar de NavegaciÃ³n -->
+    <!-- Sidebar de Navegacion -->
     <aside class="pos-sidebar" :class="{ 'pos-sidebar--open': sidebarOpen }">
       <div class="pos-sidebar-logo">
         <div class="pos-sidebar-logo-inner">
-          <span class="pos-logo-icon">âš¡</span>
+          <span class="pos-logo-icon">&#9889;</span>
           <span class="pos-logo-text">GestorPOS</span>
         </div>
         <Button 
@@ -25,40 +25,40 @@
       </div>
 
       <nav class="pos-sidebar-nav">
-        <NuxtLink to="/" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('dashboard')" to="/" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-home" />
           <span>Dashboard</span>
         </NuxtLink>
-        <NuxtLink to="/pos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('pos')" to="/pos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-shopping-cart" />
           <span>Punto de Venta</span>
         </NuxtLink>
-        <NuxtLink to="/caja" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('caja')" to="/caja" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-wallet" />
           <span>Caja</span>
         </NuxtLink>
-        <NuxtLink to="/admin/productos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('inventario')" to="/admin/productos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-box" />
           <span>Inventario</span>
         </NuxtLink>
-        <NuxtLink to="/admin/ajuste-stock" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('ajuste_stock')" to="/admin/ajuste-stock" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-sync" />
           <span>Ajuste Stock</span>
         </NuxtLink>
-        <NuxtLink to="/admin/categorias" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('categorias')" to="/admin/categorias" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-tags" />
-          <span>CategorÃ­as</span>
+          <span>Categorías</span>
         </NuxtLink>
-        <NuxtLink to="/admin/reportes" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('reportes')" to="/admin/reportes" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-chart-bar" />
           <span>Reportes</span>
         </NuxtLink>
 
         <div class="pos-nav-divider" />
 
-        <NuxtLink to="/admin/configuracion" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('configuracion')" to="/admin/configuracion" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-cog" />
-          <span>ConfiguraciÃ³n</span>
+          <span>Configuración</span>
         </NuxtLink>
       </nav>
       <div class="pos-sidebar-version">Version v{{ appVersion }}</div>
@@ -77,7 +77,7 @@
           severity="danger"
           class="pos-logout-btn"
           @click="authStore.signOut()"
-          title="Cerrar sesiÃ³n"
+          title="Cerrar sesión"
         />
       </div>
     </aside>
@@ -87,7 +87,7 @@
       <!-- Topbar de estado -->
       <div class="pos-topbar" :class="{ 'pos-topbar--pos-route': route.path.startsWith('/pos') }">
         <div class="pos-topbar-left">
-          <button class="pos-topbar-menu" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen ? 'true' : 'false'" aria-label="Abrir menÃº">
+          <button class="pos-topbar-menu" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen ? 'true' : 'false'" aria-label="Abrir menú">
             <i :class="sidebarOpen ? 'pi pi-times' : 'pi pi-bars'" />
           </button>
         </div>
@@ -116,7 +116,7 @@
           />
           <span class="pos-app-version">v{{ appVersion }}</span>
 
-          <!-- Notificaciones Stock MÃ­nimo -->
+          <!-- Notificaciones Stock Minimo -->
           <div ref="notificacionesRef" class="relative">
              <button class="pos-bell-btn" type="button" @click="toggleNotificaciones" :aria-expanded="mostrarNotificaciones ? 'true' : 'false'" aria-label="Ver notificaciones de stock">
                <i class="pi pi-bell text-xl" />
@@ -128,7 +128,7 @@
              <!-- Panel de notificaciones -->
              <div v-if="mostrarNotificaciones" class="pos-notif-panel absolute right-0 top-10 w-80 z-50 overflow-hidden">
                 <div class="p-3 border-b font-bold flex justify-between items-center text-sm">
-                  <span>Stock CrÃ­tico</span>
+                  <span>Stock Crítico</span>
                   <Tag severity="danger" :value="productosBajoStock.length.toString()" />
                 </div>
                 <div class="max-h-60 overflow-y-auto hidden-scrollbar">
@@ -144,7 +144,7 @@
                   >
                     <div>
                       <p class="font-medium text-sm truncate w-40">{{ prod.nombre }}</p>
-                      <p class="text-xs pos-notif-min mt-1">MÃ­nimo: {{ prod.stock_minimo || 5 }}</p>
+                      <p class="text-xs pos-notif-min mt-1">Mínimo: {{ prod.stock_minimo || 5 }}</p>
                     </div>
                     <span class="pos-notif-stock font-bold text-sm px-2 py-1 rounded">Stock: {{ prod.stock }}</span>
                   </button>
@@ -170,10 +170,13 @@ import { useAuthStore } from '~/stores/auth'
 import { useCajaStore } from '~/stores/caja'
 import { useProductosStore } from '~/stores/productos'
 import { useDarkMode } from '~/composables/useDarkMode'
+import { useConfigStore } from '~/stores/config'
+import { canAccessSection, normalizeRolePermissions, type SectionKey } from '~/composables/useRolePermissions'
 
 const authStore = useAuthStore()
 const cajaStore = useCajaStore()
 const productosStore = useProductosStore()
+const configStore = useConfigStore()
 const { isDark, toggleDark, initDark } = useDarkMode()
 const sidebarOpen = ref(false)
 const isOnline = ref(import.meta.client ? navigator.onLine : true)
@@ -187,15 +190,20 @@ const seccionActual = computed(() => {
   if (route.path.startsWith('/caja')) return 'Caja'
   if (route.path.startsWith('/admin/productos')) return 'Inventario'
   if (route.path.startsWith('/admin/ajuste-stock')) return 'Ajuste Stock'
-  if (route.path.startsWith('/admin/categorias')) return 'Categorias'
+  if (route.path.startsWith('/admin/categorias')) return 'Categorías'
   if (route.path.startsWith('/admin/reportes')) return 'Reportes'
-  if (route.path.startsWith('/admin/configuracion')) return 'Configuracion'
+  if (route.path.startsWith('/admin/configuracion')) return 'Configuración'
   return 'GestorPOS'
 })
 
 const turnoLabel = computed(() =>
   cajaStore.hayTurnoActivo ? 'Turno activo' : 'Sin turno'
 )
+const rolePermissions = computed(() => normalizeRolePermissions(configStore.configuracion.role_permissions))
+
+function canAccess(section: SectionKey) {
+  return canAccessSection(authStore.rolUsuario, section, rolePermissions.value)
+}
 // Notificaciones
 const mostrarNotificaciones = ref(false)
 const productosBajoStock = computed(() => {
@@ -243,8 +251,10 @@ function closeMobile() {
 
 onMounted(() => {
   initDark()
+  authStore.fetchUser()
   cajaStore.fetchTurnoActivo()
   productosStore.fetchProductos()
+  configStore.fetchConfig()
   window.addEventListener('online', onConectado)
   window.addEventListener('offline', onDesconectado)
   document.addEventListener('click', onClickFueraNotificaciones)
@@ -268,7 +278,7 @@ onUnmounted(() => {
   position: relative;
 }
 
-/* â”€â”€â”€ Backdrop (mobile only) â”€â”€â”€ */
+/* Backdrop (mobile only) */
 .pos-sidebar-backdrop {
   display: none;
   position: fixed;
@@ -278,7 +288,7 @@ onUnmounted(() => {
   backdrop-filter: blur(2px);
 }
 
-/* â”€â”€â”€ Sidebar â”€â”€â”€ */
+/* Sidebar */
 .pos-sidebar {
   width: 240px;
   height: 100vh;
@@ -420,7 +430,7 @@ onUnmounted(() => {
   transition: background-color 0.3s ease;
 }
 
-/* â”€â”€â”€ Topbar â”€â”€â”€ */
+/* Topbar */
 .pos-topbar {
   display: flex;
   align-items: center;
@@ -602,7 +612,7 @@ onUnmounted(() => {
   background: rgba(239, 68, 68, 0.1) !important;
 }
 
-/* â”€â”€â”€ Responsive: tablet/mobile â”€â”€â”€ */
+/* Responsive: tablet/mobile */
 @media (max-width: 768px) {
   .pos-topbar-menu {
     display: flex;

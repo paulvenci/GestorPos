@@ -1,63 +1,81 @@
 import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 import type { Database } from '~/types/database.types'
+import { getDefaultRolePermissions, normalizeRolePermissions, type RolePermissionsMap } from '~/composables/useRolePermissions'
+
+interface AppConfigState {
+  margen_ganancia_defecto: number
+  stock_minimo_defecto: number
+  role_permissions: RolePermissionsMap
+}
 
 export const useConfigStore = defineStore('config', () => {
   const supabase = useSupabaseClient<Database>()
+  const defaultRolePermissions = getDefaultRolePermissions()
 
-  // Estado persistido en LocalStorage como fallback offline.
-  const configuracion = useLocalStorage('gestorpos_config', {
+  const configuracion = useLocalStorage<AppConfigState>('gestorpos_config', {
     margen_ganancia_defecto: 30,
     stock_minimo_defecto: 5,
+    role_permissions: defaultRolePermissions
   })
 
   const loading = ref(false)
 
-  // Obtener la config desde Supabase y sincronizarla
   const fetchConfig = async () => {
     loading.value = true
     try {
       const { data, error } = await supabase
         .from('configuracion')
-        .select('margen_ganancia_defecto, stock_minimo_defecto')
-        // Siempre hay solo una fila con id fijo
+        .select('*')
         .eq('id', '00000000-0000-0000-0000-000000000001')
         .single()
-      
+
       if (error && error.code !== 'PGRST116') {
         throw error
       }
-      
+
       if (data) {
-        configuracion.value.margen_ganancia_defecto = data.margen_ganancia_defecto || 30
-        configuracion.value.stock_minimo_defecto = data.stock_minimo_defecto || 5
+        const row = data as any
+        configuracion.value.margen_ganancia_defecto = row.margen_ganancia_defecto || 30
+        configuracion.value.stock_minimo_defecto = row.stock_minimo_defecto || 5
+        configuracion.value.role_permissions = normalizeRolePermissions(row.role_permissions)
       }
     } catch (err) {
-      console.error('Error cargando configuración', err)
-      // En modo offline continuará usando lo que está en configuracion localstorage
+      console.error('Error cargando configuracion', err)
     } finally {
       loading.value = false
     }
   }
 
-  // Guardar datos en la DB y actualizar localstorage
-  const saveConfig = async (nuevosAjustes: { margen_ganancia_defecto: number, stock_minimo_defecto: number }) => {
+  const saveConfig = async (nuevosAjustes: {
+    margen_ganancia_defecto: number
+    stock_minimo_defecto: number
+    role_permissions?: RolePermissionsMap
+  }) => {
     loading.value = true
     try {
-      const { error } = await supabase.from('configuracion')
-        .upsert({
-          id: '00000000-0000-0000-0000-000000000001',
-          margen_ganancia_defecto: nuevosAjustes.margen_ganancia_defecto,
-          stock_minimo_defecto: nuevosAjustes.stock_minimo_defecto,
-          updated_at: new Date().toISOString()
-        })
-      
+      const rolePermissions = normalizeRolePermissions(
+        nuevosAjustes.role_permissions || configuracion.value.role_permissions
+      )
+
+      const { error } = await (supabase.from('configuracion') as any).upsert({
+        id: '00000000-0000-0000-0000-000000000001',
+        margen_ganancia_defecto: nuevosAjustes.margen_ganancia_defecto,
+        stock_minimo_defecto: nuevosAjustes.stock_minimo_defecto,
+        role_permissions: rolePermissions,
+        updated_at: new Date().toISOString()
+      })
+
       if (error) throw error
 
-      configuracion.value = nuevosAjustes;
+      configuracion.value = {
+        margen_ganancia_defecto: nuevosAjustes.margen_ganancia_defecto,
+        stock_minimo_defecto: nuevosAjustes.stock_minimo_defecto,
+        role_permissions: rolePermissions
+      }
     } catch (err) {
-      console.error('Error guardando configuración', err)
-      throw err;
+      console.error('Error guardando configuracion', err)
+      throw err
     } finally {
       loading.value = false
     }
@@ -70,3 +88,4 @@ export const useConfigStore = defineStore('config', () => {
     saveConfig
   }
 })
+

@@ -3,21 +3,21 @@
     <!-- Encabezado -->
     <div class="admin-header">
       <div class="admin-header-actions">
-        <Button label="Nueva CategorÃ­a" icon="pi pi-plus" severity="success" @click="abrirNueva" />
+        <Button label="Nueva Categoría" icon="pi pi-plus" severity="success" @click="abrirNueva" />
       </div>
     </div>
 
-    <!-- Grid de CategorÃ­as -->
+    <!-- Grid de Categorias -->
     <div v-if="categoriasStore.loading" class="cat-loading">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem" />
-      <p>Cargando categorÃ­as...</p>
+      <p>Cargando categorías...</p>
     </div>
 
     <div v-else-if="categoriasStore.categorias.length === 0" class="cat-empty">
       <i class="pi pi-tags cat-empty-icon" />
-      <h3>Sin categorÃ­as</h3>
-      <p>Crea tu primera categorÃ­a para organizar los productos.</p>
-      <Button label="Crear categorÃ­a" icon="pi pi-plus" @click="abrirNueva" />
+      <h3>Sin categorías</h3>
+      <p>Crea tu primera categoría para organizar los productos.</p>
+      <Button label="Crear categoría" icon="pi pi-plus" @click="abrirNueva" />
     </div>
 
     <div v-else class="cat-grid">
@@ -31,7 +31,7 @@
           <div class="cat-card-color" :style="{ background: cat.color }" />
           <div class="cat-card-info">
             <h3 class="cat-card-name">{{ cat.nombre }}</h3>
-            <p class="cat-card-desc">{{ cat.descripcion || 'Sin descripciÃ³n' }}</p>
+            <p class="cat-card-desc">{{ cat.descripcion || 'Sin descripción' }}</p>
           </div>
           <Tag :value="cat.activo ? 'Activa' : 'Inactiva'" :severity="cat.activo ? 'success' : 'secondary'" />
         </div>
@@ -44,7 +44,7 @@
     </div>
 
     <!-- Dialog de Crear/Editar -->
-    <Dialog v-model:visible="mostrarDialogo" :header="editando ? 'Editar CategorÃ­a' : 'Nueva CategorÃ­a'" :modal="true" :style="{ width: '450px' }" class="p-fluid">
+    <Dialog v-model:visible="mostrarDialogo" :header="editando ? 'Editar Categoría' : 'Nueva Categoría'" :modal="true" :style="{ width: '450px' }" class="p-fluid">
       <div class="field mb-4">
         <label for="cat-nombre" class="font-bold mb-2 block">Nombre</label>
         <InputText id="cat-nombre" v-model.trim="categoriaActual.nombre" :class="{ 'p-invalid': submitted && !categoriaActual.nombre }" placeholder="Ej: Bebidas" />
@@ -52,8 +52,8 @@
       </div>
 
       <div class="field mb-4">
-        <label for="cat-desc" class="font-bold mb-2 block">DescripciÃ³n</label>
-        <InputText id="cat-desc" v-model.trim="categoriaActual.descripcion" placeholder="DescripciÃ³n opcional..." />
+        <label for="cat-desc" class="font-bold mb-2 block">Descripción</label>
+        <InputText id="cat-desc" v-model.trim="categoriaActual.descripcion" placeholder="Descripción opcional..." />
       </div>
 
       <div class="field mb-4">
@@ -72,15 +72,15 @@
 
       <template #footer>
         <Button label="Cancelar" icon="pi pi-times" text @click="mostrarDialogo = false" />
-        <Button :label="editando ? 'Guardar cambios' : 'Crear categorÃ­a'" icon="pi pi-check" @click="guardar" :loading="categoriasStore.loading" />
+        <Button :label="editando ? 'Guardar cambios' : 'Crear categoría'" icon="pi pi-check" @click="guardar" :loading="categoriasStore.loading" />
       </template>
     </Dialog>
 
-    <!-- Dialog de ConfirmaciÃ³n -->
-    <Dialog v-model:visible="mostrarConfirmacion" header="Confirmar eliminaciÃ³n" :modal="true" :style="{ width: '400px' }">
+    <!-- Dialog de Confirmacion -->
+    <Dialog v-model:visible="mostrarConfirmacion" header="Confirmar eliminación" :modal="true" :style="{ width: '400px' }">
       <div class="flex items-center gap-3 mb-4">
         <i class="pi pi-exclamation-triangle" style="font-size: 2rem; color: var(--p-red-500)" />
-        <span>Â¿EstÃ¡s seguro de que quieres eliminar la categorÃ­a <b>{{ categoriaEliminar?.nombre }}</b>?</span>
+        <span>¿Estás seguro de que quieres eliminar la categoría <b>{{ categoriaEliminar?.nombre }}</b>?</span>
       </div>
       <template #footer>
         <Button label="Cancelar" icon="pi pi-times" text @click="mostrarConfirmacion = false" />
@@ -139,7 +139,7 @@ async function ejecutarEliminar() {
   if (!categoriaEliminar.value) return
   try {
     await categoriasStore.deleteCategoria(categoriaEliminar.value.id)
-    toast.add({ severity: 'success', summary: 'Eliminada', detail: 'La categorÃ­a fue eliminada.', life: 3000 })
+    toast.add({ severity: 'success', summary: 'Eliminada', detail: 'La categoría fue eliminada.', life: 3000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: e.message, life: 5000 })
   }
@@ -155,7 +155,7 @@ async function guardar() {
     toast.add({
       severity: 'success',
       summary: editando.value ? 'Actualizada' : 'Creada',
-      detail: `CategorÃ­a "${categoriaActual.value.nombre}" ${editando.value ? 'actualizada' : 'creada'} correctamente.`,
+      detail: `Categoría "${categoriaActual.value.nombre}" ${editando.value ? 'actualizada' : 'creada'} correctamente.`,
       life: 3000
     })
     mostrarDialogo.value = false

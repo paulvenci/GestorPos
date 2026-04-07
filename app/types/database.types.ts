@@ -92,18 +92,21 @@ export type Database = {
         Row: {
           id: string
           margen_ganancia_defecto: number | null
+          role_permissions: Json | null
           stock_minimo_defecto: number | null
           updated_at: string | null
         }
         Insert: {
           id?: string
           margen_ganancia_defecto?: number | null
+          role_permissions?: Json | null
           stock_minimo_defecto?: number | null
           updated_at?: string | null
         }
         Update: {
           id?: string
           margen_ganancia_defecto?: number | null
+          role_permissions?: Json | null
           stock_minimo_defecto?: number | null
           updated_at?: string | null
         }

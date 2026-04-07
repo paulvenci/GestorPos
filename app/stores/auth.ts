@@ -8,6 +8,9 @@ export const useAuthStore = defineStore('auth', () => {
   const turnoActivo = ref<string | null>(null)
   const perfil = ref<{ nombre: string | null; rol: string } | null>(null)
 
+  const nombrePerfil = computed(() => perfil.value?.nombre?.trim() || '')
+  const nombreCorreo = computed(() => user.value?.email?.split('@')[0]?.trim() || '')
+
   async function fetchUser() {
     const { data } = await supabase.auth.getUser()
     user.value = data.user
@@ -47,7 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const isAuthenticated = computed(() => !!user.value)
-  const nombreUsuario = computed(() => perfil.value?.nombre || user.value?.email?.split('@')[0] || 'Usuario')
+  const nombreUsuario = computed(() => nombrePerfil.value || nombreCorreo.value || 'Sin nombre')
   const rolUsuario = computed(() => perfil.value?.rol || 'cajero')
 
   return { user, perfil, turnoActivo, isAuthenticated, nombreUsuario, rolUsuario, fetchUser, fetchPerfil, signIn, signOut }
