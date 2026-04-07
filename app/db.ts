@@ -21,6 +21,7 @@ export interface VentaOffline {
   turno_id: string;
   subtotal: number;
   total: number;
+  metodo_pago?: string;
   detalles: any[]; // Se tipificará mejor más adelante
   sync_status: 'pending' | 'synced' | 'error';
   created_at: string;

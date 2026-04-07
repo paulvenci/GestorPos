@@ -196,16 +196,16 @@ async function fetchUltimasVentas() {
 
 <style scoped>
 .dashboard-page {
-  padding: 2rem 2.5rem;
+  padding: 1.4rem 1.6rem;
   color: var(--text-app);
 }
 
 .dashboard-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.4rem;
 }
 
 .dashboard-header h1 {
-  font-size: 2rem;
+  font-size: 1.82rem;
   font-weight: 800;
   margin: 0;
   letter-spacing: -0.03em;
@@ -214,23 +214,23 @@ async function fetchUltimasVentas() {
 .dashboard-header p {
   color: var(--text-muted);
   margin: 0.25rem 0 0;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   text-transform: capitalize;
 }
 
 /* ─── KPI Grid ─── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.4rem;
 }
 
 .kpi-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
+  gap: 0.8rem;
+  padding: 1rem 1.05rem;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 1rem;
@@ -285,11 +285,11 @@ async function fetchUltimasVentas() {
 
 /* ─── Dashboard sections ─── */
 .dashboard-section {
-  margin-bottom: 2rem;
+  margin-bottom: 1.4rem;
 }
 
 .dashboard-section h2 {
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   font-weight: 700;
   margin: 0 0 1rem;
   display: flex;
@@ -317,7 +317,7 @@ async function fetchUltimasVentas() {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.85rem;
   border: none !important;
 }
 
@@ -328,14 +328,14 @@ async function fetchUltimasVentas() {
 
 :deep(.p-datatable-tbody > tr > td) {
   border-color: var(--border-subtle) !important;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.85rem;
 }
 
 /* ─── NavCard Grid ─── */
 .navcard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.65rem;
 }
 
 .navcard {
@@ -343,8 +343,8 @@ async function fetchUltimasVentas() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 1rem;
+  gap: 0.42rem;
+  padding: 0.75rem;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 0.75rem;
@@ -360,13 +360,100 @@ async function fetchUltimasVentas() {
 }
 
 .navcard-icon {
-  font-size: 1.25rem;
+  font-size: 1.12rem;
   color: var(--color-brand-primary);
 }
 
 .navcard-label {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 0.8rem 0.8rem 1rem;
+  }
+
+  .dashboard-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.78rem;
+  }
+
+  .dashboard-header p {
+    font-size: 0.78rem;
+    margin-top: 0.2rem;
+  }
+
+  .kpi-grid {
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-card {
+    padding: 0.72rem 0.78rem;
+    gap: 0.75rem;
+    border-radius: 0.85rem;
+  }
+
+  .kpi-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+    border-radius: 0.7rem;
+  }
+
+  .kpi-label {
+    font-size: 0.72rem;
+  }
+
+  .kpi-value {
+    font-size: 1.62rem;
+    line-height: 1;
+  }
+
+  .kpi-sub {
+    font-size: 0.72rem;
+  }
+
+  .dashboard-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .dashboard-section h2 {
+    font-size: 0.94rem;
+    margin-bottom: 0.65rem;
+  }
+
+  :deep(.p-datatable-thead > tr > th),
+  :deep(.p-datatable-tbody > tr > td) {
+    padding: 0.55rem 0.6rem !important;
+    font-size: 0.78rem;
+  }
+
+  .navcard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .navcard {
+    padding: 0.58rem 0.28rem;
+    border-radius: 0.7rem;
+    min-height: 68px;
+    gap: 0.3rem;
+  }
+
+  .navcard-icon {
+    font-size: 1.05rem;
+  }
+
+  .navcard-label {
+    font-size: 0.7rem;
+    line-height: 1.15;
+  }
 }
 </style>

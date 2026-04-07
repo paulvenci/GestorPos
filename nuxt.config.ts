@@ -1,12 +1,20 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import Aura from '@primevue/themes/aura';
 import tailwindcss from '@tailwindcss/vite';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf-8'));
+const resolvedAppVersion = process.env.APP_VERSION || packageJson.version || 'dev';
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false, // <-- IMPORTANTE: Modo SPA para Offline-First
   runtimeConfig: {
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || ''
+    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
+    public: {
+      appVersion: resolvedAppVersion
+    }
   },
   future: {
     compatibilityVersion: 4

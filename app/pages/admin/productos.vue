@@ -2,10 +2,6 @@
   <div class="admin-page">
     <!-- Encabezado -->
     <div class="admin-header">
-      <div class="admin-header-titles">
-        <h1>Inventario de Productos</h1>
-        <p>Administra el catálogo, precios, stock y genera etiquetas de códigos de barras.</p>
-      </div>
       <div class="admin-header-actions">
         <IconField class="admin-search">
           <InputIcon class="pi pi-search" />
@@ -85,7 +81,14 @@
     </DataTable>
 
     <!-- Modal Formulario -->
-    <Dialog v-model:visible="mostrarDialogo" :style="{ width: '750px' }" header="Detalles del Producto" :modal="true" class="p-fluid producto-dialog">
+    <Dialog
+      v-model:visible="mostrarDialogo"
+      :style="{ width: '750px' }"
+      :breakpoints="{ '1024px': '92vw', '768px': '96vw' }"
+      header="Detalles del Producto"
+      :modal="true"
+      class="p-fluid producto-dialog"
+    >
       <div class="producto-form-2col">
         <!-- Columna izquierda: Foto -->
         <div class="producto-col-foto">
@@ -177,11 +180,11 @@
           </div>
 
           <div class="producto-field-row">
-            <div class="producto-field" style="max-width: 50%;">
+            <div class="producto-field">
               <label for="stock">Stock Inicial</label>
               <InputNumber id="stock" v-model="productoActual.stock" />
             </div>
-            <div class="producto-field" style="max-width: 50%;">
+            <div class="producto-field">
               <label for="stock_minimo">Stock Mínimo</label>
               <InputNumber id="stock_minimo" v-model="productoActual.stock_minimo" />
             </div>
@@ -866,35 +869,28 @@ watch(
 
 .admin-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.admin-header-titles h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem;
-  color: var(--text-app);
-  letter-spacing: -0.03em;
-}
-
-.admin-header-titles p {
-  color: var(--text-muted);
-  margin: 0;
-  font-size: 0.95rem;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: var(--bg-app);
+  padding: 0.4rem 0;
 }
 
 .admin-header-actions {
   display: flex;
   gap: 1rem;
   align-items: center;
+  width: 100%;
 }
 
 .admin-search {
   width: 300px;
+  max-width: 100%;
 }
 
 :deep(.p-datatable) {
@@ -946,6 +942,16 @@ watch(
   grid-template-columns: 220px 1fr;
   gap: 1.5rem;
   padding: 0.5rem 0;
+}
+
+:deep(.producto-dialog .p-dialog-content) {
+  max-height: min(72dvh, 760px);
+  overflow-y: auto;
+}
+
+:deep(.producto-dialog .p-dialog-footer) {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.75rem;
 }
 
 .producto-col-foto {
@@ -1041,10 +1047,100 @@ watch(
 /* Admin search fix */
 :deep(.admin-search) {
   width: 300px;
+  max-width: 100%;
 }
 
 :deep(.admin-search input) {
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .admin-page {
+    padding: 0.75rem;
+  }
+
+  .admin-header {
+    margin-bottom: 0.55rem;
+    padding: 0.25rem 0;
+  }
+
+  .admin-header-actions {
+    width: 100%;
+    gap: 0.45rem;
+    align-items: stretch;
+  }
+
+  .admin-search {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  :deep(.admin-search) {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  :deep(.admin-header-actions .p-button) {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0.5rem 0.7rem !important;
+    font-size: 0.86rem !important;
+  }
+
+  :deep(.producto-dialog .p-dialog-header) {
+    padding: 0.7rem 0.85rem !important;
+  }
+
+  :deep(.producto-dialog .p-dialog-content) {
+    padding: 0.5rem 0.85rem 0.35rem !important;
+    max-height: 74dvh;
+  }
+
+  :deep(.producto-dialog .p-dialog-footer) {
+    padding: 0.55rem 0.85rem calc(0.55rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .producto-form-2col {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    padding: 0.25rem 0 0.1rem;
+  }
+
+  .producto-col-foto {
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .producto-foto-area {
+    width: 100%;
+    max-width: 180px;
+    height: 150px;
+    margin: 0 auto;
+  }
+
+  .producto-foto-actions {
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .producto-col-fields {
+    gap: 0.7rem;
+  }
+
+  .producto-field {
+    gap: 0.35rem;
+  }
+
+  .producto-field-row {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .producto-field label {
+    font-size: 0.82rem;
+  }
 }
 </style>
 

@@ -154,6 +154,7 @@ export const usePosStore = defineStore('pos', () => {
             turno_id: idTurno as string,
             subtotal: subtotal.value,
             total: total.value,
+            metodo_pago: metodoPago,
             detalles: items,
             sync_status: 'pending',
             created_at: new Date().toISOString()

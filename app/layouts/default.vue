@@ -7,11 +7,6 @@
       @click="sidebarOpen = false" 
     />
 
-    <!-- Botón hamburguesa (mobile) -->
-    <button class="pos-hamburger" @click="sidebarOpen = !sidebarOpen">
-      <i :class="sidebarOpen ? 'pi pi-times' : 'pi pi-bars'" />
-    </button>
-
     <!-- Sidebar de Navegación -->
     <aside class="pos-sidebar" :class="{ 'pos-sidebar--open': sidebarOpen }">
       <div class="pos-sidebar-logo">
@@ -89,15 +84,11 @@
     <!-- Contenido Principal -->
     <main class="pos-main-content">
       <!-- Topbar de estado -->
-      <div class="pos-topbar">
+      <div class="pos-topbar" :class="{ 'pos-topbar--pos-route': route.path.startsWith('/pos') }">
         <div class="pos-topbar-left">
-          <div v-if="mostrarAvisoTurnoPos" class="pos-turno-alerta">
-            <i class="pi pi-info-circle" />
-            <span>Operando fuera de turno</span>
-            <NuxtLink to="/caja">
-              <Button label="Abrir turno" icon="pi pi-play" size="small" text severity="warning" />
-            </NuxtLink>
-          </div>
+          <button class="pos-topbar-menu" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen ? 'true' : 'false'" aria-label="Abrir menú">
+            <i :class="sidebarOpen ? 'pi pi-times' : 'pi pi-bars'" />
+          </button>
         </div>
         <div class="pos-topbar-info flex items-center gap-4">
           <Tag
@@ -106,6 +97,22 @@
             :icon="isOnline ? 'pi pi-wifi' : 'pi pi-wifi'"
             class="pos-online-tag"
           />
+
+          <!-- Divisor -->
+          <div class="h-6 w-px bg-slate-200 dark:bg-slate-700" />
+
+          <!-- Saludo y Turno -->
+          <span class="pos-topbar-greeting">
+            <i class="pi pi-user" />
+            {{ authStore.nombreUsuario }}
+          </span>
+          <Tag
+            :value="turnoLabel"
+            :severity="cajaStore.hayTurnoActivo ? 'success' : 'warn'"
+            :icon="cajaStore.hayTurnoActivo ? 'pi pi-check-circle' : 'pi pi-minus-circle'"
+            class="pos-turno-tag"
+          />
+          <span class="pos-app-version">v{{ appVersion }}</span>
 
           <!-- Notificaciones Stock Mínimo -->
           <div ref="notificacionesRef" class="relative">
@@ -147,20 +154,6 @@
                 </div>
              </div>
           </div>
-
-          <!-- Divisor -->
-          <div class="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-
-          <!-- Saludo y Turno -->
-          <span class="pos-topbar-greeting">
-            <i class="pi pi-user" />
-            {{ authStore.nombreUsuario }}
-          </span>
-          <Tag
-            :value="turnoLabel"
-            :severity="cajaStore.hayTurnoActivo ? 'success' : 'warn'"
-            :icon="cajaStore.hayTurnoActivo ? 'pi pi-check-circle' : 'pi pi-minus-circle'"
-          />
         </div>
       </div>
       <div class="pos-content-scroll">
@@ -184,14 +177,12 @@ const sidebarOpen = ref(false)
 const isOnline = ref(import.meta.client ? navigator.onLine : true)
 const notificacionesRef = ref<HTMLElement | null>(null)
 const route = useRoute()
+const runtimeConfig = useRuntimeConfig()
+const appVersion = computed(() => String(runtimeConfig.public.appVersion || 'dev'))
 
 const turnoLabel = computed(() =>
   cajaStore.hayTurnoActivo ? 'Turno activo' : 'Sin turno'
 )
-const mostrarAvisoTurnoPos = computed(() =>
-  route.path.startsWith('/pos') && !cajaStore.hayTurnoActivo && !cajaStore.loading
-)
-
 // Notificaciones
 const mostrarNotificaciones = ref(false)
 const productosBajoStock = computed(() => {
@@ -258,29 +249,10 @@ onUnmounted(() => {
 <style scoped>
 .pos-layout-wrapper {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
   overflow: hidden;
   position: relative;
-}
-
-/* ─── Hamburger button (mobile only) ─── */
-.pos-hamburger {
-  display: none;
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 1001;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border-sidebar);
-  background: var(--bg-sidebar);
-  color: var(--text-app);
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 /* ─── Backdrop (mobile only) ─── */
@@ -419,7 +391,8 @@ onUnmounted(() => {
 .pos-main-content {
   flex: 1;
   background: var(--bg-app);
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -442,6 +415,35 @@ onUnmounted(() => {
 .pos-topbar-left {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pos-topbar-menu {
+  display: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border-sidebar);
+  background: var(--bg-app);
+  color: var(--text-app);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.pos-topbar-menu:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  color: var(--color-brand-primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.pos-topbar-menu:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
 }
 
 .pos-content-scroll {
@@ -468,6 +470,16 @@ onUnmounted(() => {
 .pos-topbar-greeting i {
   font-size: 0.9rem;
   color: var(--color-brand-primary);
+}
+
+.pos-app-version {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .pos-turno-alerta {
@@ -567,8 +579,10 @@ onUnmounted(() => {
 
 /* ─── Responsive: tablet/mobile ─── */
 @media (max-width: 768px) {
-  .pos-hamburger {
+  .pos-topbar-menu {
     display: flex;
+    width: 1.95rem;
+    height: 1.95rem;
   }
 
   .pos-sidebar-backdrop {
@@ -589,11 +603,64 @@ onUnmounted(() => {
   }
 
   .pos-main-content {
-    padding-top: 3.5rem;
+    padding-top: 0;
   }
 
   .pos-topbar {
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.6rem;
+    gap: 0.4rem;
+  }
+
+  .pos-topbar--pos-route .pos-topbar-greeting {
+    display: none;
+  }
+
+  .pos-topbar--pos-route .pos-app-version {
+    display: none;
+  }
+
+  .pos-topbar-info {
+    gap: 0.35rem !important;
+  }
+
+  .pos-topbar-info > div.h-6 {
+    display: none;
+  }
+
+  .pos-bell-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.55rem;
+  }
+
+  .pos-topbar-greeting {
+    font-size: 0.78rem;
+    gap: 0.25rem;
+  }
+
+  .pos-topbar-greeting i {
+    font-size: 0.78rem;
+  }
+
+  .pos-online-tag :deep(.p-tag) {
+    padding: 0.18rem 0.42rem !important;
+    font-size: 0.72rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .pos-topbar-info :deep(.p-tag) {
+    font-size: 0.72rem !important;
+  }
+
+  .pos-turno-alerta {
+    padding: 0.24rem 0.42rem;
+    font-size: 0.7rem;
+    gap: 0.24rem;
+  }
+
+  .pos-turno-alerta :deep(.p-button) {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.72rem !important;
   }
 }
 </style>

@@ -25,14 +25,6 @@
             <i class="pi pi-spin pi-spinner" />
           </span>
         </div>
-        <Button
-          icon="pi pi-plus"
-          severity="info"
-          aria-label="Nuevo Producto"
-          class="pos-add-btn"
-          @click="pedirAutorizacion"
-          title="Ingresar Nuevo Producto"
-        />
       </div>
 
         <!-- Badge offline -->
@@ -41,63 +33,64 @@
           Modo Offline
         </div>
 
-      <!-- Resultados de búsqueda -->
-      <Transition name="slide-down">
-        <div v-if="posStore.resultados.length > 0" class="pos-resultados">
-          <div
-            v-for="(prod, idx) in posStore.resultados"
-            :key="prod.id"
-            class="pos-resultado-item"
-            :class="{ 'pos-resultado-item--first': idx === 0 }"
-            tabindex="0"
-            @click="seleccionarProducto(prod)"
-            @keydown.enter="seleccionarProducto(prod)"
-          >
-            <img v-if="prod.imagen_url" :src="prod.imagen_url" class="pos-resultado-thumb" alt="" />
-            <div v-else class="pos-resultado-thumb pos-resultado-thumb--empty">
-              <i class="pi pi-box" />
-            </div>
-            <div class="pos-resultado-info">
-              <span class="pos-resultado-nombre">{{ prod.nombre }}</span>
-              <span class="pos-resultado-sku">{{ prod.sku }}</span>
-            </div>
-            <div class="pos-resultado-derecha">
-              <span class="pos-resultado-precio">{{ formatMonto(prod.precio) }}</span>
-              <Tag
-                :value="`Stock: ${prod.stock}`"
-                :severity="prod.stock > 0 ? 'success' : 'danger'"
-                class="pos-resultado-stock"
-              />
-            </div>
+      <div class="pos-resultados-area">
+        <div v-if="!posStore.busqueda && topVendidos.length > 0" class="pos-catalogo pos-catalogo--top">
+          <h3 class="pos-catalogo-title">Top 10 más vendidos</h3>
+          <div class="pos-catalogo-grid">
+            <button
+              v-for="item in topVendidos"
+              :key="item.id"
+              class="pos-catalogo-item"
+              :disabled="!item.es_pesable && item.stock === 0"
+              @click="seleccionarProducto(item)"
+            >
+              <img v-if="item.imagen_url" :src="item.imagen_url" class="pos-catalogo-img" alt="" />
+              <div v-else class="pos-catalogo-img pos-catalogo-img--empty">
+                <i class="pi pi-box" />
+              </div>
+              <span class="pos-catalogo-nombre">{{ item.nombre }}</span>
+              <span class="pos-catalogo-precio">{{ formatMonto(item.precio) }}</span>
+            </button>
           </div>
         </div>
-      </Transition>
 
-      <!-- Catálogo rápido (cuando no hay búsqueda) -->
-      <div v-if="!posStore.busqueda && productosDestacados.length > 0" class="pos-catalogo">
-        <h3 class="pos-catalogo-title">Acceso Rápido</h3>
-        <div class="pos-catalogo-grid">
-          <button
-            v-for="prod in productosDestacados"
-            :key="prod.id"
-            class="pos-catalogo-item"
-            :disabled="!prod.es_pesable && prod.stock === 0"
-            @click="seleccionarProducto(prod)"
-          >
-            <img v-if="prod.imagen_url" :src="prod.imagen_url" class="pos-catalogo-img" alt="" />
-            <div v-else class="pos-catalogo-img pos-catalogo-img--empty">
-              <i class="pi pi-box" />
+        <!-- Resultados de búsqueda -->
+        <Transition name="slide-down">
+          <div v-if="posStore.resultados.length > 0" class="pos-resultados">
+            <div
+              v-for="(prod, idx) in posStore.resultados"
+              :key="prod.id"
+              class="pos-resultado-item"
+              :class="{ 'pos-resultado-item--first': idx === 0 }"
+              tabindex="0"
+              @click="seleccionarProducto(prod)"
+              @keydown.enter="seleccionarProducto(prod)"
+            >
+              <img v-if="prod.imagen_url" :src="prod.imagen_url" class="pos-resultado-thumb" alt="" />
+              <div v-else class="pos-resultado-thumb pos-resultado-thumb--empty">
+                <i class="pi pi-box" />
+              </div>
+              <div class="pos-resultado-info">
+                <span class="pos-resultado-nombre">{{ prod.nombre }}</span>
+                <span class="pos-resultado-sku">{{ prod.sku }}</span>
+              </div>
+              <div class="pos-resultado-derecha">
+                <span class="pos-resultado-precio">{{ formatMonto(prod.precio) }}</span>
+                <Tag
+                  :value="`Stock: ${prod.stock}`"
+                  :severity="prod.stock > 0 ? 'success' : 'danger'"
+                  class="pos-resultado-stock"
+                />
+              </div>
             </div>
-            <span class="pos-catalogo-nombre">{{ prod.nombre }}</span>
-            <span class="pos-catalogo-precio">{{ formatMonto(prod.precio) }}</span>
-          </button>
-        </div>
-      </div>
+          </div>
+        </Transition>
 
-      <!-- Estado vacío inicial -->
-      <div v-if="!posStore.busqueda && productosDestacados.length === 0" class="pos-vacio">
-        <i class="pi pi-search" style="font-size: 3rem; color: #334155;" />
-        <p>Escanea o escribe para buscar productos</p>
+        <div v-if="posStore.busqueda && !posStore.buscando && posStore.resultados.length === 0" class="pos-vacio">
+          <i class="pi pi-search-minus" style="font-size: 2rem; color: #64748b;" />
+          <p>No se encontraron productos para tu búsqueda</p>
+        </div>
+
       </div>
     </div>
 
@@ -202,16 +195,38 @@
     v-model:visible="mostrarConfirmacion"
     modal
     header="Confirmar Venta"
-    :style="{ width: '400px' }"
+    :style="{ width: '430px' }"
   >
     <div class="dialog-body">
       <div class="confirm-total">
         <span class="confirm-total-label">Total a cobrar</span>
         <span class="confirm-total-monto">{{ formatMonto(posStore.total) }}</span>
       </div>
-      <div class="confirm-metodo">
-        <i :class="metodosPago.find(m => m.value === metodoPago)?.icon" />
-        <span>{{ metodosPago.find(m => m.value === metodoPago)?.label }}</span>
+
+      <div class="confirm-pagos">
+        <div class="confirm-pago-row">
+          <label>Efectivo</label>
+          <InputNumber v-model="pagoEfectivo" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" />
+        </div>
+        <div class="confirm-pago-row">
+          <label>Tarjeta</label>
+          <InputNumber v-model="pagoTarjeta" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" />
+        </div>
+        <div class="confirm-pago-row">
+          <label>Transferencia</label>
+          <InputNumber v-model="pagoTransferencia" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" />
+        </div>
+      </div>
+
+      <div class="confirm-resumen-pago">
+        <div class="confirm-resumen-row">
+          <span>Pagado</span>
+          <strong>{{ formatMonto(totalPagado) }}</strong>
+        </div>
+        <div class="confirm-resumen-row" :class="{ 'confirm-resumen-row--ok': saldoPendiente === 0, 'confirm-resumen-row--warn': saldoPendiente !== 0 }">
+          <span>{{ saldoPendiente >= 0 ? 'Pendiente' : 'Excedente' }}</span>
+          <strong>{{ formatMonto(Math.abs(saldoPendiente)) }}</strong>
+        </div>
       </div>
     </div>
     <template #footer>
@@ -220,7 +235,7 @@
         label="Confirmar cobro"
         icon="pi pi-check"
         :loading="posStore.procesando || confirmandoCobro"
-        :disabled="confirmandoCobro"
+        :disabled="confirmandoCobro || !pagoValido"
         class="pos-btn-cta"
         @click="confirmarCobro"
       />
@@ -338,6 +353,7 @@ const cajaStore = useCajaStore()
 const posStore = usePosStore()
 const toast = useToast()
 const { formatMonto } = useFormatMonto()
+const supabase = useSupabaseClient<Database>()
 const ultimosToasts = new Map<string, number>()
 
 function addToastUnico(
@@ -358,8 +374,11 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 const mostrarConfirmacion = ref(false)
 const confirmandoCobro = ref(false)
 const metodoPago = ref('efectivo')
+const pagoEfectivo = ref(0)
+const pagoTarjeta = ref(0)
+const pagoTransferencia = ref(0)
 const isOnline = ref(import.meta.client ? navigator.onLine : true)
-const productosDestacados = ref<ProductoLocal[]>([])
+const topVendidos = ref<ProductoLocal[]>([])
 const onDesconectado = () => { isOnline.value = false }
 
 const metodosPago = [
@@ -367,6 +386,15 @@ const metodosPago = [
   { value: 'tarjeta', label: 'Tarjeta', icon: 'pi pi-credit-card' },
   { value: 'transferencia', label: 'Transferencia', icon: 'pi pi-send' }
 ]
+
+const totalPagado = computed(() =>
+  (Number(pagoEfectivo.value) || 0) +
+  (Number(pagoTarjeta.value) || 0) +
+  (Number(pagoTransferencia.value) || 0)
+)
+
+const saldoPendiente = computed(() => Math.round((posStore.total - totalPagado.value)))
+const pagoValido = computed(() => posStore.total > 0 && saldoPendiente.value === 0 && totalPagado.value > 0)
 
 type TicketItem = {
   nombre: string
@@ -381,9 +409,7 @@ type TicketItem = {
 onMounted(async () => {
   await cajaStore.fetchTurnoActivo()
   await posStore.sincronizarCatalogo()
-
-  // Cargar productos destacados (Dexie)
-  productosDestacados.value = await db.productos.limit(20).toArray()
+  await cargarTopVendidos()
 
   // Auto-focus en el input de búsqueda
   nextTick(() => searchInputRef.value?.focus())
@@ -397,6 +423,26 @@ onUnmounted(() => {
   window.removeEventListener('online', onConectado)
   window.removeEventListener('offline', onDesconectado)
 })
+
+async function cargarTopVendidos() {
+  try {
+    const { data: topData, error } = await supabase.rpc('get_top_productos', { dias_historial: 30 })
+    if (error || !topData?.length) {
+      topVendidos.value = []
+      return
+    }
+
+    const idsTop = (topData as Array<{ producto_id: string }>).map((p) => p.producto_id)
+    const catalogo = await db.productos.toArray()
+    const byId = new Map(catalogo.map((p) => [p.id, p]))
+    topVendidos.value = idsTop
+      .map((id) => byId.get(id))
+      .filter((p): p is ProductoLocal => !!p)
+      .slice(0, 10)
+  } catch {
+    topVendidos.value = []
+  }
+}
 
 async function onConectado() {
   isOnline.value = true
@@ -772,11 +818,13 @@ async function crearProductoRapido() {
 // ─── Cobro ────────────────────────────────────────────────
 function cobrar() {
   if (posStore.carrito.length === 0) return
+  prepararPagosSegunMetodo()
   mostrarConfirmacion.value = true
 }
 
 async function confirmarCobro() {
   if (confirmandoCobro.value) return
+  if (!pagoValido.value) return
   confirmandoCobro.value = true
 
   const totalCobrado = posStore.total
@@ -789,10 +837,13 @@ async function confirmarCobro() {
     subtotal: item.precio * item.cantidad * (1 - item.descuento / 100)
   }))
   const fechaTicket = new Date()
+  const detallePago = construirDetallePago()
+  const metodoPagoFinal = detallePago.metodo
+  const metodoPagoEtiqueta = detallePago.etiqueta
 
   try {
     const turnoId = cajaStore.turnoActivo?.id ?? null
-    const ventaId = await posStore.registrarVenta(turnoId, metodoPago.value)
+    const ventaId = await posStore.registrarVenta(turnoId, metodoPagoFinal)
     mostrarConfirmacion.value = false
     const label = turnoId ? '¡Venta registrada!' : 'Venta fuera de turno registrada'
     toast.add({
@@ -804,7 +855,7 @@ async function confirmarCobro() {
     imprimirComprobante80mm({
       ventaId: String(ventaId || '').slice(0, 8).toUpperCase() || 'N/A',
       fecha: fechaTicket,
-      metodoPago: metodoPago.value,
+      metodoPago: metodoPagoEtiqueta,
       items: itemsTicket,
       total: totalCobrado,
       estado: 'emitido'
@@ -823,7 +874,7 @@ async function confirmarCobro() {
       imprimirComprobante80mm({
         ventaId: 'PENDIENTE',
         fecha: fechaTicket,
-        metodoPago: metodoPago.value,
+        metodoPago: metodoPagoEtiqueta,
         items: itemsTicket,
         total: totalCobrado,
         estado: 'pendiente'
@@ -840,6 +891,45 @@ async function confirmarCobro() {
     }
   } finally {
     confirmandoCobro.value = false
+  }
+}
+
+function prepararPagosSegunMetodo() {
+  const total = Math.round(posStore.total)
+  pagoEfectivo.value = 0
+  pagoTarjeta.value = 0
+  pagoTransferencia.value = 0
+
+  if (metodoPago.value === 'tarjeta') {
+    pagoTarjeta.value = total
+    return
+  }
+  if (metodoPago.value === 'transferencia') {
+    pagoTransferencia.value = total
+    return
+  }
+  pagoEfectivo.value = total
+}
+
+function construirDetallePago() {
+  const efectivo = Math.round(Number(pagoEfectivo.value) || 0)
+  const tarjeta = Math.round(Number(pagoTarjeta.value) || 0)
+  const transferencia = Math.round(Number(pagoTransferencia.value) || 0)
+  const partes: string[] = []
+  if (efectivo > 0) partes.push(`Efectivo ${formatMonto(efectivo)}`)
+  if (tarjeta > 0) partes.push(`Tarjeta ${formatMonto(tarjeta)}`)
+  if (transferencia > 0) partes.push(`Transferencia ${formatMonto(transferencia)}`)
+
+  const cantidadMetodos = [efectivo, tarjeta, transferencia].filter(v => v > 0).length
+  if (cantidadMetodos <= 1) {
+    if (efectivo > 0) return { metodo: 'efectivo', etiqueta: partes[0] || 'Efectivo' }
+    if (tarjeta > 0) return { metodo: 'tarjeta', etiqueta: partes[0] || 'Tarjeta' }
+    return { metodo: 'transferencia', etiqueta: partes[0] || 'Transferencia' }
+  }
+
+  return {
+    metodo: 'mixto',
+    etiqueta: `Mixto: ${partes.join(' + ')}`
   }
 }
 
@@ -952,7 +1042,7 @@ async function sincronizarColaOffline() {
         p_impuestos: 0,
         p_descuentos: 0,
         p_total: venta.total,
-        p_metodo_pago: 'efectivo',
+        p_metodo_pago: venta.metodo_pago || 'efectivo',
         p_items: venta.detalles
       })
       if (!error) {
@@ -995,7 +1085,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
+  padding: 1rem;
   border-right: 1px solid var(--border-subtle);
   overflow-y: auto;
   min-height: 0;
@@ -1005,12 +1095,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.85rem;
   position: sticky;
   top: 0;
   z-index: 8;
   background: var(--bg-app);
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.6rem;
 }
 
 .pos-search-input-wrap {
@@ -1064,13 +1154,6 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
     background: rgba(99, 102, 241, 0.05) !important;
 }
 
-:deep(.pos-add-btn) {
-  min-width: 2.85rem !important;
-  height: 2.85rem !important;
-  border-radius: 0.875rem !important;
-  flex-shrink: 0;
-}
-
 .pos-search-input:focus {
   border-color: rgba(99, 102, 241, 0.6);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
@@ -1094,14 +1177,23 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   white-space: nowrap;
 }
 
+.pos-resultados-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ─── Resultados ─── */
 .pos-resultados {
   background: var(--bg-surface);
   border: 1px solid var(--border-sidebar);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   border-radius: 0.875rem;
-  overflow: hidden;
-  margin-bottom: 1rem;
+  overflow-y: auto;
+  margin-bottom: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .pos-resultado-item {
@@ -1176,6 +1268,10 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   flex: 1;
 }
 
+.pos-catalogo--top {
+  margin-bottom: 0.75rem;
+}
+
 .pos-catalogo-title {
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -1187,7 +1283,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 .pos-catalogo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
   gap: 0.625rem;
 }
 
@@ -1195,7 +1291,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 0.75rem;
-  padding: 0.875rem;
+  padding: 0.7rem;
   cursor: pointer;
   text-align: center;
   display: flex;
@@ -1207,8 +1303,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .pos-catalogo-img {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   border-radius: 0.5rem;
   object-fit: cover;
   flex-shrink: 0;
@@ -1235,14 +1331,14 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .pos-catalogo-nombre {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-app);
   line-height: 1.3;
 }
 
 .pos-catalogo-precio {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #4ade80;
 }
@@ -1259,7 +1355,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 /* ─── Panel derecho: Carrito ─── */
 .pos-panel-right {
-  width: 380px;
+  width: 350px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1273,18 +1369,20 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  padding: 0.34rem 0.72rem;
+  min-height: 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .pos-carrito-title {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 1rem;
+  gap: 0.38rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #e2e8f0;
-  margin: 0;
+  margin: 0 !important;
+  line-height: 1.05;
 }
 
 .pos-carrito-badge {
@@ -1307,9 +1405,10 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .pos-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.75rem;
+  column-gap: 0.75rem;
   padding: 0.75rem 0.875rem;
   background: var(--bg-app);
   border: 1px solid var(--border-subtle);
@@ -1318,11 +1417,11 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .pos-item:hover {
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .pos-item-info {
-  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -1347,9 +1446,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 .pos-item-controles {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  justify-content: center;
+  justify-self: center;
+  gap: 0.3rem;
+  min-width: 7rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-sidebar);
   border-radius: 2rem;
   padding: 0.2rem;
 }
@@ -1359,8 +1461,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   height: 1.6rem;
   border-radius: 50%;
   border: none;
-  background: transparent;
-  color: #94a3b8;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-app);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1371,25 +1473,29 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 .pos-item-btn:hover {
   background: rgba(99, 102, 241, 0.2);
-  color: #a5b4fc;
+  color: var(--color-brand-primary);
 }
 
 .pos-item-cantidad {
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--text-app);
   font-size: 0.875rem;
-  min-width: 1.5rem;
+  min-width: 2.7rem;
+  font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
 .pos-item-precio-col {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .pos-item-precio {
-  font-size: 0.875rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: #4ade80;
   white-space: nowrap;
@@ -1572,13 +1678,50 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   letter-spacing: -0.04em;
 }
 
-.confirm-metodo {
+.confirm-pagos {
   display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.confirm-pago-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
+}
+
+.confirm-pago-row label {
+  font-size: 0.84rem;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.confirm-resumen-pago {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.7rem;
+  background: var(--bg-app);
+}
+
+.confirm-resumen-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.86rem;
+}
+
+.confirm-resumen-row + .confirm-resumen-row {
+  margin-top: 0.25rem;
+}
+
+.confirm-resumen-row--ok {
+  color: #16a34a;
+}
+
+.confirm-resumen-row--warn {
+  color: #ea580c;
 }
 
 /* ─── Transiciones ─── */
@@ -1616,40 +1759,237 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   .pos-panel-left {
     border-right: none;
     border-bottom: 1px solid var(--border-subtle);
-    padding: 1rem;
+    padding: 0.85rem;
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+    padding-bottom: 0.5rem;
   }
 
   .pos-panel-right {
     width: 100%;
-    height: 42vh;
+    height: auto;
+    flex: 1;
+    min-height: 260px;
     border-left: none;
+  }
+
+  .pos-resultados-area {
+    flex: 0 0 auto;
+  }
+
+  .pos-resultados {
+    flex: 0 0 auto;
+    max-height: 36dvh;
+    margin-top: 0.35rem;
+  }
+
+  .pos-catalogo--top {
+    display: none;
   }
 }
 
 @media (max-width: 768px) {
-  .pos-search-bar {
-    gap: 0.5rem;
-    padding-bottom: 0.5rem;
+  .pos-panel-left {
+    padding: 0.65rem;
+    padding-bottom: 0.35rem;
   }
 
-  :deep(.pos-add-btn) {
-    min-width: 2.6rem !important;
-    height: 2.6rem !important;
+  .pos-search-bar {
+    gap: 0.45rem;
+    padding-bottom: 0.45rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .pos-scan-btn {
+    padding: 0 0.75rem !important;
   }
 
   .pos-search-input {
-    font-size: 0.95rem;
-    padding: 0.78rem 0.85rem;
+    font-size: 0.9rem;
+    padding: 0.66rem 0.72rem;
+    border-radius: 0.75rem;
+  }
+
+  .pos-catalogo-title {
+    font-size: 0.72rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .pos-catalogo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .pos-catalogo-item {
+    padding: 0.45rem 0.35rem;
+    border-radius: 0.6rem;
+    gap: 0.35rem;
+  }
+
+  .pos-catalogo-img {
+    width: 34px;
+    height: 34px;
+    border-radius: 0.45rem;
+  }
+
+  .pos-catalogo-nombre {
+    font-size: 0.68rem;
+    line-height: 1.15;
+  }
+
+  .pos-catalogo-precio {
+    font-size: 0.72rem;
+  }
+
+  .pos-resultados {
+    margin-bottom: 0;
+  }
+
+  .pos-resultado-item {
+    padding: 0.55rem 0.62rem;
+    gap: 0.5rem;
+  }
+
+  .pos-resultado-thumb {
+    width: 30px;
+    height: 30px;
+  }
+
+  .pos-resultado-nombre {
+    font-size: 0.78rem;
+  }
+
+  .pos-resultado-sku {
+    font-size: 0.66rem;
+  }
+
+  .pos-resultado-derecha {
+    gap: 0.4rem;
+  }
+
+  .pos-resultado-stock {
+    display: none;
+  }
+
+  .pos-resultado-precio {
+    font-size: 0.82rem;
   }
 
   .pos-panel-right {
-    height: 48vh;
+    height: auto;
+    flex: 1;
+    min-height: 245px;
   }
 
   .pos-carrito-header,
   .pos-carrito-footer {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 0.72rem;
+    padding-right: 0.72rem;
+  }
+
+  .pos-carrito-header {
+    padding-top: 0.28rem;
+    padding-bottom: 0.28rem;
+  }
+
+  .pos-carrito-title {
+    font-size: 0.9rem;
+    gap: 0.4rem;
+  }
+
+  .pos-carrito-items {
+    padding: 0.5rem 0.62rem;
+    gap: 0.42rem;
+  }
+
+  .pos-item {
+    padding: 0.55rem 0.6rem;
+    gap: 0.45rem;
+  }
+
+  .pos-item-controles {
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 6.2rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-sidebar);
+  }
+
+  .pos-item-btn {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--text-app);
+  }
+
+  .pos-item-btn:hover {
+    color: var(--color-brand-primary);
+  }
+
+  .pos-item-nombre {
+    font-size: 0.78rem;
+  }
+
+  .pos-item-sku {
+    font-size: 0.62rem;
+  }
+
+  .pos-item-cantidad,
+  .pos-item-precio {
+    font-size: 0.82rem;
+  }
+
+  .pos-item-cantidad {
+    min-width: 2.7rem;
+    color: var(--text-app);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pos-item-precio-col {
+    justify-content: flex-end;
+    min-width: 6.7rem;
+  }
+
+  .pos-item-precio {
+    font-size: 0.9rem;
+  }
+
+  .pos-item-eliminar {
+    display: none;
+  }
+
+  .pos-carrito-footer {
+    gap: 0.6rem;
+    padding-top: 0.65rem;
+    padding-bottom: calc(0.65rem + env(safe-area-inset-bottom));
+  }
+
+  .pos-total-label {
+    font-size: 0.78rem;
+  }
+
+  .pos-total-monto {
+    font-size: 1.45rem;
+  }
+
+  .pos-metodo-btn {
+    font-size: 0.66rem;
+    padding: 0.42rem 0.2rem;
+  }
+
+  .pos-metodo-btn .pi {
+    font-size: 0.88rem;
+  }
+
+  :deep(.pos-cobrar-btn) {
+    font-size: 0.86rem !important;
+    padding: 0.58rem 0.75rem !important;
+    border-radius: 0.65rem !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .pos-catalogo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

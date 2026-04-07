@@ -119,7 +119,7 @@
             <Column field="cajero" header="Cajero">
               <template #body="slotProps">
                 <span class="text-sm font-medium">
-                  {{ perfiles[slotProps.data.turnos_caja?.id_usuario]?.nombre || '...' }}
+                  {{ perfiles[slotProps.data.id_usuario || slotProps.data.turnos_caja?.id_usuario]?.nombre || '...' }}
                 </span>
               </template>
             </Column>
@@ -424,12 +424,29 @@ async function fetchVentasHoy() {
 
     const { data, error } = await supabase
       .from('ventas')
-      .select('id, fecha, total, subtotal, metodo_pago, id_turno, turnos_caja(id_usuario), detalle_ventas(cantidad, precio_unitario, subtotal, productos(nombre))')
+      .select('id, fecha, total, subtotal, metodo_pago, id_turno, id_usuario, turnos_caja(id_usuario), detalle_ventas(cantidad, precio_unitario, subtotal, productos(nombre))')
       .gte('fecha', inicioDia)
       .order('fecha', { ascending: false })
 
     if (error) throw error
     ventasHoy.value = data || []
+
+    // Asegurar nombres de cajero incluso en ventas fuera de turno (id_usuario en ventas).
+    const idsCajeros = Array.from(new Set(
+      (ventasHoy.value || [])
+        .map((v: any) => v.id_usuario || v.turnos_caja?.id_usuario)
+        .filter(Boolean)
+    ))
+    const idsFaltantes = idsCajeros.filter((id) => !perfiles.value[id])
+    if (idsFaltantes.length > 0) {
+      const { data: perfilesData } = await supabase
+        .from('perfiles')
+        .select('id, nombre')
+        .in('id', idsFaltantes)
+      ;(perfilesData || []).forEach((p: any) => {
+        perfiles.value[p.id] = p
+      })
+    }
   } catch (error: any) {
     toast.add({ severity: 'error', summary: 'Error Ventas', detail: error.message, life: 3000 })
   } finally {
