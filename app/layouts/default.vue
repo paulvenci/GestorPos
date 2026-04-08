@@ -161,6 +161,7 @@
       <div class="pos-content-scroll">
         <slot />
       </div>
+      <ConsultaPrecioGlobal />
     </main>
   </div>
 </template>
@@ -184,6 +185,7 @@ const notificacionesRef = ref<HTMLElement | null>(null)
 const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
 const appVersion = computed(() => String(runtimeConfig.public.appVersion || 'dev'))
+const consultaPrecioVisible = useState<boolean>('consulta-precio-open', () => false)
 const seccionActual = computed(() => {
   if (route.path === '/') return 'Dashboard'
   if (route.path.startsWith('/pos')) return 'Punto de Venta'
@@ -240,6 +242,12 @@ function onClickFueraNotificaciones(event: MouseEvent) {
 }
 
 function onKeydownLayout(event: KeyboardEvent) {
+  if (event.key === 'F3') {
+    event.preventDefault()
+    consultaPrecioVisible.value = !consultaPrecioVisible.value
+    return
+  }
+
   if (event.key === 'Escape' && mostrarNotificaciones.value) {
     mostrarNotificaciones.value = false
   }

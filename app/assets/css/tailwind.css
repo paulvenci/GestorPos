@@ -49,4 +49,55 @@
   *:not(.p-dialog):not(.p-dialog-mask):not(.p-overlay):not(.p-component-overlay):not([class*="p-dialog"]) {
     transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
   }
+
+  /*
+   * PrimeVue maneja sus propias animaciones para overlays, dropdowns, dialogs y toasts.
+   * Si heredan la transicion global aparecen "parpadeos" al abrir/cerrar.
+   */
+  .p-toast,
+  .p-toast *,
+  .p-toast-message,
+  .p-toast-message *,
+  .p-connected-overlay,
+  .p-connected-overlay *,
+  .p-overlay,
+  .p-overlay *,
+  .p-overlaypanel,
+  .p-overlaypanel *,
+  .p-popover,
+  .p-popover *,
+  .p-confirm-popup,
+  .p-confirm-popup *,
+  .p-select-overlay,
+  .p-select-overlay *,
+  .p-dropdown-panel,
+  .p-dropdown-panel *,
+  .p-multiselect-overlay,
+  .p-multiselect-overlay *,
+  .p-datepicker-panel,
+  .p-datepicker-panel *,
+  .p-autocomplete-overlay,
+  .p-autocomplete-overlay *,
+  .p-cascadeselect-overlay,
+  .p-cascadeselect-overlay *,
+  .p-menu,
+  .p-menu *,
+  .p-tieredmenu,
+  .p-tieredmenu *,
+  .p-megamenu-overlay,
+  .p-megamenu-overlay *,
+  .p-dialog,
+  .p-dialog *,
+  .p-dialog-mask,
+  .p-dialog-mask *,
+  .p-sidebar,
+  .p-sidebar *,
+  .p-drawer,
+  .p-drawer *,
+  .p-tooltip,
+  .p-tooltip *,
+  .p-image-preview-mask,
+  .p-image-preview-mask * {
+    transition: none !important;
+  }
 }

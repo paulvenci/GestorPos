@@ -25,6 +25,13 @@
             <i class="pi pi-spin pi-spinner" />
           </span>
         </div>
+        <Button
+          icon="pi pi-tag"
+          label="Consultar (F3)"
+          class="pos-consulta-btn"
+          severity="secondary"
+          @click="abrirConsultaGlobal"
+        />
       </div>
 
         <!-- Badge offline -->
@@ -354,6 +361,7 @@ const posStore = usePosStore()
 const toast = useToast()
 const { formatMonto } = useFormatMonto()
 const supabase = useSupabaseClient<Database>()
+const consultaPrecioVisible = useState<boolean>('consulta-precio-open', () => false)
 const ultimosToasts = new Map<string, number>()
 
 function addToastUnico(
@@ -463,10 +471,18 @@ function onEnterBusqueda() {
   }
 }
 
-function limpiarBusqueda() {
+function limpiarSoloBusqueda() {
   posStore.busqueda = ''
   posStore.resultados.length = 0
+}
+
+function limpiarBusqueda() {
+  limpiarSoloBusqueda()
   posStore.vaciarCarrito()
+}
+
+function abrirConsultaGlobal() {
+  consultaPrecioVisible.value = true
 }
 
 // ─── Lógica Producto por Peso ────────
@@ -1059,8 +1075,16 @@ async function sincronizarColaOffline() {
 
 // ─── Atajos de teclado ────────────────────────────────────
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'F2') { e.preventDefault(); cobrar() }
-  if (e.key === 'Escape') { e.preventDefault(); limpiarBusqueda() }
+  if (e.key === 'F2') {
+    e.preventDefault()
+    cobrar()
+    return
+  }
+
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    limpiarBusqueda()
+  }
 }
 
 onMounted(() => document.addEventListener('keydown', onKeydown))
@@ -1106,6 +1130,29 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 .pos-search-input-wrap {
   position: relative;
   flex: 1;
+}
+
+.pos-consulta-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.pos-consulta-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  color: var(--color-brand-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.pos-consulta-banner .pi {
+  font-size: 0.9rem;
 }
 
 .pos-search-icon {
@@ -1724,6 +1771,86 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   color: #ea580c;
 }
 
+.pos-consulta-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.pos-consulta-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pos-consulta-nombre {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-app);
+}
+
+.pos-consulta-sku {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-family: monospace;
+}
+
+.pos-consulta-precio-box {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.16));
+  border: 1px solid rgba(34, 197, 94, 0.18);
+  border-radius: 0.9rem;
+  padding: 1rem 1.1rem;
+  text-align: center;
+}
+
+.pos-consulta-precio-label {
+  display: block;
+  color: #047857;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pos-consulta-precio-value {
+  display: block;
+  margin-top: 0.3rem;
+  color: #065f46;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.pos-consulta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.pos-consulta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  background: var(--bg-app);
+}
+
+.pos-consulta-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.pos-consulta-item strong {
+  color: var(--text-app);
+  font-size: 0.92rem;
+}
+
 /* ─── Transiciones ─── */
 .slide-down-enter-active,
 .slide-down-leave-active {
@@ -1799,10 +1926,22 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
     gap: 0.45rem;
     padding-bottom: 0.45rem;
     margin-bottom: 0.6rem;
+    flex-wrap: wrap;
   }
 
   .pos-scan-btn {
     padding: 0 0.75rem !important;
+  }
+
+  .pos-consulta-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pos-consulta-banner {
+    margin-bottom: 0.6rem;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.62rem;
   }
 
   .pos-search-input {
@@ -1984,6 +2123,14 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
     font-size: 0.86rem !important;
     padding: 0.58rem 0.75rem !important;
     border-radius: 0.65rem !important;
+  }
+
+  .pos-consulta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pos-consulta-precio-value {
+    font-size: 1.7rem;
   }
 }
 

@@ -6,14 +6,15 @@
         <div class="caja-empty-icon">
           <i class="pi pi-lock" />
         </div>
-        <h2 class="caja-empty-title">No hay turno activo</h2>
-        <p class="caja-empty-desc">
-          Para comenzar a operar, debes abrir un nuevo turno de caja ingresando el monto inicial.
-        </p>
+        <div class="caja-empty-copy">
+          <h2 class="caja-empty-title">No hay turno activo</h2>
+          <p class="caja-empty-desc">
+            Para comenzar a operar, abre un turno con el monto inicial.
+          </p>
+        </div>
         <Button
           label="Abrir turno de caja"
           icon="pi pi-play"
-          size="large"
           class="caja-open-btn"
           @click="mostrarDialogo = true"
         />
@@ -114,7 +115,7 @@
         </Column>
         <Column header="Monto Cierre">
           <template #body="slotProps">
-            <span v-if="slotProps.data.monto_cierre !== null">{{ formatMonto(slotProps.data.monto_cierre) }}</span>
+            <span v-if="typeof slotProps.data.monto_cierre === 'number'">{{ formatMonto(slotProps.data.monto_cierre) }}</span>
             <span v-else style="color: var(--text-muted)">—</span>
           </template>
         </Column>
@@ -342,6 +343,8 @@ async function fetchHistorial() {
         ...t,
         apertura_at: t.fecha_apertura,
         cierre_at: t.fecha_cierre,
+        // En la tabla se muestra como "Monto Cierre": corresponde al monto declarado al cerrar la caja.
+        monto_cierre: typeof t.monto_declarado === 'number' ? t.monto_declarado : null,
         usuario_nombre: perfilMap.get(t.id_usuario) || null,
         etiqueta_impresion: `${formatFechaLarga(t.fecha_apertura)} - ${perfilMap.get(t.id_usuario) || t.id_usuario?.substring(0, 8) || 'N/A'}`
       }))
@@ -421,7 +424,7 @@ function imprimirHistorial80mm(turnos: any[]) {
       <div class="muted">${formatFechaLarga(t.apertura_at)}</div>
       <div class="row"><span>Ventas</span><span>${t.ventas_registradas ?? 0}</span></div>
       <div class="row"><span>Inicial</span><span>${formatMonto(t.monto_inicial || 0)}</span></div>
-      <div class="row"><span>Cierre</span><span>${t.monto_cierre !== null ? formatMonto(t.monto_cierre) : '—'}</span></div>
+      <div class="row"><span>Cierre</span><span>${typeof t.monto_cierre === 'number' ? formatMonto(t.monto_cierre) : '—'}</span></div>
     </div>
   `).join('')
 
@@ -466,7 +469,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
     <div class="row"><span>Apertura</span><span>${formatFechaLarga(turno.apertura_at)}</span></div>
     <div class="row"><span>Cierre</span><span>${turno.cierre_at ? formatFechaLarga(turno.cierre_at) : 'Activo'}</span></div>
     <div class="row"><span>Inicial</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
-    <div class="row"><span>Cierre</span><span>${turno.monto_cierre !== null ? formatMonto(turno.monto_cierre) : '—'}</span></div>
+    <div class="row"><span>Cierre</span><span>${typeof turno.monto_cierre === 'number' ? formatMonto(turno.monto_cierre) : '—'}</span></div>
     <div class="line"></div>
     <div class="strong">Ventas del turno</div>
     ${ventasHtml || '<div class="muted">Sin ventas asociadas.</div>'}
@@ -544,50 +547,57 @@ async function confirmarCierre() {
 /* ─── Empty state ─── */
 .caja-empty-state {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 70vh;
+  align-items: stretch;
+  justify-content: stretch;
+  margin-bottom: 1rem;
 }
 
 .caja-empty-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-sidebar);
-  border-radius: 1.25rem;
-  padding: 3.5rem;
-  text-align: center;
-  max-width: 420px;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.caja-empty-copy {
+  flex: 1;
+  min-width: 0;
 }
 
 .caja-empty-icon {
-  width: 5rem;
-  height: 5rem;
-  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.85rem;
   background: rgba(99, 102, 241, 0.15);
   border: 1px solid rgba(99, 102, 241, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1.5rem;
+  flex-shrink: 0;
 }
 
 .caja-empty-icon .pi {
-  font-size: 2rem;
+  font-size: 1.2rem;
   color: #818cf8;
 }
 
 .caja-empty-title {
-  font-size: 1.5rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-app);
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.2rem;
 }
 
 .caja-empty-desc {
   color: var(--text-muted);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin: 0 0 2rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin: 0;
 }
 
 :deep(.caja-open-btn) {
@@ -596,6 +606,9 @@ async function confirmarCierre() {
   border-radius: 0.75rem !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35) !important;
+  padding: 0.75rem 1rem !important;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease !important;
 }
 
@@ -850,6 +863,40 @@ async function confirmarCierre() {
 @media (max-width: 768px) {
   .caja-root {
     padding: 0.75rem;
+  }
+
+  .caja-empty-state {
+    margin-bottom: 0.8rem;
+  }
+
+  .caja-empty-card {
+    padding: 0.8rem 0.85rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .caja-empty-copy {
+    min-width: min(100%, 180px);
+  }
+
+  .caja-empty-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+  }
+
+  .caja-empty-title {
+    font-size: 0.95rem;
+  }
+
+  .caja-empty-desc {
+    font-size: 0.78rem;
+  }
+
+  .caja-empty-card :deep(.caja-open-btn) {
+    width: 100%;
+    justify-content: center;
+    padding: 0.65rem 0.8rem !important;
   }
 
   .caja-header {

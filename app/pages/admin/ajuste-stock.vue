@@ -36,6 +36,18 @@
           </div>
         </div>
 
+        <div class="ajuste-field">
+          <label>Precio de compra</label>
+          <InputNumber
+            v-model="form.costo"
+            :min="0"
+            mode="currency"
+            currency="CLP"
+            locale="es-CL"
+            placeholder="Opcional"
+          />
+        </div>
+
         <div v-if="form.id_producto && form.cantidad" class="ajuste-preview">
           <span>Stock resultante:</span>
           <strong :class="stockResultanteClass">{{ stockResultante }}</strong>
@@ -152,6 +164,7 @@ const form = ref({
   id_producto: null as string | null,
   tipo: 'ingreso' as 'ingreso' | 'egreso',
   cantidad: 1,
+  costo: null as number | null,
   motivo: null as string | null,
   observaciones: ''
 })
@@ -166,6 +179,10 @@ const productosOptions = computed(() =>
 const productoSeleccionado = computed(() =>
   productos.value.find(p => p.id === form.value.id_producto) || null
 )
+
+watch(productoSeleccionado, (producto) => {
+  form.value.costo = typeof producto?.costo === 'number' ? producto.costo : null
+})
 
 const stockResultante = computed(() => {
   if (!productoSeleccionado.value) return 0
@@ -190,7 +207,7 @@ async function fetchProductos() {
   try {
     const { data } = await supabase
       .from('productos')
-      .select('id, nombre, stock')
+      .select('id, nombre, stock, costo')
       .eq('activo', true)
       .order('nombre')
     productos.value = data || []
@@ -243,7 +260,7 @@ async function fetchAjustes() {
 }
 
 function abrirNuevo() {
-  form.value = { id_producto: null, tipo: 'ingreso', cantidad: 1, motivo: null, observaciones: '' }
+  form.value = { id_producto: null, tipo: 'ingreso', cantidad: 1, costo: null, motivo: null, observaciones: '' }
   mostrarDialogo.value = true
 }
 
@@ -275,7 +292,10 @@ async function registrarAjuste() {
     // Actualizar stock del producto
     const { error: updateError } = await supabase
       .from('productos')
-      .update({ stock: stockResultante.value })
+      .update({
+        stock: stockResultante.value,
+        ...(typeof form.value.costo === 'number' ? { costo: form.value.costo } : {})
+      })
       .eq('id', form.value.id_producto)
     if (updateError) throw updateError
 
