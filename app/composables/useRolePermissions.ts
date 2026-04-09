@@ -1,5 +1,6 @@
-export type RoleKey = 'admin' | 'supervisor' | 'cajero'
+export type RoleKey = 'super_admin' | 'admin' | 'supervisor' | 'cajero'
 export type SectionKey =
+  | 'empresas'
   | 'dashboard'
   | 'pos'
   | 'caja'
@@ -11,7 +12,7 @@ export type SectionKey =
 
 export type RolePermissionsMap = Record<RoleKey, SectionKey[]>
 
-const ALL_SECTIONS: SectionKey[] = [
+const COMPANY_SECTIONS: SectionKey[] = [
   'dashboard',
   'pos',
   'caja',
@@ -22,9 +23,12 @@ const ALL_SECTIONS: SectionKey[] = [
   'configuracion'
 ]
 
+const ALL_SECTIONS: SectionKey[] = ['empresas', ...COMPANY_SECTIONS]
+
 export function getDefaultRolePermissions(): RolePermissionsMap {
   return {
-    admin: [...ALL_SECTIONS],
+    super_admin: [...ALL_SECTIONS],
+    admin: [...COMPANY_SECTIONS],
     supervisor: ['dashboard', 'pos', 'caja', 'inventario', 'ajuste_stock', 'categorias', 'reportes'],
     cajero: ['dashboard', 'pos', 'caja']
   }
@@ -46,6 +50,7 @@ export function normalizeRolePermissions(input: unknown): RolePermissionsMap {
   if (!admin.includes('configuracion')) admin.push('configuracion')
   if (!admin.includes('dashboard')) admin.push('dashboard')
   return {
+    super_admin: defaults.super_admin,
     admin,
     supervisor: uniqueSections(data.supervisor).length ? uniqueSections(data.supervisor) : defaults.supervisor,
     cajero: uniqueSections(data.cajero).length ? uniqueSections(data.cajero) : defaults.cajero
@@ -53,6 +58,7 @@ export function normalizeRolePermissions(input: unknown): RolePermissionsMap {
 }
 
 export function getSectionFromPath(path: string): SectionKey | null {
+  if (path.startsWith('/superadmin/empresas')) return 'empresas'
   if (path === '/') return 'dashboard'
   if (path.startsWith('/pos')) return 'pos'
   if (path.startsWith('/caja')) return 'caja'
@@ -69,12 +75,14 @@ export function canAccessSection(
   section: SectionKey,
   permissions: RolePermissionsMap
 ): boolean {
+  if (role === 'super_admin') return true
   const r = (role || 'cajero') as RoleKey
   const allowed = permissions[r] || permissions.cajero
   return allowed.includes(section)
 }
 
 export function getFallbackRouteForRole(role: string | null | undefined, permissions: RolePermissionsMap): string {
+  if (role === 'super_admin') return '/superadmin/empresas'
   const r = (role || 'cajero') as RoleKey
   const allowed = permissions[r] || permissions.cajero
   if (allowed.includes('dashboard')) return '/'

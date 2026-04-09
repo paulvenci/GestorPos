@@ -3,7 +3,7 @@
     <!-- Encabezado -->
     <div class="admin-header">
       <div class="admin-header-titles">
-        <h1>Configuración</h1>
+        <h1>ConfiguraciÃ³n</h1>
         <p>Gestiona los usuarios del sistema y sus roles de acceso.</p>
       </div>
     </div>
@@ -90,19 +90,19 @@
 
         <!-- Leyenda de Roles -->
         <div class="roles-legend">
-          <h3><i class="pi pi-info-circle" /> Descripción de roles</h3>
+          <h3><i class="pi pi-info-circle" /> DescripciÃ³n de roles</h3>
           <div class="roles-grid">
             <div class="role-card">
               <Tag value="admin" severity="danger" icon="pi pi-shield" />
-              <p>Control total del sistema. Puede gestionar usuarios, productos, reportes y configuración.</p>
+              <p>Control total del sistema. Puede gestionar usuarios, productos, reportes y configuraciÃ³n.</p>
             </div>
             <div class="role-card">
               <Tag value="cajero" severity="info" icon="pi pi-calculator" />
-              <p>Acceso al Punto de Venta y gestión de turnos de caja. No puede modificar productos ni configuración.</p>
+              <p>Acceso al Punto de Venta y gestiÃ³n de turnos de caja. No puede modificar productos ni configuraciÃ³n.</p>
             </div>
             <div class="role-card">
               <Tag value="supervisor" severity="warn" icon="pi pi-eye" />
-              <p>Puede ver reportes, administrar productos y supervisar la operación sin gestionar usuarios.</p>
+              <p>Puede ver reportes, administrar productos y supervisar la operaciÃ³n sin gestionar usuarios.</p>
             </div>
           </div>
         </div>
@@ -110,7 +110,7 @@
         <div class="roles-manager">
           <div class="roles-manager-header">
             <h3><i class="pi pi-sliders-h" /> Gestor de permisos por rol</h3>
-            <p>Selecciona las secciones que cada rol puede usar en la aplicación.</p>
+            <p>Selecciona las secciones que cada rol puede usar en la aplicaciÃ³n.</p>
           </div>
           <div class="roles-manager-grid">
             <div class="role-manager-card" v-for="rol in rolesDisponibles" :key="rol.value">
@@ -138,7 +138,7 @@
       <TabPanel value="1">
         <div class="config-section">
           <div class="config-section-header">
-            <h2><i class="pi pi-cog" /> Configuración general</h2>
+            <h2><i class="pi pi-cog" /> ConfiguraciÃ³n general</h2>
             <p>Ajustes generales del sistema POS.</p>
           </div>
 
@@ -170,21 +170,21 @@
             <div class="config-item" v-if="globalConfig">
               <div class="config-item-info">
                 <label>Margen de Ganancia (%) por Defecto</label>
-                <p>Añadido al calcular el precio de venta si no se especifica otro.</p>
+                <p>AÃ±adido al calcular el precio de venta si no se especifica otro.</p>
               </div>
               <InputNumber v-model="globalConfig.margen_ganancia_defecto" suffix=" %" :min="0" style="width: 300px" />
             </div>
 
             <div class="config-item" v-if="globalConfig">
               <div class="config-item-info">
-                <label>Stock Mínimo por Defecto</label>
-                <p>Se usará para alertarte cuando un producto se esté agotando.</p>
+                <label>Stock MÃ­nimo por Defecto</label>
+                <p>Se usarÃ¡ para alertarte cuando un producto se estÃ© agotando.</p>
               </div>
               <InputNumber v-model="globalConfig.stock_minimo_defecto" :min="0" style="width: 300px" />
             </div>
 
             <div class="flex justify-end mt-2">
-              <Button label="Guardar Configuración" icon="pi pi-save" :loading="configLoading" @click="guardarConfiguracion" />
+              <Button label="Guardar ConfiguraciÃ³n" icon="pi pi-save" :loading="configLoading" @click="guardarConfiguracion" />
             </div>
           </div>
         </div>
@@ -198,18 +198,38 @@
           <div class="config-form border border-red-200 dark:border-red-900/50 rounded-xl bg-red-50/30 dark:bg-red-900/10 p-6">
             <div class="config-item flex justify-between items-center w-full">
               <div class="config-item-info max-w-xl">
-                <label class="text-red-600 dark:text-red-400 font-bold">Borrar todas las Ventas</label>
-                <p class="text-sm mt-1">Elimina definitivamente todos los registros de ventas, detalles de boletas y transacciones. Esta acción es útil si estás terminando una Demo y quieres limpiar la base de datos para producción.</p>
+                <label class="text-red-600 dark:text-red-400 font-bold">Borrar todas las ventas</label>
+                <p class="text-sm mt-1">Elimina definitivamente las ventas y sus detalles solo de esta empresa. Úsalo al terminar una demo para dejar el negocio listo para producción.</p>
               </div>
-              <Button label="Limpiar Ventas" icon="pi pi-trash" severity="danger" @click="borrarTodasLasVentas" :disabled="loading" />
+              <Button label="Limpiar ventas" icon="pi pi-trash" severity="danger" @click="borrarTodasLasVentas" :disabled="loading" />
             </div>
-            <!-- Nueva Acción para Mocks -->
             <div class="config-item flex justify-between items-center w-full border-t border-red-200 dark:border-red-900/50 pt-4 mt-2">
               <div class="config-item-info max-w-xl">
-                <label class="text-indigo-600 dark:text-indigo-400 font-bold">Generar Ventas de Prueba</label>
-                <p class="text-sm mt-1">Inserta 20 registros ficticios de ventas con fechas aleatorias en el último mes. Requiere tener un Turno Abierto y productos registrados en el sistema.</p>
+                <label class="text-cyan-600 dark:text-cyan-400 font-bold">Generar productos demo</label>
+                <p class="text-sm mt-1">Carga un catálogo inicial demo solo para esta empresa. Úsalo cuando el negocio aún no tenga productos ingresados.</p>
               </div>
-              <Button label="Generar Ventas" icon="pi pi-bolt" severity="success" @click="generarVentasDePrueba" :loading="loading" />
+              <Button label="Generar productos" icon="pi pi-box" severity="info" @click="generarProductosDePrueba" :loading="loading" />
+            </div>
+            <div class="config-item flex justify-between items-center w-full border-t border-red-200 dark:border-red-900/50 pt-4 mt-2">
+              <div class="config-item-info max-w-xl">
+                <label class="text-orange-600 dark:text-orange-400 font-bold">Limpiar productos demo</label>
+                <p class="text-sm mt-1">Elimina el catálogo demo de esta empresa mientras aún no existan ventas asociadas.</p>
+              </div>
+              <Button label="Limpiar productos" icon="pi pi-eraser" severity="warning" @click="limpiarProductosDemo" :loading="loading" />
+            </div>
+            <div class="config-item flex justify-between items-center w-full border-t border-red-200 dark:border-red-900/50 pt-4 mt-2">
+              <div class="config-item-info max-w-xl">
+                <label class="text-emerald-600 dark:text-emerald-400 font-bold">Onboarding demo completo</label>
+                <p class="text-sm mt-1">Carga productos demo y luego ventas demo solo para esta empresa. Ideal para mostrar el sistema rápido en un negocio nuevo.</p>
+              </div>
+              <Button label="Onboarding demo" icon="pi pi-sparkles" severity="success" @click="ejecutarOnboardingDemo" :loading="loading" />
+            </div>
+            <div class="config-item flex justify-between items-center w-full border-t border-red-200 dark:border-red-900/50 pt-4 mt-2">
+              <div class="config-item-info max-w-xl">
+                <label class="text-indigo-600 dark:text-indigo-400 font-bold">Generar ventas demo</label>
+                <p class="text-sm mt-1">Inserta ventas ficticias para esta empresa con fechas recientes. Requiere tener un turno abierto y productos registrados.</p>
+              </div>
+              <Button label="Generar ventas" icon="pi pi-bolt" severity="success" @click="generarVentasDePrueba" :loading="loading" />
             </div>
           </div>
         </div>
@@ -225,13 +245,13 @@
         </div>
 
         <div v-if="esNuevo" class="usuario-field">
-          <label>Correo electrónico</label>
+          <label>Correo electrÃ³nico</label>
           <InputText v-model.trim="usuarioActual.email" type="email" placeholder="usuario@empresa.com" />
         </div>
 
         <div v-if="esNuevo" class="usuario-field">
-          <label>Contraseña</label>
-          <Password v-model="usuarioActual.password" :feedback="false" toggle-mask placeholder="Mínimo 6 caracteres" class="w-full" input-class="w-full" />
+          <label>ContraseÃ±a</label>
+          <Password v-model="usuarioActual.password" :feedback="false" toggle-mask placeholder="MÃ­nimo 6 caracteres" class="w-full" input-class="w-full" />
         </div>
 
         <div class="usuario-field">
@@ -303,7 +323,7 @@ const rolesDisponibles: { label: string, value: RoleKey }[] = [
 const monedas = [
   { label: 'Peso Chileno (CLP)', value: 'CLP' },
   { label: 'Peso Argentino (ARS)', value: 'ARS' },
-  { label: 'Dólar (USD)', value: 'USD' },
+  { label: 'DÃ³lar (USD)', value: 'USD' },
   { label: 'Peso Mexicano (MXN)', value: 'MXN' },
   { label: 'Euro (EUR)', value: 'EUR' }
 ]
@@ -320,9 +340,9 @@ const seccionesDisponibles: { label: string, value: SectionKey }[] = [
   { label: 'Caja', value: 'caja' },
   { label: 'Inventario', value: 'inventario' },
   { label: 'Ajuste Stock', value: 'ajuste_stock' },
-  { label: 'Categorías', value: 'categorias' },
+  { label: 'CategorÃ­as', value: 'categorias' },
   { label: 'Reportes', value: 'reportes' },
-  { label: 'Configuración', value: 'configuracion' }
+  { label: 'ConfiguraciÃ³n', value: 'configuracion' }
 ]
 
 const rolePermissionsDraft = ref<Record<RoleKey, SectionKey[]>>(getDefaultRolePermissions())
@@ -343,7 +363,7 @@ watch(
   }
 )
 
-// Función para guardar globales
+// FunciÃ³n para guardar globales
 async function guardarConfiguracion() {
   if (!globalConfig.value) return
   try {
@@ -352,7 +372,7 @@ async function guardarConfiguracion() {
       stock_minimo_defecto: globalConfig.value.stock_minimo_defecto,
       role_permissions: normalizeRolePermissions(rolePermissionsDraft.value)
     })
-    toast.add({ severity: 'success', summary: 'Guardado', detail: 'Configuración actualizada en todos los dispositivos.', life: 3000 })
+    toast.add({ severity: 'success', summary: 'Guardado', detail: 'ConfiguraciÃ³n actualizada en todos los dispositivos.', life: 3000 })
   } catch (error: any) {
     toast.add({ severity: 'error', summary: 'Error interno', detail: 'No tienes permiso o error validando', life: 4000 })
   }
@@ -408,7 +428,7 @@ async function guardarUsuario() {
       // Crear usuario via Supabase Edge Function
       const { email, password, nombre, rol } = usuarioActual.value
       if (!email || !password || password.length < 6) {
-        toast.add({ severity: 'warn', summary: 'Datos incompletos', detail: 'Email y contraseña (mínimo 6 caracteres) son requeridos.', life: 4000 })
+        toast.add({ severity: 'warn', summary: 'Datos incompletos', detail: 'Email y contraseÃ±a (mÃ­nimo 6 caracteres) son requeridos.', life: 4000 })
         loading.value = false
         return
       }
@@ -455,18 +475,35 @@ async function guardarUsuario() {
 }
 
 async function borrarTodasLasVentas() {
-  if (confirm('⚠️ ADVERTENCIA CRÍTICA ⚠️\n\n¿Estás absolutamente seguro de que deseas eliminar TODAS las ventas?\nEsto borrará permanentemente todo el registro histórico y los detalles de las boletas. Esta acción no se puede deshacer.')) {
+  if (confirm('Se eliminarán todas las ventas de esta empresa. Esta acción no se puede deshacer. ¿Deseas continuar?')) {
     try {
       loading.value = true
-      // Hack legal en la Data API Rest de Supabase: para borrar toda la tabla ocupamos un filtro que evalúe todas las filas y nos asistan los ON DELETE CASCADE.
-      const { error } = await supabase
-        .from('ventas')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000')
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
 
-      if (error) throw error
+      if (!accessToken) {
+        throw new Error('No hay sesión activa para limpiar ventas.')
+      }
 
-      toast.add({ severity: 'success', summary: 'Limpieza Exitosa', detail: 'Todas las ventas han sido eliminadas. Ambiente listo para nueva ronda.', life: 5000 })
+      const response = await fetch('/api/admin/limpiar-ventas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.statusMessage || payload.message || 'No se pudieron limpiar las ventas')
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Ventas eliminadas',
+        detail: payload.message || 'Se limpiaron todas las ventas de esta empresa.',
+        life: 5000
+      })
     } catch (err: any) {
       toast.add({ severity: 'error', summary: 'Error al limpiar', detail: err.message, life: 5000 })
     } finally {
@@ -475,65 +512,111 @@ async function borrarTodasLasVentas() {
   }
 }
 
-async function generarVentasDePrueba() {
-  if (confirm('Se van a generar más de 20 ventas ficticias distribuidas en los últimos 30 días para alimentar los gráficos de Reportes. ¿Deseas continuar?')) {
+async function limpiarProductosDemo() {
+  if (confirm('Se eliminarán los productos demo de esta empresa. Solo úsalo si aún no has trabajado con ventas reales. ¿Deseas continuar?')) {
     loading.value = true
     try {
-      // 1. Obtener productos y un turno abierto
-      const [{ data: productos }, { data: turnos }] = await Promise.all([
-        supabase.from('productos').select('id, precio').gt('stock', 0),
-        supabase.from('turnos_caja').select('id, id_usuario').eq('estado', 'abierto').limit(1)
-      ])
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
 
-      if (!productos || productos.length === 0) throw new Error('No hay productos con stock disponibles.')
-      if (!turnos || turnos.length === 0 || !turnos[0]) throw new Error('Necesitas Abrir Caja (en el POS) antes de generar ventas.')
-
-      const turno_id = turnos[0].id
-      
-      const metodos = ['efectivo', 'tarjeta', 'transferencia']
-      const ventasAInsertar = []
-
-      // 2. Generar ~25 ventas aleatorias
-      for (let i = 0; i < 25; i++) {
-        const numItems = Math.floor(Math.random() * 4) + 1 // 1 a 4 productos
-        let ventaTotal = 0
-        const lineas = []
-
-        for (let j = 0; j < numItems; j++) {
-          const p = productos[Math.floor(Math.random() * productos.length)] as { id: string, precio: number }
-          const cant = Math.floor(Math.random() * 3) + 1 // 1 a 3 uds
-          const st = cant * (p.precio || 1000)
-          ventaTotal += st
-          lineas.push({ id_producto: p.id, cantidad: cant, precio_unitario: p.precio || 1000, subtotal: st })
-        }
-
-        // Fecha aleatoria últimos 30 días
-        const date = new Date()
-        date.setDate(date.getDate() - Math.floor(Math.random() * 30))
-        date.setHours(Math.floor(Math.random() * 10) + 10) // Entre 10am y 8pm
-
-        const { data: ventaAgregada, error: ventaError } = await supabase.from('ventas').insert({
-          id_turno: turno_id,
-          subtotal: ventaTotal,
-          total: ventaTotal,
-          metodo_pago: metodos[Math.floor(Math.random() * metodos.length)],
-          fecha: date.toISOString()
-        }).select('id').single()
-
-        if (ventaError) throw ventaError
-
-        // Insertar lineas
-        const d_ventas = lineas.map(l => ({
-          id_venta: ventaAgregada.id,
-          id_producto: l.id_producto,
-          cantidad: l.cantidad,
-          precio_unitario: l.precio_unitario,
-          subtotal: l.subtotal
-        }))
-        await supabase.from('detalle_ventas').insert(d_ventas)
+      if (!accessToken) {
+        throw new Error('No hay sesión activa para limpiar productos demo.')
       }
 
-      toast.add({ severity: 'success', summary: 'Simulación Exitosa', detail: 'Ventas ficticias registradas. Ve a Reportes para verificar.', life: 6000 })
+      const response = await fetch('/api/admin/limpiar-productos-demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.statusMessage || payload.message || 'No se pudieron limpiar los productos demo')
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Productos demo eliminados',
+        detail: payload.message || 'Se limpió el catálogo demo de esta empresa.',
+        life: 5000
+      })
+    } catch (error: any) {
+      toast.add({ severity: 'error', summary: 'Error al limpiar', detail: error.message, life: 5000 })
+    } finally {
+      loading.value = false
+    }
+  }
+}
+
+async function ejecutarOnboardingDemo() {
+  if (confirm('Se cargarán productos demo y ventas demo para esta empresa. Se recomienda usarlo solo en negocios nuevos o ambientes demo. ¿Deseas continuar?')) {
+    loading.value = true
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+
+      if (!accessToken) {
+        throw new Error('No hay sesión activa para ejecutar onboarding demo.')
+      }
+
+      const response = await fetch('/api/admin/onboarding-demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.statusMessage || payload.message || 'No se pudo ejecutar el onboarding demo')
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Onboarding demo listo',
+        detail: payload.message || 'Se cargaron productos y ventas demo para esta empresa.',
+        life: 6000
+      })
+    } catch (error: any) {
+      toast.add({ severity: 'error', summary: 'Onboarding fallido', detail: error.message, life: 5000 })
+    } finally {
+      loading.value = false
+    }
+  }
+}
+async function generarProductosDePrueba() {
+  if (confirm('Se generará un catálogo demo solo para esta empresa. Esta acción es ideal para ambientes vacíos. ¿Deseas continuar?')) {
+    loading.value = true
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+
+      if (!accessToken) {
+        throw new Error('No hay sesión activa para generar productos de prueba.')
+      }
+
+      const response = await fetch('/api/admin/generar-productos-demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.statusMessage || payload.message || 'No se pudieron generar los productos demo')
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Catálogo demo creado',
+        detail: `Se generaron ${payload.creados || 0} productos para esta empresa.`,
+        life: 6000
+      })
     } catch (error: any) {
       toast.add({ severity: 'error', summary: 'Carga fallida', detail: error.message, life: 5000 })
     } finally {
@@ -541,7 +624,43 @@ async function generarVentasDePrueba() {
     }
   }
 }
+async function generarVentasDePrueba() {
+  if (confirm('Se van a generar más de 20 ventas ficticias distribuidas en los últimos 30 días para alimentar los gráficos de Reportes. ¿Deseas continuar?')) {
+    loading.value = true
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
 
+      if (!accessToken) {
+        throw new Error('No hay sesión activa para generar ventas de prueba.')
+      }
+
+      const response = await fetch('/api/admin/generar-ventas-demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.statusMessage || payload.message || 'No se pudieron generar las ventas demo')
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Simulación Exitosa',
+        detail: `Se generaron ${payload.creadas || 0} ventas ficticias para esta empresa.`,
+        life: 6000
+      })
+    } catch (error: any) {
+      toast.add({ severity: 'error', summary: 'Carga fallida', detail: error.message, life: 5000 })
+    } finally {
+      loading.value = false
+    }
+  }
+}
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
 }
@@ -769,4 +888,14 @@ function getRolIcon(rol: string) {
   color: var(--text-muted);
 }
 </style>
+
+
+
+
+
+
+
+
+
+
 

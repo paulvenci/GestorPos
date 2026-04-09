@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string | null
+          empresa_id: string
           id: string
           id_producto: string
           id_usuario: string
@@ -30,6 +31,7 @@ export type Database = {
         Insert: {
           cantidad: number
           created_at?: string | null
+          empresa_id?: string
           id?: string
           id_producto: string
           id_usuario: string
@@ -42,6 +44,7 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string | null
+          empresa_id?: string
           id?: string
           id_producto?: string
           id_usuario?: string
@@ -52,6 +55,13 @@ export type Database = {
           tipo?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ajustes_stock_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ajustes_stock_id_producto_fkey"
             columns: ["id_producto"]
@@ -67,6 +77,7 @@ export type Database = {
           color: string | null
           created_at: string | null
           descripcion: string | null
+          empresa_id: string
           id: string
           nombre: string
         }
@@ -75,6 +86,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           descripcion?: string | null
+          empresa_id?: string
           id?: string
           nombre: string
         }
@@ -83,13 +95,23 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           descripcion?: string | null
+          empresa_id?: string
           id?: string
           nombre?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categorias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       configuracion: {
         Row: {
+          empresa_id: string
           id: string
           margen_ganancia_defecto: number | null
           role_permissions: Json | null
@@ -97,6 +119,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          empresa_id?: string
           id?: string
           margen_ganancia_defecto?: number | null
           role_permissions?: Json | null
@@ -104,11 +127,50 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          empresa_id?: string
           id?: string
           margen_ganancia_defecto?: number | null
           role_permissions?: Json | null
           stock_minimo_defecto?: number | null
           updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracion_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          activo: boolean
+          created_at: string
+          fecha_vencimiento: string | null
+          id: string
+          nombre: string
+          plan: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          nombre: string
+          plan?: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          nombre?: string
+          plan?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -116,6 +178,7 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string | null
+          empresa_id: string
           id: string
           id_producto: string
           id_venta: string
@@ -125,6 +188,7 @@ export type Database = {
         Insert: {
           cantidad: number
           created_at?: string | null
+          empresa_id?: string
           id?: string
           id_producto: string
           id_venta: string
@@ -134,6 +198,7 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string | null
+          empresa_id?: string
           id?: string
           id_producto?: string
           id_venta?: string
@@ -141,6 +206,13 @@ export type Database = {
           subtotal?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "detalle_ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "detalle_ventas_id_producto_fkey"
             columns: ["id_producto"]
@@ -161,6 +233,7 @@ export type Database = {
         Row: {
           activo: boolean | null
           created_at: string | null
+          empresa_id: string
           id: string
           nombre: string | null
           rol: string
@@ -168,6 +241,7 @@ export type Database = {
         Insert: {
           activo?: boolean | null
           created_at?: string | null
+          empresa_id: string
           id: string
           nombre?: string | null
           rol?: string
@@ -175,11 +249,20 @@ export type Database = {
         Update: {
           activo?: boolean | null
           created_at?: string | null
+          empresa_id?: string
           id?: string
           nombre?: string | null
           rol?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "perfiles_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       productos: {
         Row: {
@@ -187,6 +270,7 @@ export type Database = {
           categoria: string | null
           costo: number | null
           created_at: string | null
+          empresa_id: string
           id: string
           imagen_url: string | null
           nombre: string
@@ -203,6 +287,7 @@ export type Database = {
           categoria?: string | null
           costo?: number | null
           created_at?: string | null
+          empresa_id?: string
           id?: string
           imagen_url?: string | null
           nombre: string
@@ -219,6 +304,7 @@ export type Database = {
           categoria?: string | null
           costo?: number | null
           created_at?: string | null
+          empresa_id?: string
           id?: string
           imagen_url?: string | null
           nombre?: string
@@ -230,11 +316,20 @@ export type Database = {
           stock_minimo?: number | null
           margen_ganancia?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "productos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       turnos_caja: {
         Row: {
           created_at: string | null
+          empresa_id: string
           estado: string
           fecha_apertura: string
           fecha_cierre: string | null
@@ -247,6 +342,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          empresa_id?: string
           estado?: string
           fecha_apertura?: string
           fecha_cierre?: string | null
@@ -259,6 +355,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          empresa_id?: string
           estado?: string
           fecha_apertura?: string
           fecha_cierre?: string | null
@@ -269,12 +366,21 @@ export type Database = {
           observaciones?: string | null
           ventas_registradas?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "turnos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ventas: {
         Row: {
           created_at: string | null
           descuentos: number | null
+          empresa_id: string
           fecha: string
           id: string
           id_turno: string | null
@@ -287,6 +393,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           descuentos?: number | null
+          empresa_id?: string
           fecha?: string
           id?: string
           id_turno?: string | null
@@ -299,6 +406,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           descuentos?: number | null
+          empresa_id?: string
           fecha?: string
           id?: string
           id_turno?: string | null
@@ -309,6 +417,13 @@ export type Database = {
           total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ventas_id_turno_fkey"
             columns: ["id_turno"]

@@ -9,7 +9,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'No autorizado' })
   }
 
-  // Verificar que el solicitante es admin
   const supabaseUrl = config.public.supabase.url
   const supabaseServiceKey = config.supabaseServiceKey
 
@@ -21,7 +20,6 @@ export default defineEventHandler(async (event) => {
     auth: { autoRefreshToken: false, persistSession: false }
   })
 
-  // Verificar token del solicitante
   const token = authHeader.replace('Bearer ', '')
   const { data: { user: requester }, error: authError } = await adminClient.auth.getUser(token)
 
@@ -29,43 +27,64 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Token inválido' })
   }
 
-  // Verificar que es admin
   const { data: perfil } = await adminClient
     .from('perfiles')
-    .select('rol')
+    .select('rol, empresa_id')
     .eq('id', requester.id)
     .single()
 
-  if (perfil?.rol !== 'admin') {
-    throw createError({ statusCode: 403, message: 'Solo los administradores pueden crear usuarios' })
+  if (!perfil || !['admin', 'super_admin'].includes(perfil.rol)) {
+    throw createError({ statusCode: 403, message: 'Solo administradores autorizados pueden crear usuarios' })
   }
 
-  // Crear usuario
-  const { email, password, nombre, rol } = body
+  const email = String(body?.email || '').trim()
+  const password = String(body?.password || '')
+  const nombre = String(body?.nombre || '').trim()
+  const rol = String(body?.rol || 'cajero').trim() || 'cajero'
+  const empresaId = typeof body?.empresa_id === 'string' && body.empresa_id
+    ? body.empresa_id
+    : perfil.empresa_id
 
   if (!email || !password || password.length < 6) {
     throw createError({ statusCode: 400, message: 'Email y contraseña (mínimo 6 caracteres) son requeridos' })
+  }
+
+  if (!empresaId) {
+    throw createError({ statusCode: 400, message: 'No se encontró empresa asociada para el nuevo usuario' })
+  }
+
+  if (perfil.rol !== 'super_admin' && empresaId !== perfil.empresa_id) {
+    throw createError({ statusCode: 403, message: 'No puedes crear usuarios para otra empresa' })
   }
 
   const { data: newUser, error: createError2 } = await adminClient.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { nombre, rol }
+    user_metadata: {
+      nombre: nombre || email.split('@')[0],
+      rol,
+      empresa_id: empresaId,
+      activo: true
+    }
   })
 
   if (createError2) {
     throw createError({ statusCode: 400, message: createError2.message })
   }
 
-  // Crear perfil
   if (newUser?.user) {
-    await adminClient.from('perfiles').upsert({
+    const { error: perfilError } = await adminClient.from('perfiles').upsert({
       id: newUser.user.id,
       nombre: nombre || email.split('@')[0],
-      rol: rol || 'cajero',
-      activo: true
+      rol,
+      activo: true,
+      empresa_id: empresaId
     })
+
+    if (perfilError) {
+      throw createError({ statusCode: 400, message: perfilError.message })
+    }
   }
 
   return { success: true, userId: newUser?.user?.id }

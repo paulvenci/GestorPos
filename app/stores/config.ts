@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 import type { Database } from '~/types/database.types'
 import { getDefaultRolePermissions, normalizeRolePermissions, type RolePermissionsMap } from '~/composables/useRolePermissions'
+import { useAuthStore } from '~/stores/auth'
 
 interface AppConfigState {
   margen_ganancia_defecto: number
@@ -11,6 +12,7 @@ interface AppConfigState {
 
 export const useConfigStore = defineStore('config', () => {
   const supabase = useSupabaseClient<Database>()
+  const authStore = useAuthStore()
   const defaultRolePermissions = getDefaultRolePermissions()
 
   const configuracion = useLocalStorage<AppConfigState>('gestorpos_config', {
@@ -27,7 +29,6 @@ export const useConfigStore = defineStore('config', () => {
       const { data, error } = await supabase
         .from('configuracion')
         .select('*')
-        .eq('id', '00000000-0000-0000-0000-000000000001')
         .single()
 
       if (error && error.code !== 'PGRST116') {
@@ -54,17 +55,21 @@ export const useConfigStore = defineStore('config', () => {
   }) => {
     loading.value = true
     try {
+      if (!authStore.empresaId) {
+        throw new Error('No hay empresa asignada al usuario actual')
+      }
+
       const rolePermissions = normalizeRolePermissions(
         nuevosAjustes.role_permissions || configuracion.value.role_permissions
       )
 
       const { error } = await (supabase.from('configuracion') as any).upsert({
-        id: '00000000-0000-0000-0000-000000000001',
+        empresa_id: authStore.empresaId,
         margen_ganancia_defecto: nuevosAjustes.margen_ganancia_defecto,
         stock_minimo_defecto: nuevosAjustes.stock_minimo_defecto,
         role_permissions: rolePermissions,
         updated_at: new Date().toISOString()
-      })
+      }, { onConflict: 'empresa_id' })
 
       if (error) throw error
 
@@ -88,4 +93,3 @@ export const useConfigStore = defineStore('config', () => {
     saveConfig
   }
 })
-

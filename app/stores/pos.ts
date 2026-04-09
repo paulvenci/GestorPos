@@ -41,7 +41,7 @@ export const usePosStore = defineStore('pos', () => {
     try {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, nombre, sku, precio, stock, imagen_url, es_pesable, updated_at')
+        .select('id, empresa_id, nombre, sku, precio, costo, categoria, activo, stock, imagen_url, es_pesable, stock_minimo, margen_ganancia, updated_at')
         .eq('activo', true)
       if (error) return // Puede estar offline, no pasa nada
       if (data) {

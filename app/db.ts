@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 
 export interface ProductoLocal {
   id: string; // uuid
+  empresa_id?: string;
   nombre: string;
   sku: string;
   precio: number;
@@ -18,6 +19,7 @@ export interface ProductoLocal {
 
 export interface VentaOffline {
   id?: number; // Auto-incremented local id
+  empresa_id?: string;
   turno_id: string;
   subtotal: number;
   total: number;

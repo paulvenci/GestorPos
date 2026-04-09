@@ -6,7 +6,13 @@ export const useAuthStore = defineStore('auth', () => {
   const supabase = useSupabaseClient<Database>()
   const user = ref<User | null>(null)
   const turnoActivo = ref<string | null>(null)
-  const perfil = ref<{ nombre: string | null; rol: string } | null>(null)
+  const perfil = ref<{
+    nombre: string | null
+    rol: string
+    activo?: boolean | null
+    empresa_id: string | null
+    empresa?: { nombre: string | null } | null
+  } | null>(null)
 
   const nombrePerfil = computed(() => perfil.value?.nombre?.trim() || '')
   const nombreCorreo = computed(() => user.value?.email?.split('@')[0]?.trim() || '')
@@ -23,7 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await supabase
         .from('perfiles')
-        .select('nombre, rol')
+        .select('nombre, rol, activo, empresa_id, empresa:empresas(nombre)')
         .eq('id', userId)
         .single()
       if (data) {
@@ -52,6 +58,21 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value)
   const nombreUsuario = computed(() => nombrePerfil.value || nombreCorreo.value || 'Sin nombre')
   const rolUsuario = computed(() => perfil.value?.rol || 'cajero')
+  const empresaId = computed(() => perfil.value?.empresa_id || null)
+  const nombreEmpresa = computed(() => perfil.value?.empresa?.nombre?.trim() || '')
 
-  return { user, perfil, turnoActivo, isAuthenticated, nombreUsuario, rolUsuario, fetchUser, fetchPerfil, signIn, signOut }
+  return {
+    user,
+    perfil,
+    turnoActivo,
+    isAuthenticated,
+    nombreUsuario,
+    rolUsuario,
+    empresaId,
+    nombreEmpresa,
+    fetchUser,
+    fetchPerfil,
+    signIn,
+    signOut
+  }
 })

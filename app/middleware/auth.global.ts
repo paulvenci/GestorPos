@@ -55,11 +55,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const { data: perfil } = await supabase
     .from('perfiles')
-    .select('rol, activo')
+    .select('rol, activo, empresa_id')
     .eq('id', currentUser.id)
     .single()
 
-  if (!perfil || perfil.activo === false) {
+  if (!perfil || perfil.activo === false || !perfil.empresa_id) {
     return navigateTo('/login')
   }
 

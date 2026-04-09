@@ -25,6 +25,10 @@
       </div>
 
       <nav class="pos-sidebar-nav">
+        <NuxtLink v-if="authStore.rolUsuario === 'super_admin'" to="/superadmin/empresas" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-building" />
+          <span>Negocios</span>
+        </NuxtLink>
         <NuxtLink v-if="canAccess('dashboard')" to="/" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-home" />
           <span>Dashboard</span>
@@ -187,6 +191,7 @@ const runtimeConfig = useRuntimeConfig()
 const appVersion = computed(() => String(runtimeConfig.public.appVersion || 'dev'))
 const consultaPrecioVisible = useState<boolean>('consulta-precio-open', () => false)
 const seccionActual = computed(() => {
+  if (route.path.startsWith('/superadmin/empresas')) return 'Negocios'
   if (route.path === '/') return 'Dashboard'
   if (route.path.startsWith('/pos')) return 'Punto de Venta'
   if (route.path.startsWith('/caja')) return 'Caja'
