@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="pos-layout-wrapper">
     <!-- Backdrop overlay (mobile) -->
     <div 
@@ -36,14 +36,17 @@
         <NuxtLink v-if="canAccess('pos')" to="/pos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-shopping-cart" />
           <span>Punto de Venta</span>
+          <kbd class="pos-nav-shortcut">F5</kbd>
         </NuxtLink>
         <NuxtLink v-if="canAccess('caja')" to="/caja" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-wallet" />
           <span>Caja</span>
+          <kbd class="pos-nav-shortcut">F6</kbd>
         </NuxtLink>
         <NuxtLink v-if="canAccess('inventario')" to="/admin/productos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-box" />
           <span>Inventario</span>
+          <kbd class="pos-nav-shortcut">F7</kbd>
         </NuxtLink>
         <NuxtLink v-if="canAccess('ajuste_stock')" to="/admin/ajuste-stock" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-sync" />
@@ -253,6 +256,24 @@ function onKeydownLayout(event: KeyboardEvent) {
     return
   }
 
+  if (event.key === 'F5') {
+    event.preventDefault()
+    if (canAccess('pos')) navigateTo('/pos')
+    return
+  }
+
+  if (event.key === 'F6') {
+    event.preventDefault()
+    if (canAccess('caja')) navigateTo('/caja')
+    return
+  }
+
+  if (event.key === 'F7') {
+    event.preventDefault()
+    if (canAccess('inventario')) navigateTo('/admin/productos')
+    return
+  }
+
   if (event.key === 'Escape' && mostrarNotificaciones.value) {
     mostrarNotificaciones.value = false
   }
@@ -380,6 +401,25 @@ onUnmounted(() => {
   font-size: 1rem;
   width: 1.25rem;
   text-align: center;
+}
+
+.pos-nav-shortcut {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.35rem;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-brand-primary);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  line-height: 1;
+  font-family: inherit;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.pos-nav-item:hover .pos-nav-shortcut {
+  opacity: 1;
 }
 
 .pos-nav-divider {

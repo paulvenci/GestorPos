@@ -338,6 +338,8 @@
       <div>
          <label class="block text-sm font-medium mb-1">Ingresar Precio Total</label>
          <InputNumber
+           ref="precioTotalPesoRef"
+           inputId="pos-precio-total-peso"
            v-model="precioPesadoCalculado"
            mode="currency"
            currency="CLP"
@@ -830,6 +832,7 @@ const productoPendientePeso = ref<ProductoLocal | null>(null)
 const cantidadPesoCalculada = ref(0)
 const precioPesadoCalculado = ref(0)
 const pesoInputRef = ref<any>(null)
+const precioTotalPesoRef = ref<any>(null)
 let origenEdicionPeso: 'peso' | 'total' | null = null
 
 const totalPesoCalculado = computed(() => Math.max(0, precioPesadoCalculado.value || 0))
@@ -884,9 +887,9 @@ function enfocarCampoPeso() {
   nextTick(() => {
     window.setTimeout(() => {
       const input =
-        document.getElementById('pos-peso-cantidad') as HTMLInputElement | null ||
-        pesoInputRef.value?.$el?.querySelector?.('input') ||
-        pesoInputRef.value?.input ||
+        document.getElementById('pos-precio-total-peso') as HTMLInputElement | null ||
+        precioTotalPesoRef.value?.$el?.querySelector?.('input') ||
+        precioTotalPesoRef.value?.input ||
         null
 
       if (input && typeof input.focus === 'function') {
