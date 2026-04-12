@@ -10,6 +10,7 @@
           <div class="p-inputgroup flex-1">
             <input
               ref="searchInputRef"
+              id="pos-busqueda-principal"
               v-model="posStore.busqueda"
               type="text"
               placeholder="Escanear código o buscar por nombre..."
@@ -216,7 +217,7 @@
         </div>
 
         <Button
-          label="Cobrar (F2)"
+          label="Cobrar (F11/F12)"
           icon="pi pi-check-circle"
           size="large"
           class="pos-cobrar-btn"
@@ -234,25 +235,39 @@
     modal
     header="Confirmar Venta"
     :style="{ width: '430px' }"
+    :closable="false"
+    :focusOnShow="false"
+    @show="onMostrarModalCobro"
+    @hide="onCerrarModalCobro"
   >
     <div class="dialog-body">
+      <div class="confirm-estado">
+        <Tag
+          :value="ventaActualGuardada ? 'VENTA GUARDADA' : 'VENTA PENDIENTE'"
+          :severity="ventaActualGuardada ? 'success' : 'warn'"
+        />
+        <span v-if="ventaActualGuardada" class="confirm-estado-text">
+          ID {{ ventaActualIdCorto }} · {{ ventaActualImpresa ? 'impresa' : 'sin imprimir' }}
+        </span>
+      </div>
+
       <div class="confirm-total">
         <span class="confirm-total-label">Total a cobrar</span>
-        <span class="confirm-total-monto">{{ formatMonto(posStore.total) }}</span>
+        <span class="confirm-total-monto">{{ formatMonto(totalCobroActual) }}</span>
       </div>
 
       <div class="confirm-pagos">
         <div class="confirm-pago-row">
           <label>Efectivo</label>
-          <InputNumber v-model="pagoEfectivo" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" />
+          <InputNumber ref="pagoEfectivoRef" inputId="pos-pago-efectivo" v-model="pagoEfectivo" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" @focus="seleccionarTextoPago" />
         </div>
         <div class="confirm-pago-row">
           <label>Tarjeta</label>
-          <InputNumber v-model="pagoTarjeta" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" />
+          <InputNumber ref="pagoTarjetaRef" inputId="pos-pago-tarjeta" v-model="pagoTarjeta" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" @focus="seleccionarTextoPago" />
         </div>
         <div class="confirm-pago-row">
           <label>Transferencia</label>
-          <InputNumber v-model="pagoTransferencia" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" />
+          <InputNumber ref="pagoTransferenciaRef" inputId="pos-pago-transferencia" v-model="pagoTransferencia" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" @focus="seleccionarTextoPago" />
         </div>
       </div>
 
@@ -276,20 +291,29 @@
       </div>
     </div>
     <template #footer>
-      <Button label="Cancelar" text severity="secondary" @click="mostrarConfirmacion = false" />
+      <Button :label="ventaActualGuardada ? 'Cerrar (Esc)' : 'Cancelar (Esc)'" text severity="secondary" @click="mostrarConfirmacion = false" />
       <Button
-        label="Confirmar cobro"
-        icon="pi pi-check"
+        label="Guardar (F2)"
+        icon="pi pi-save"
         :loading="posStore.procesando || confirmandoCobro"
-        :disabled="confirmandoCobro || !pagoValido"
+        :disabled="confirmandoCobro || !pagoValido || ventaActualGuardada"
+        severity="secondary"
+        outlined
+        @click="confirmarCobro(false)"
+      />
+      <Button
+        :label="ventaActualGuardada ? 'Reimprimir (F1)' : 'Guardar e Imprimir (F1)'"
+        :icon="ventaActualGuardada ? 'pi pi-print' : 'pi pi-check'"
+        :loading="posStore.procesando || confirmandoCobro"
+        :disabled="confirmandoCobro || (!pagoValido && !ventaActualGuardada)"
         class="pos-btn-cta"
-        @click="confirmarCobro"
+        @click="confirmarCobro(true)"
       />
     </template>
   </Dialog>
 
   <!-- Modal Modalidad de Peso -->
-  <Dialog v-model:visible="mostrarModalPeso" header="Producto por Peso" :modal="true" :style="{ width: '400px' }" @hide="cerrarModalPeso">
+  <Dialog v-model:visible="mostrarModalPeso" header="Producto por Peso" :modal="true" :style="{ width: '400px' }" :closable="false" :focusOnShow="false" @show="enfocarCampoPeso" @hide="cerrarModalPeso">
     <div class="p-2 flex flex-col gap-4">
       <div>
          <h3 class="font-bold text-lg text-slate-800 dark:text-white">{{ productoPendientePeso?.nombre }}</h3>
@@ -298,6 +322,8 @@
       <div>
          <label class="block text-sm font-medium mb-1">Ingresar Peso (Kg)</label>
          <InputNumber
+           ref="pesoInputRef"
+           inputId="pos-peso-cantidad"
            v-model="cantidadPesoCalculada"
            locale="en-US"
            :useGrouping="false"
@@ -305,9 +331,8 @@
            :maxFractionDigits="3"
            :step="0.05"
            class="w-full"
-           autofocus
            @update:modelValue="onCambioPeso"
-           @keydown.enter="confirmarPeso"
+           @keydown.enter="confirmarPesoDesdeTeclado"
          />
       </div>
       <div>
@@ -320,7 +345,7 @@
            :maxFractionDigits="0"
            class="w-full"
            @update:modelValue="onCambioTotal"
-           @keydown.enter="confirmarPeso"
+           @keydown.enter="confirmarPesoDesdeTeclado"
          />
       </div>
       <div class="pos-peso-total-box">
@@ -463,20 +488,34 @@ function addToastUnico(
 
 // ─── Refs ─────────────────────────────────────────────────
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const pagoEfectivoRef = ref<any>(null)
+const pagoTarjetaRef = ref<any>(null)
+const pagoTransferenciaRef = ref<any>(null)
 const mostrarConfirmacion = ref(false)
 const confirmandoCobro = ref(false)
 const metodoPago = ref('efectivo')
 const pagoEfectivo = ref(0)
 const pagoTarjeta = ref(0)
 const pagoTransferencia = ref(0)
+const totalCobroModal = ref(0)
+const itemsCobroModal = ref<TicketItem[]>([])
+const ventaActualGuardada = ref(false)
+const ventaActualImpresa = ref(false)
+const ventaActualId = ref<string | null>(null)
+const ventaActualEstado = ref<'emitido' | 'pendiente' | null>(null)
+const ventaActualFecha = ref<Date | null>(null)
+const ventaActualMetodoEtiqueta = ref('')
+const ventaActualCajero = ref('')
+const ventaActualPagado = ref(0)
+const ventaActualVuelto = ref(0)
 const isOnline = ref(import.meta.client ? navigator.onLine : true)
 const topVendidos = ref<ProductoLocal[]>([])
 const mostrarReservas = ref(false)
 const onDesconectado = () => { isOnline.value = false }
 
 const metodosPago = [
-  { value: 'efectivo', label: 'Efectivo', icon: 'pi pi-money-bill' },
-  { value: 'tarjeta', label: 'Tarjeta', icon: 'pi pi-credit-card' },
+  { value: 'efectivo', label: 'Efectivo (F12)', icon: 'pi pi-money-bill' },
+  { value: 'tarjeta', label: 'Tarjeta (F11)', icon: 'pi pi-credit-card' },
   { value: 'transferencia', label: 'Transferencia', icon: 'pi pi-send' }
 ]
 
@@ -486,8 +525,11 @@ const totalPagado = computed(() =>
   (Number(pagoTransferencia.value) || 0)
 )
 
-const saldoPendiente = computed(() => Math.round((posStore.total - totalPagado.value)))
-const pagoValido = computed(() => posStore.total > 0 && saldoPendiente.value <= 0 && totalPagado.value > 0)
+const totalCobroActual = computed(() => mostrarConfirmacion.value ? totalCobroModal.value : posStore.total)
+const saldoPendiente = computed(() => Math.round((totalCobroActual.value - totalPagado.value)))
+const pagoValido = computed(() => totalCobroActual.value > 0 && saldoPendiente.value <= 0 && totalPagado.value > 0)
+const ventaActualIdCorto = computed(() => String(ventaActualId.value || '').slice(0, 8).toUpperCase() || 'N/A')
+const cleanupPagoInputListeners: Array<() => void> = []
 
 type TicketItem = {
   nombre: string
@@ -496,6 +538,205 @@ type TicketItem = {
   precio: number
   descuento: number
   subtotal: number
+}
+
+function construirItemsTicketDesdeCarrito() {
+  return posStore.carrito.map((item) => ({
+    nombre: item.nombre,
+    sku: item.sku,
+    cantidad: item.cantidad,
+    precio: item.precio,
+    descuento: item.descuento,
+    subtotal: redondearCLP(item.precio * item.cantidad * (1 - item.descuento / 100))
+  }))
+}
+
+function resetEstadoCobro() {
+  totalCobroModal.value = 0
+  itemsCobroModal.value = []
+  ventaActualGuardada.value = false
+  ventaActualImpresa.value = false
+  ventaActualId.value = null
+  ventaActualEstado.value = null
+  ventaActualFecha.value = null
+  ventaActualMetodoEtiqueta.value = ''
+  ventaActualCajero.value = ''
+  ventaActualPagado.value = 0
+  ventaActualVuelto.value = 0
+  pagoEfectivo.value = 0
+  pagoTarjeta.value = 0
+  pagoTransferencia.value = 0
+}
+
+function enfocarBusquedaPrincipalPOS() {
+  nextTick(() => {
+    window.setTimeout(() => {
+      const input =
+        document.getElementById('pos-busqueda-principal') as HTMLInputElement | null ||
+        searchInputRef.value
+
+      if (!input) return
+      input.focus?.()
+      input.select?.()
+    }, 20)
+  })
+}
+
+function onCerrarModalCobro() {
+  limpiarListenersInputsPago()
+  resetEstadoCobro()
+  enfocarBusquedaPrincipalPOS()
+}
+
+function onMostrarModalCobro() {
+  instalarListenersInputsPago()
+  enfocarCampoPagoSeleccionado()
+}
+
+function obtenerInputRefSegunMetodo() {
+  if (metodoPago.value === 'tarjeta') return pagoTarjetaRef
+  if (metodoPago.value === 'transferencia') return pagoTransferenciaRef
+  return pagoEfectivoRef
+}
+
+function enfocarCampoPagoSeleccionado() {
+  const inputId =
+    metodoPago.value === 'tarjeta'
+      ? 'pos-pago-tarjeta'
+      : metodoPago.value === 'transferencia'
+        ? 'pos-pago-transferencia'
+        : 'pos-pago-efectivo'
+
+  nextTick(() => {
+    window.setTimeout(() => {
+      const inputRef = obtenerInputRefSegunMetodo()
+      const input =
+        document.getElementById(inputId) as HTMLInputElement | null ||
+        inputRef.value?.$el?.querySelector?.('input') ||
+        inputRef.value?.input ||
+        null
+
+      if (input && typeof input.focus === 'function') {
+        input.focus()
+        seleccionarInputCompleto(input)
+      }
+    }, 30)
+  })
+}
+
+function seleccionarInputCompleto(input: HTMLInputElement) {
+  const aplicar = () => {
+    if (typeof input.focus === 'function') input.focus()
+    if (typeof input.select === 'function') input.select()
+    if (typeof input.setSelectionRange === 'function') {
+      input.setSelectionRange(0, input.value.length)
+    }
+  }
+
+  aplicar()
+  requestAnimationFrame(aplicar)
+  window.setTimeout(aplicar, 0)
+  window.setTimeout(aplicar, 40)
+}
+
+function seleccionarTextoPago(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  if (!input) return
+  seleccionarInputCompleto(input)
+}
+
+function obtenerInputPagoPorCampo(campo: 'efectivo' | 'tarjeta' | 'transferencia') {
+  const id =
+    campo === 'tarjeta'
+      ? 'pos-pago-tarjeta'
+      : campo === 'transferencia'
+        ? 'pos-pago-transferencia'
+        : 'pos-pago-efectivo'
+
+  return document.getElementById(id) as HTMLInputElement | null
+}
+
+function obtenerOrdenCampoPago() {
+  return ['efectivo', 'tarjeta', 'transferencia'] as const
+}
+
+function setMontoPago(campo: 'efectivo' | 'tarjeta' | 'transferencia', valor: number) {
+  const monto = Number.isFinite(valor) ? Math.max(0, Math.round(valor)) : 0
+  if (campo === 'efectivo') pagoEfectivo.value = monto
+  else if (campo === 'tarjeta') pagoTarjeta.value = monto
+  else pagoTransferencia.value = monto
+}
+
+function parsearMontoDesdeInput(valor: string) {
+  const limpio = String(valor || '').replace(/[^\d-]/g, '')
+  if (!limpio || limpio === '-') return 0
+  return Number(limpio)
+}
+
+function sincronizarMontoPagoDesdeInput(campo: 'efectivo' | 'tarjeta' | 'transferencia') {
+  const input = obtenerInputPagoPorCampo(campo)
+  if (!input) return
+  setMontoPago(campo, parsearMontoDesdeInput(input.value))
+}
+
+function moverFocoCampoPago(campoActual: 'efectivo' | 'tarjeta' | 'transferencia', direccion: 1 | -1) {
+  const orden = obtenerOrdenCampoPago()
+  const actualIndex = orden.indexOf(campoActual)
+  const siguienteIndex = actualIndex + direccion
+  if (siguienteIndex < 0 || siguienteIndex >= orden.length) return
+  const siguienteCampo = orden[siguienteIndex]
+  metodoPago.value = siguienteCampo
+  const input = obtenerInputPagoPorCampo(siguienteCampo)
+  if (!input) return
+  seleccionarInputCompleto(input)
+}
+
+function limpiarListenersInputsPago() {
+  while (cleanupPagoInputListeners.length > 0) {
+    const cleanup = cleanupPagoInputListeners.pop()
+    cleanup?.()
+  }
+}
+
+function instalarListenersInputsPago() {
+  limpiarListenersInputsPago()
+
+  const campos = obtenerOrdenCampoPago()
+  window.setTimeout(() => {
+    for (const campo of campos) {
+      const input = obtenerInputPagoPorCampo(campo)
+      if (!input) continue
+
+      const onInput = () => sincronizarMontoPagoDesdeInput(campo)
+      const onFocus = () => { metodoPago.value = campo }
+      const onKeyup = () => sincronizarMontoPagoDesdeInput(campo)
+      const onKeydown = (event: KeyboardEvent) => {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault()
+          event.stopPropagation()
+          moverFocoCampoPago(campo, 1)
+          return
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault()
+          event.stopPropagation()
+          moverFocoCampoPago(campo, -1)
+          return
+        }
+        window.setTimeout(() => sincronizarMontoPagoDesdeInput(campo), 0)
+      }
+
+      input.addEventListener('input', onInput)
+      input.addEventListener('focus', onFocus)
+      input.addEventListener('keyup', onKeyup)
+      input.addEventListener('keydown', onKeydown, true)
+
+      cleanupPagoInputListeners.push(() => input.removeEventListener('input', onInput))
+      cleanupPagoInputListeners.push(() => input.removeEventListener('focus', onFocus))
+      cleanupPagoInputListeners.push(() => input.removeEventListener('keyup', onKeyup))
+      cleanupPagoInputListeners.push(() => input.removeEventListener('keydown', onKeydown, true))
+    }
+  }, 30)
 }
 
 // ─── Inicialización ───────────────────────────────────────
@@ -588,6 +829,7 @@ const mostrarModalPeso = ref(false)
 const productoPendientePeso = ref<ProductoLocal | null>(null)
 const cantidadPesoCalculada = ref(0)
 const precioPesadoCalculado = ref(0)
+const pesoInputRef = ref<any>(null)
 let origenEdicionPeso: 'peso' | 'total' | null = null
 
 const totalPesoCalculado = computed(() => Math.max(0, precioPesadoCalculado.value || 0))
@@ -636,6 +878,29 @@ function seleccionarProducto(prod: ProductoLocal) {
   posStore.agregarItem(prod)
   nextTick(() => searchInputRef.value?.focus())
   playBeep()
+}
+
+function enfocarCampoPeso() {
+  nextTick(() => {
+    window.setTimeout(() => {
+      const input =
+        document.getElementById('pos-peso-cantidad') as HTMLInputElement | null ||
+        pesoInputRef.value?.$el?.querySelector?.('input') ||
+        pesoInputRef.value?.input ||
+        null
+
+      if (input && typeof input.focus === 'function') {
+        input.focus()
+        if (typeof input.select === 'function') input.select()
+      }
+    }, 30)
+  })
+}
+
+function confirmarPesoDesdeTeclado(event?: KeyboardEvent) {
+  event?.preventDefault()
+  if (totalPesoCalculado.value <= 0 || !cantidadPesoCalculada.value || cantidadPesoCalculada.value <= 0) return
+  confirmarPeso()
 }
 
 function confirmarPeso() {
@@ -930,35 +1195,66 @@ async function crearProductoRapido() {
 }
 
 // ─── Cobro ────────────────────────────────────────────────
-function cobrar() {
+function cobrar(metodoPreferido?: 'efectivo' | 'tarjeta' | 'transferencia') {
   if (posStore.carrito.length === 0) return
+  if (metodoPreferido) metodoPago.value = metodoPreferido
+  totalCobroModal.value = posStore.total
+  itemsCobroModal.value = construirItemsTicketDesdeCarrito()
+  ventaActualGuardada.value = false
+  ventaActualImpresa.value = false
+  ventaActualId.value = null
+  ventaActualEstado.value = null
+  ventaActualFecha.value = null
+  ventaActualMetodoEtiqueta.value = ''
   prepararPagosSegunMetodo()
   mostrarConfirmacion.value = true
 }
 
-async function confirmarCobro() {
+function imprimirVentaActualGuardada() {
+  if (!ventaActualGuardada.value || !ventaActualFecha.value) return
+  imprimirComprobante80mm({
+    ventaId: ventaActualIdCorto.value,
+    fecha: ventaActualFecha.value,
+    cajero: ventaActualCajero.value,
+    metodoPago: ventaActualMetodoEtiqueta.value,
+    pagado: ventaActualPagado.value,
+    vuelto: ventaActualVuelto.value,
+    items: itemsCobroModal.value,
+    total: totalCobroModal.value,
+    estado: ventaActualEstado.value || 'emitido'
+  })
+  ventaActualImpresa.value = true
+}
+
+async function confirmarCobro(imprimir = true) {
   if (confirmandoCobro.value) return
+  if (ventaActualGuardada.value) {
+    if (imprimir) imprimirVentaActualGuardada()
+    return
+  }
   if (!pagoValido.value) return
   confirmandoCobro.value = true
 
-  const totalCobrado = posStore.total
-  const itemsTicket: TicketItem[] = posStore.carrito.map((item) => ({
-    nombre: item.nombre,
-    sku: item.sku,
-    cantidad: item.cantidad,
-    precio: item.precio,
-    descuento: item.descuento,
-    subtotal: redondearCLP(item.precio * item.cantidad * (1 - item.descuento / 100))
-  }))
+  const totalCobrado = totalCobroModal.value
   const fechaTicket = new Date()
   const detallePago = construirDetallePago()
   const metodoPagoFinal = detallePago.metodo
   const metodoPagoEtiqueta = detallePago.etiqueta
+  const cajeroNombre = authStore.nombreUsuario || 'Cajero'
+  const totalPagadoActual = totalPagado.value
+  const vueltoActual = Math.max(0, Math.abs(saldoPendiente.value < 0 ? saldoPendiente.value : 0))
 
   try {
     const turnoId = cajaStore.turnoActivo?.id ?? null
     const ventaId = await posStore.registrarVenta(turnoId, metodoPagoFinal)
-    mostrarConfirmacion.value = false
+    ventaActualGuardada.value = true
+    ventaActualId.value = String(ventaId || '')
+    ventaActualEstado.value = 'emitido'
+    ventaActualFecha.value = fechaTicket
+    ventaActualMetodoEtiqueta.value = metodoPagoEtiqueta
+    ventaActualCajero.value = cajeroNombre
+    ventaActualPagado.value = totalPagadoActual
+    ventaActualVuelto.value = vueltoActual
     const label = turnoId ? '¡Venta registrada!' : 'Venta fuera de turno registrada'
     toast.add({
       severity: 'success',
@@ -966,33 +1262,25 @@ async function confirmarCobro() {
       detail: `Total cobrado: ${formatMonto(totalCobrado || 0)}`,
       life: 4000
     })
-    imprimirComprobante80mm({
-      ventaId: String(ventaId || '').slice(0, 8).toUpperCase() || 'N/A',
-      fecha: fechaTicket,
-      metodoPago: metodoPagoEtiqueta,
-      items: itemsTicket,
-      total: totalCobrado,
-      estado: 'emitido'
-    })
-    nextTick(() => searchInputRef.value?.focus())
+    if (imprimir) imprimirVentaActualGuardada()
   } catch (err: any) {
     const msg = String(err?.message || '')
     if (err.message === 'OFFLINE') {
+      ventaActualGuardada.value = true
+      ventaActualId.value = 'PENDIENTE'
+      ventaActualEstado.value = 'pendiente'
+      ventaActualFecha.value = fechaTicket
+      ventaActualMetodoEtiqueta.value = metodoPagoEtiqueta
+      ventaActualCajero.value = cajeroNombre
+      ventaActualPagado.value = totalPagadoActual
+      ventaActualVuelto.value = vueltoActual
       toast.add({
         severity: 'warn',
         summary: 'Venta guardada localmente',
         detail: `Sin conexión. Venta (${formatMonto(totalCobrado || 0)}) guardada para sincronizar.`,
         life: 6000
       })
-      mostrarConfirmacion.value = false
-      imprimirComprobante80mm({
-        ventaId: 'PENDIENTE',
-        fecha: fechaTicket,
-        metodoPago: metodoPagoEtiqueta,
-        items: itemsTicket,
-        total: totalCobrado,
-        estado: 'pendiente'
-      })
+      if (imprimir) imprimirVentaActualGuardada()
     } else if (msg.includes('productos_stock_check') || msg.toLowerCase().includes('stock insuficiente')) {
       toast.add({
         severity: 'warn',
@@ -1009,20 +1297,23 @@ async function confirmarCobro() {
 }
 
 function prepararPagosSegunMetodo() {
-  const total = Math.round(posStore.total)
+  const total = Math.round(totalCobroActual.value)
   pagoEfectivo.value = 0
   pagoTarjeta.value = 0
   pagoTransferencia.value = 0
 
   if (metodoPago.value === 'tarjeta') {
     pagoTarjeta.value = total
+    enfocarCampoPagoSeleccionado()
     return
   }
   if (metodoPago.value === 'transferencia') {
     pagoTransferencia.value = total
+    enfocarCampoPagoSeleccionado()
     return
   }
   pagoEfectivo.value = total
+  enfocarCampoPagoSeleccionado()
 }
 
 function construirDetallePago() {
@@ -1058,12 +1349,15 @@ function escapeHtml(value: string) {
 function imprimirComprobante80mm(payload: {
   ventaId: string
   fecha: Date
+  cajero: string
   metodoPago: string
+  pagado: number
+  vuelto: number
   items: TicketItem[]
   total: number
   estado: 'emitido' | 'pendiente'
 }) {
-  const printWindow = window.open('', '_blank', 'width=380,height=700')
+  const printWindow = window.open('', '_blank', 'width=300,height=700')
   if (!printWindow) {
     toast.add({ severity: 'warn', summary: 'Popup bloqueado', detail: 'Permite ventanas emergentes para imprimir comprobante.', life: 4000 })
     return
@@ -1073,7 +1367,6 @@ function imprimirComprobante80mm(payload: {
     <tr>
       <td>
         <div class="name">${escapeHtml(item.nombre)}</div>
-        <div class="meta">${escapeHtml(item.sku || '-')}</div>
       </td>
       <td class="qty">${item.cantidad.toFixed(item.cantidad % 1 === 0 ? 0 : 3)}</td>
       <td class="money">${formatMonto(item.subtotal)}</td>
@@ -1089,21 +1382,21 @@ function imprimirComprobante80mm(payload: {
       <head>
         <title>Comprobante ${payload.ventaId}</title>
         <style>
-          @page { size: 80mm auto; margin: 2mm; }
-          body { font-family: "Courier New", monospace; width: 76mm; margin: 0 auto; color: #111; font-size: 12px; }
+          @page { size: 58mm auto; margin: 1.5mm; }
+          body { font-family: "Courier New", monospace; width: 54mm; margin: 0 auto; color: #111; font-size: 10px; line-height: 1.2; }
           .center { text-align: center; }
-          .title { font-weight: 700; font-size: 16px; margin-top: 6px; }
-          .line { border-top: 1px dashed #555; margin: 6px 0; }
-          .meta { color: #444; font-size: 11px; }
+          .title { font-weight: 700; font-size: 13px; margin-top: 4px; }
+          .line { border-top: 1px dashed #555; margin: 4px 0; }
+          .meta { color: #444; font-size: 9px; }
           table { width: 100%; border-collapse: collapse; }
-          td { vertical-align: top; padding: 3px 0; }
-          td.qty { text-align: center; width: 10mm; }
-          td.money { text-align: right; width: 20mm; white-space: nowrap; }
-          .name { font-weight: 700; }
-          .totals { margin-top: 6px; }
-          .totals .row { display: flex; justify-content: space-between; padding: 2px 0; }
-          .totals .final { font-size: 15px; font-weight: 800; }
-          .status { border: 1px dashed #b45309; color: #92400e; padding: 4px; text-align: center; margin: 6px 0; font-weight: 700; }
+          td { vertical-align: top; padding: 2px 0; }
+          td.qty { text-align: center; width: 7mm; }
+          td.money { text-align: right; width: 15mm; white-space: nowrap; }
+          .name { font-weight: 700; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+          .totals { margin-top: 4px; }
+          .totals .row { display: flex; justify-content: space-between; padding: 1px 0; }
+          .totals .final { font-size: 12px; font-weight: 800; }
+          .status { border: 1px dashed #b45309; color: #92400e; padding: 3px; text-align: center; margin: 4px 0; font-weight: 700; font-size: 9px; }
         </style>
       </head>
       <body>
@@ -1112,6 +1405,7 @@ function imprimirComprobante80mm(payload: {
         <div class="line"></div>
         <div>ID: ${escapeHtml(payload.ventaId)}</div>
         <div>Fecha: ${payload.fecha.toLocaleString('es-CL')}</div>
+        <div>Cajero: ${escapeHtml(payload.cajero || 'Cajero')}</div>
         <div>Pago: ${escapeHtml(payload.metodoPago.toUpperCase())}</div>
         ${estadoHtml}
         <div class="line"></div>
@@ -1120,6 +1414,8 @@ function imprimirComprobante80mm(payload: {
         </table>
         <div class="line"></div>
         <div class="totals">
+          <div class="row"><span>PAGADO</span><span>${formatMonto(payload.pagado)}</span></div>
+          <div class="row"><span>VUELTO</span><span>${formatMonto(payload.vuelto)}</span></div>
           <div class="row final"><span>TOTAL</span><span>${formatMonto(payload.total)}</span></div>
         </div>
         <div class="line"></div>
@@ -1173,6 +1469,48 @@ async function sincronizarColaOffline() {
 
 // ─── Atajos de teclado ────────────────────────────────────
 function onKeydown(e: KeyboardEvent) {
+  if (mostrarConfirmacion.value) {
+    if (e.key === 'F1') {
+      e.preventDefault()
+      confirmarCobro(true)
+      return
+    }
+
+    if (e.key === 'F2') {
+      e.preventDefault()
+      confirmarCobro(false)
+      return
+    }
+
+    if (e.key === 'F11') {
+      e.preventDefault()
+      metodoPago.value = 'tarjeta'
+      if (!ventaActualGuardada.value) prepararPagosSegunMetodo()
+      else enfocarCampoPagoSeleccionado()
+      return
+    }
+
+    if (e.key === 'F12') {
+      e.preventDefault()
+      metodoPago.value = 'efectivo'
+      if (!ventaActualGuardada.value) prepararPagosSegunMetodo()
+      else enfocarCampoPagoSeleccionado()
+      return
+    }
+  }
+
+  if (e.key === 'F11') {
+    e.preventDefault()
+    cobrar('tarjeta')
+    return
+  }
+
+  if (e.key === 'F12') {
+    e.preventDefault()
+    cobrar('efectivo')
+    return
+  }
+
   if (e.key === 'F2') {
     e.preventDefault()
     cobrar()
@@ -1851,6 +2189,20 @@ function tiempoDesde(isoDate: string): string {
 /* ─── Diálogo confirmación ─── */
 .dialog-body {
   padding: 0.5rem 0;
+}
+
+.confirm-estado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.confirm-estado-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: right;
 }
 
 .confirm-total {

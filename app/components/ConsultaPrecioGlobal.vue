@@ -14,7 +14,10 @@
     modal
     header="Consultar precio"
     :style="{ width: 'min(720px, calc(100vw - 2rem))' }"
+    :closable="false"
+    :focusOnShow="false"
     class="consulta-precio-dialog"
+    @show="enfocarBusqueda"
     @hide="onHide"
   >
     <div class="consulta-precio-body">
@@ -23,8 +26,10 @@
           <InputIcon class="pi pi-search" />
           <InputText
             ref="searchInputRef"
+            inputId="consulta-precio-busqueda"
             v-model="busqueda"
             fluid
+            autofocus
             placeholder="Escribe o escanea un código o nombre..."
             autocomplete="off"
             @input="onBusqueda"
@@ -148,6 +153,7 @@ const resultados = ref<ProductoLocal[]>([])
 const buscando = ref(false)
 const productoSeleccionado = ref<ProductoLocal | null>(null)
 const searchInputRef = ref<any>(null)
+let focusSearchRetries: ReturnType<typeof setTimeout>[] = []
 
 const mostrarScanner = ref(false)
 const videoScannerRef = ref<HTMLVideoElement | null>(null)
@@ -159,6 +165,7 @@ let scannerResultadoProcesado = false
 
 watch(visible, async (isOpen) => {
   if (isOpen) {
+    ;(document.activeElement as HTMLElement | null)?.blur?.()
     await nextTick()
     enfocarBusqueda()
     return
@@ -225,10 +232,12 @@ function seleccionarProducto(producto: ProductoLocal) {
 }
 
 function onHide() {
+  limpiarFocusBusquedaPendiente()
   busqueda.value = ''
   resultados.value = []
   productoSeleccionado.value = null
   cerrarScanner()
+  enfocarBusquedaPOS()
 }
 
 function agregarAlCarrito() {
@@ -377,8 +386,47 @@ async function procesarCodigoEscaneado(raw: string) {
 }
 
 function enfocarBusqueda() {
-  const maybeInput = searchInputRef.value?.$el?.querySelector?.('input') || searchInputRef.value
-  maybeInput?.focus?.()
+  limpiarFocusBusquedaPendiente()
+  nextTick(() => {
+    const aplicar = () => {
+      const input =
+        document.getElementById('consulta-precio-busqueda') as HTMLInputElement | null ||
+        searchInputRef.value?.$el?.querySelector?.('input') ||
+        searchInputRef.value
+
+      if (!input || !visible.value) return
+
+      ;(document.activeElement as HTMLElement | null)?.blur?.()
+      searchInputRef.value?.$el?.focus?.()
+      input.focus?.()
+      input.select?.()
+      input.setSelectionRange?.(0, input.value?.length || 0)
+    }
+
+    aplicar()
+    requestAnimationFrame(aplicar)
+    for (const delay of [20, 60, 120, 220]) {
+      focusSearchRetries.push(window.setTimeout(aplicar, delay))
+    }
+  })
+}
+
+function limpiarFocusBusquedaPendiente() {
+  focusSearchRetries.forEach((timeoutId) => clearTimeout(timeoutId))
+  focusSearchRetries = []
+}
+
+function enfocarBusquedaPOS() {
+  if (!route.path.startsWith('/pos')) return
+
+  nextTick(() => {
+    window.setTimeout(() => {
+      const input = document.getElementById('pos-busqueda-principal') as HTMLInputElement | null
+      if (!input) return
+      input.focus?.()
+      input.select?.()
+    }, 20)
+  })
 }
 
 function cerrarScanner() {

@@ -454,6 +454,25 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
     return
   }
 
+  const resumenPagos = (ventas || []).reduce((acc: Record<string, number>, venta: any) => {
+    const metodo = String(venta.metodo_pago || '').toLowerCase()
+    const total = Number(venta.total || 0)
+    acc.total += total
+    if (metodo === 'efectivo') acc.efectivo += total
+    else if (metodo === 'tarjeta') acc.tarjeta += total
+    else if (metodo === 'transferencia') acc.transferencia += total
+    else if (metodo === 'mixto') acc.mixto += total
+    else acc.otros += total
+    return acc
+  }, {
+    efectivo: 0,
+    tarjeta: 0,
+    transferencia: 0,
+    mixto: 0,
+    otros: 0,
+    total: 0
+  })
+
   const ventasHtml = (ventas || []).map((v: any) => `
     <div class="item">
       <div class="row"><span>ID</span><span>${String(v.id).substring(0, 8)}</span></div>
@@ -461,6 +480,15 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       <div class="muted">Pago: ${v.metodo_pago}</div>
     </div>
   `).join('')
+
+  const resumenHtml = [
+    `<div class="row"><span>Efectivo</span><span>${formatMonto(resumenPagos.efectivo)}</span></div>`,
+    `<div class="row"><span>Tarjeta</span><span>${formatMonto(resumenPagos.tarjeta)}</span></div>`,
+    `<div class="row"><span>Transfer.</span><span>${formatMonto(resumenPagos.transferencia)}</span></div>`,
+    resumenPagos.mixto > 0 ? `<div class="row"><span>Mixto</span><span>${formatMonto(resumenPagos.mixto)}</span></div>` : '',
+    resumenPagos.otros > 0 ? `<div class="row"><span>Otros</span><span>${formatMonto(resumenPagos.otros)}</span></div>` : '',
+    `<div class="row strong"><span>Total ventas</span><span>${formatMonto(resumenPagos.total)}</span></div>`
+  ].filter(Boolean).join('')
 
   const body = `
     <div class="title">Detalle de Turno</div>
@@ -471,10 +499,12 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
     <div class="row"><span>Inicial</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
     <div class="row"><span>Cierre</span><span>${typeof turno.monto_cierre === 'number' ? formatMonto(turno.monto_cierre) : '—'}</span></div>
     <div class="line"></div>
+    <div class="strong">Resumen pagos</div>
+    ${resumenHtml}
+    ${resumenPagos.mixto > 0 ? '<div class="muted">Nota: el pago mixto se informa aparte porque no existe desglose interno por medio.</div>' : ''}
+    <div class="line"></div>
     <div class="strong">Ventas del turno</div>
     ${ventasHtml || '<div class="muted">Sin ventas asociadas.</div>'}
-    <div class="line"></div>
-    <div class="row strong"><span>Total ventas</span><span>${formatMonto((ventas || []).reduce((acc: number, v: any) => acc + (v.total || 0), 0))}</span></div>
   `
 
   abrirVentanaImpresion80mm('Detalle de Turno', body)

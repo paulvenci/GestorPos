@@ -86,15 +86,31 @@
              TAB 1: VENTAS DE HOY
         ======================== -->
         <TabPanel value="1">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold">Ventas de Hoy</h2>
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div class="flex flex-wrap items-end gap-3">
+              <div>
+                <h2 class="text-lg font-bold">Ventas de Hoy</h2>
+                <p class="text-sm text-muted">Filtra el reporte por cajero antes de revisar o imprimir.</p>
+              </div>
+              <div class="w-72 max-w-full">
+                <label class="text-xs text-muted">Cajero</label>
+                <Select
+                  v-model="filtroCajeroHoy"
+                  :options="opcionesCajeroHoy"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Todos los cajeros"
+                  class="w-full"
+                />
+              </div>
+            </div>
             <div class="flex gap-2">
               <Button icon="pi pi-print" label="Imprimir" @click="imprimirVentasHoy" size="small" variant="outlined" severity="secondary" />
               <Button icon="pi pi-refresh" label="Actualizar" @click="fetchVentasHoy" :loading="loadingVentasHoy" size="small" variant="outlined" />
             </div>
           </div>
           <DataTable
-            :value="ventasHoy"
+            :value="ventasHoyFiltradas"
             v-model:expandedRows="expandedRows"
             dataKey="id"
             :loading="loadingVentasHoy"
@@ -364,6 +380,7 @@ const loadingTurnos = ref(false)
 const ventasHoy = ref<any[]>([])
 const loadingVentasHoy = ref(false)
 const expandedRows = ref({})
+const filtroCajeroHoy = ref<string | null>(null)
 
 // Tab 2
 const topProductos = ref<any[]>([])
@@ -386,6 +403,52 @@ onMounted(() => {
   fetchRotacion()
   fetchRentabilidad()
   fetchHistorialVentas()
+})
+
+const opcionesCajeroHoy = computed(() => {
+  const ids = Array.from(new Set(
+    ventasHoy.value
+      .map((venta: any) => venta.id_usuario || venta.turnos_caja?.id_usuario)
+      .filter(Boolean)
+  ))
+
+  const opciones = ids.map((id) => ({
+    label: perfiles.value[id]?.nombre || `Usuario ${String(id).substring(0, 6)}`,
+    value: id
+  }))
+
+  opciones.sort((a, b) => a.label.localeCompare(b.label, 'es'))
+
+  return [
+    { label: 'Todos los cajeros', value: null },
+    ...opciones
+  ]
+})
+
+const ventasHoyFiltradas = computed(() => {
+  if (!filtroCajeroHoy.value) return ventasHoy.value
+  return ventasHoy.value.filter((venta: any) => (venta.id_usuario || venta.turnos_caja?.id_usuario) === filtroCajeroHoy.value)
+})
+
+const resumenVentasHoy = computed(() => {
+  return ventasHoyFiltradas.value.reduce((acc: Record<string, number>, venta: any) => {
+    const metodo = String(venta.metodo_pago || '').toLowerCase()
+    const total = Number(venta.total || 0)
+    acc.total += total
+    if (metodo === 'efectivo') acc.efectivo += total
+    else if (metodo === 'tarjeta') acc.tarjeta += total
+    else if (metodo === 'transferencia') acc.transferencia += total
+    else if (metodo === 'mixto') acc.mixto += total
+    else acc.otros += total
+    return acc
+  }, {
+    efectivo: 0,
+    tarjeta: 0,
+    transferencia: 0,
+    mixto: 0,
+    otros: 0,
+    total: 0
+  })
 })
 
 // === MÉTODOS DE CONSULTA ===
@@ -606,15 +669,36 @@ function imprimirTurnos() {
 }
 
 function imprimirVentasHoy() {
-  const rows = ventasHoy.value.map((v: any) => `
+  const rows = ventasHoyFiltradas.value.map((v: any) => `
     <tr>
       <td>${v.id.substring(0, 8)}</td>
       <td>${formatDate(v.fecha)}</td>
+      <td>${perfiles.value[v.id_usuario || v.turnos_caja?.id_usuario]?.nombre || '-'}</td>
       <td>${v.metodo_pago}</td>
       <td>${formatMonto(v.total)}</td>
     </tr>
   `).join('')
-  abrirVentanaReporte('Ventas de Hoy', `<table><thead><tr><th>Boleta</th><th>Fecha</th><th>Pago</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>`)
+  const resumenRows = [
+    `<div class="row"><strong>Efectivo</strong><span>${formatMonto(resumenVentasHoy.value.efectivo)}</span></div>`,
+    `<div class="row"><strong>Tarjeta</strong><span>${formatMonto(resumenVentasHoy.value.tarjeta)}</span></div>`,
+    `<div class="row"><strong>Transferencia</strong><span>${formatMonto(resumenVentasHoy.value.transferencia)}</span></div>`,
+    resumenVentasHoy.value.mixto > 0 ? `<div class="row"><strong>Mixto</strong><span>${formatMonto(resumenVentasHoy.value.mixto)}</span></div>` : '',
+    resumenVentasHoy.value.otros > 0 ? `<div class="row"><strong>Otros</strong><span>${formatMonto(resumenVentasHoy.value.otros)}</span></div>` : '',
+    `<div class="row"><strong>Total</strong><span>${formatMonto(resumenVentasHoy.value.total)}</span></div>`
+  ].filter(Boolean).join('')
+
+  const cajeroSeleccionado = opcionesCajeroHoy.value.find((op) => op.value === filtroCajeroHoy.value)?.label || 'Todos los cajeros'
+
+  abrirVentanaReporte(
+    'Ventas de Hoy',
+    `<div class="meta">Cajero: ${cajeroSeleccionado}</div>
+     <div class="meta">Ventas consideradas: ${ventasHoyFiltradas.value.length}</div>
+     <h2>Resumen por medio de pago</h2>
+     ${resumenRows}
+     <h2>Detalle</h2>
+     <table><thead><tr><th>Boleta</th><th>Fecha</th><th>Cajero</th><th>Pago</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
+     ${resumenVentasHoy.value.mixto > 0 ? '<div class="meta">Nota: las ventas mixtas se informan aparte porque la base actual no guarda su desglose interno por efectivo/tarjeta/transferencia.</div>' : ''}`
+  )
 }
 
 function imprimirRotacion() {
