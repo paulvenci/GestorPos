@@ -1501,6 +1501,25 @@ function onKeydown(e: KeyboardEvent) {
       return
     }
   }
+  if (e.key === '+' || e.key === '-') {
+    const algunModalAbierto = mostrarConfirmacion.value || 
+                              mostrarModalPeso.value || 
+                              mostrarScanner.value || 
+                              mostrarReservas.value || 
+                              mostrarModalAuth.value || 
+                              mostrarModalNuevoProd.value || 
+                              consultaPrecioVisible.value;
+    if (!algunModalAbierto && posStore.carrito.length > 0) {
+      e.preventDefault()
+      const idAModificar = posStore.ultimoModificadoId || posStore.carrito[posStore.carrito.length - 1].id_producto
+      const item = posStore.carrito.find(i => i.id_producto === idAModificar)
+      if (item && !item.es_pesable) {
+        const delta = e.key === '+' ? 1 : -1
+        posStore.setCantidad(item.id_producto, item.cantidad + delta)
+      }
+      return
+    }
+  }
 
   if (e.key === 'F11') {
     e.preventDefault()

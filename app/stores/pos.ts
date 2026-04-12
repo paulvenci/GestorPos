@@ -31,6 +31,7 @@ export const usePosStore = defineStore('pos', () => {
   const buscando = ref(false)
   const procesando = ref(false)
   const ventasReservadas = ref<VentaReservadaLocal[]>([])
+  const ultimoModificadoId = ref<string | null>(null)
 
   function esErrorDeRed(error: any) {
     if (import.meta.client && !navigator.onLine) return true
@@ -100,19 +101,24 @@ export const usePosStore = defineStore('pos', () => {
         es_pesable: producto.es_pesable
       })
     }
+    ultimoModificadoId.value = producto.id
     resultados.value = []
     busqueda.value = ''
   }
 
   function quitarItem(id_producto: string) {
     carrito.value = carrito.value.filter(i => i.id_producto !== id_producto)
+    if (ultimoModificadoId.value === id_producto) ultimoModificadoId.value = null
   }
 
   function setCantidad(id_producto: string, cantidad: number) {
     const item = carrito.value.find(i => i.id_producto === id_producto)
     if (item) {
       if (cantidad <= 0) quitarItem(id_producto)
-      else item.cantidad = cantidad
+      else {
+        item.cantidad = cantidad
+        ultimoModificadoId.value = id_producto
+      }
     }
   }
 
@@ -123,6 +129,7 @@ export const usePosStore = defineStore('pos', () => {
 
   function vaciarCarrito() {
     carrito.value = []
+    ultimoModificadoId.value = null
   }
 
   // ─── Totales (con Ley de Redondeo Chile → $10) ──────
@@ -237,6 +244,7 @@ export const usePosStore = defineStore('pos', () => {
     carrito, busqueda, resultados, buscando, procesando,
     subtotal, total,
     ventasReservadas,
+    ultimoModificadoId,
     sincronizarCatalogo, buscarProductos,
     agregarItem, quitarItem, setCantidad, setDescuento, vaciarCarrito,
     registrarVenta,
