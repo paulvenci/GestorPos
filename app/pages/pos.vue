@@ -819,7 +819,6 @@ function limpiarBusqueda() {
   }
 
   limpiarSoloBusqueda()
-  posStore.vaciarCarrito()
 }
 
 function abrirConsultaGlobal() {
