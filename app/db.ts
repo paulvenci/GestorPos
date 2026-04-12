@@ -14,6 +14,7 @@ export interface ProductoLocal {
   es_pesable?: boolean;
   stock_minimo?: number;
   margen_ganancia?: number | null;
+  iva?: number;
   updated_at: string;
 }
 
@@ -70,3 +71,4 @@ export class GestorPOSDatabase extends Dexie {
 }
 
 export const db = new GestorPOSDatabase();
+

@@ -8,11 +8,10 @@
       <div class="pos-search-bar">
         <div class="pos-search-input-wrap">
           <div class="p-inputgroup flex-1">
-            <input
+            <InputText
               ref="searchInputRef"
               id="pos-busqueda-principal"
               v-model="posStore.busqueda"
-              type="text"
               placeholder="Escanear código o buscar por nombre..."
               class="pos-search-input"
               autocomplete="off"
@@ -379,6 +378,10 @@
          <label class="block text-sm mb-1">Nombre</label>
          <InputText v-model="nuevoProdRapido.nombre" class="w-full" autofocus />
       </div>
+      <div class="field">
+         <label class="block text-sm mb-1">Código (SKU)</label>
+         <InputText v-model="nuevoProdRapido.sku" class="w-full" placeholder="Generado automático si se deja en blanco" />
+      </div>
       <div class="grid grid-cols-2 gap-4">
          <div class="field">
            <label class="block text-sm mb-1">Costo</label>
@@ -489,7 +492,26 @@ function addToastUnico(
 }
 
 // ─── Refs ─────────────────────────────────────────────────
-const searchInputRef = ref<HTMLInputElement | null>(null)
+const searchInputRef = ref<any>(null)
+
+/** Resuelve el <input> nativo dentro del InputText de PrimeVue y le da foco */
+function enfocarBusqueda() {
+  nextTick(() => {
+    window.setTimeout(() => {
+      const el = searchInputRef.value
+      if (!el) return
+      // InputText de PrimeVue expone $el (el input nativo)
+      const input: HTMLInputElement | null =
+        document.getElementById('pos-busqueda-principal') as HTMLInputElement | null ||
+        el.$el ||
+        el
+      if (input && typeof input.focus === 'function') {
+        input.focus()
+        input.select?.()
+      }
+    }, 15)
+  })
+}
 const pagoEfectivoRef = ref<any>(null)
 const pagoTarjetaRef = ref<any>(null)
 const pagoTransferenciaRef = ref<any>(null)
@@ -571,17 +593,7 @@ function resetEstadoCobro() {
 }
 
 function enfocarBusquedaPrincipalPOS() {
-  nextTick(() => {
-    window.setTimeout(() => {
-      const input =
-        document.getElementById('pos-busqueda-principal') as HTMLInputElement | null ||
-        searchInputRef.value
-
-      if (!input) return
-      input.focus?.()
-      input.select?.()
-    }, 20)
-  })
+  enfocarBusqueda()
 }
 
 function onCerrarModalCobro() {
@@ -749,7 +761,7 @@ onMounted(async () => {
   await cargarTopVendidos()
 
   // Auto-focus en el input de búsqueda
-  nextTick(() => searchInputRef.value?.focus())
+  enfocarBusqueda()
 
   // Monitorear estado de red
   window.addEventListener('online', onConectado)
@@ -878,7 +890,9 @@ function seleccionarProducto(prod: ProductoLocal) {
   }
 
   posStore.agregarItem(prod)
-  nextTick(() => searchInputRef.value?.focus())
+  posStore.busqueda = ''
+  posStore.resultados = []
+  enfocarBusqueda()
   playBeep()
 }
 
@@ -911,7 +925,7 @@ function confirmarPeso() {
      playBeep()
   }
   cerrarModalPeso()
-  nextTick(() => searchInputRef.value?.focus())
+  enfocarBusqueda()
 }
 
 function cerrarModalPeso() {
@@ -1117,7 +1131,7 @@ const creandoProd = ref(false)
 function pedirAutorizacion() {
   const esAdminLogeado = authStore.rolUsuario === 'admin'
   if (esAdminLogeado) {
-    nuevoProdRapido.value = { nombre: '', costo: 0, precio: 0 }
+    nuevoProdRapido.value = { nombre: '', costo: 0, precio: 0, sku: posStore.busqueda }
     mostrarModalNuevoProd.value = true
     return
   }
@@ -1144,7 +1158,7 @@ async function validarPin() {
     
     if (authPin.value === '1234' || esAdminLogeado) {
        mostrarModalAuth.value = false
-       nuevoProdRapido.value = { nombre: '', costo: 0, precio: 0 }
+       nuevoProdRapido.value = { nombre: '', costo: 0, precio: 0, sku: posStore.busqueda }
        mostrarModalNuevoProd.value = true
        toast.add({ severity: 'success', summary: 'Autorizado', detail: 'Puedes crear un producto nuevo', life: 2000 })
     } else {
@@ -1165,9 +1179,10 @@ async function crearProductoRapido() {
        precio: nuevoProdRapido.value.precio,
        stock: 100, // stock infinito para temporal
        activo: true,
-       sku: 'NVO-' + Date.now().toString().slice(-6),
+       sku: nuevoProdRapido.value.sku && nuevoProdRapido.value.sku.trim() ? nuevoProdRapido.value.sku.trim() : 'NVO-' + Date.now().toString().slice(-6),
        es_pesable: false,
        margen_ganancia: 30,
+       iva: 19,
        stock_minimo: 0,
        categoria: 'Rápidos',
        updated_at: new Date().toISOString()
@@ -1571,7 +1586,7 @@ async function reservarVentaActual() {
   try {
     await posStore.reservarVenta()
     toast.add({ severity: 'success', summary: 'Venta reservada', detail: 'La venta fue pausada. Puedes retomarla después.', life: 3000 })
-    nextTick(() => searchInputRef.value?.focus())
+    enfocarBusqueda()
   } catch (err: any) {
     toast.add({ severity: 'warn', summary: 'No se pudo reservar', detail: err.message, life: 3000 })
   }
@@ -1592,7 +1607,7 @@ async function retomarVentaReservada(id: number) {
   await posStore.retomarVenta(id)
   mostrarReservas.value = false
   toast.add({ severity: 'success', summary: 'Venta retomada', detail: 'Se cargó la venta reservada al carrito.', life: 3000 })
-  nextTick(() => searchInputRef.value?.focus())
+  enfocarBusqueda()
 }
 
 function tiempoDesde(isoDate: string): string {

@@ -170,12 +170,46 @@
 
           <div class="producto-field-row">
             <div class="producto-field">
-              <label for="precio">Precio Venta</label>
-              <InputNumber id="precio" v-model="productoActual.precio" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" />
+              <label for="costo">Costo (Neto)</label>
+              <InputNumber id="costo" v-model="productoActual.costo" @input="handleCostoInput" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" />
             </div>
             <div class="producto-field">
-              <label for="costo">Costo</label>
-              <InputNumber id="costo" v-model="productoActual.costo" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" />
+              <label for="precio">Precio Venta Público (Bruto)</label>
+              <InputNumber id="precio" v-model="productoActual.precio" @input="handlePrecioInput" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" />
+            </div>
+          </div>
+
+          <div class="producto-field-row">
+            <div class="producto-field">
+              <label for="margen_ganancia">Margen Ganancia (%)</label>
+              <InputNumber id="margen_ganancia" v-model="productoActual.margen_ganancia" @input="handleMargenInput" suffix=" %" :min="0" />
+            </div>
+            <div class="producto-field">
+              <label for="iva">IVA (%)</label>
+              <InputNumber id="iva" v-model="productoActual.iva" @input="handleIvaInput" suffix=" %" :min="0" />
+            </div>
+          </div>
+
+          <!-- Resumen de Costos -->
+          <div class="col-span-full mb-4 bg-slate-50 border border-slate-200 rounded p-4 text-sm">
+            <h4 class="font-bold text-slate-700 mb-2">Desglose de Precios (Referencial)</h4>
+            <div class="flex flex-col gap-1 text-slate-600">
+              <div class="flex justify-between">
+                <span>Costo Neto:</span>
+                <span class="font-medium">{{ formatMonto(resumenCalculo.costo) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Margen Ganancia ({{ productoActual.margen_ganancia || 0 }}%):</span>
+                <span class="font-medium text-emerald-600">+ {{ formatMonto(resumenCalculo.gananciaMonto) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>IVA ({{ productoActual.iva || 0 }}%):</span>
+                <span class="font-medium text-rose-600">+ {{ formatMonto(resumenCalculo.ivaMonto) }}</span>
+              </div>
+              <div class="flex justify-between border-t border-slate-300 mt-2 pt-2 pt-2 text-base text-slate-900 font-bold">
+                <span>Precio Público Sugerido:</span>
+                <span>{{ formatMonto(resumenCalculo.precioPublico) }}</span>
+              </div>
             </div>
           </div>
 
@@ -190,17 +224,11 @@
             </div>
           </div>
 
-          <div class="producto-field-row">
-            <div class="producto-field">
-              <label>¿Se vende por peso?</label>
-              <div class="flex items-center gap-2 mt-2">
-                <ToggleSwitch v-model="productoActual.es_pesable" />
-                <span class="text-sm font-medium">{{ productoActual.es_pesable ? 'Sí (Ej. Pan, Queso)' : 'No (Unidades)' }}</span>
-              </div>
-            </div>
-            <div class="producto-field">
-              <label for="margen_ganancia">Margen Ganancia (%)</label>
-              <InputNumber id="margen_ganancia" v-model="productoActual.margen_ganancia" suffix=" %" :min="0" />
+          <div class="producto-field">
+            <label>¿Se vende por peso?</label>
+            <div class="flex items-center gap-2 mt-2">
+              <ToggleSwitch v-model="productoActual.es_pesable" />
+              <span class="text-sm font-medium">{{ productoActual.es_pesable ? 'Sí (Ej. Pan, Queso)' : 'No (Unidades)' }}</span>
             </div>
           </div>
         </div>
@@ -417,7 +445,7 @@ function imprimirSeleccionados() {
 
 // ----- Formulario CRUD -----
 const productoVacio: Partial<ProductoLocal> = {
-  nombre: '', sku: '', precio: 0, costo: 0, stock: 0, categoria: '', activo: true, imagen_url: null, es_pesable: false, stock_minimo: 5, margen_ganancia: 30
+  nombre: '', sku: '', precio: 0, costo: 0, stock: 0, categoria: '', activo: true, imagen_url: null, es_pesable: false, stock_minimo: 5, margen_ganancia: 30, iva: 19
 }
 
 const mostrarDialogo = ref(false)
@@ -838,26 +866,65 @@ function cerrarScanner() {
 watch(mostrarScanner, (visible) => {
   if (!visible) cerrarScanner()
 })
-// ----- AutoCalc Precio de Venta -----
-watch(
-  () => [productoActual.value.costo, productoActual.value.margen_ganancia],
-  ([newCosto, newMargen]) => {
-    // Si estamos editando y tanto costo como margen son números
-    if (newCosto !== undefined && newCosto !== null && newMargen !== undefined && newMargen !== null) {
-      const costo = Number(newCosto) || 0
-      const margen = Number(newMargen) || 0
-      
-      if (costo > 0) {
-        const precioSugerido = costo * (1 + margen / 100)
-        // Ley de redondeo: Multiplicar por 10, y etc. Mejor: redondear a la decena.
-        // Ej: 1553 ->/10 = 155.3 -> round(155.3)=155 -> *10 = 1550
-        // Ej: 1557 ->/10 = 155.7 -> round(155.7)=156 -> *10 = 1560
-        // Ej: 1555 ->/10 = 155.5 -> round(155.5)=156 -> *10 = 1560
-        productoActual.value.precio = Math.round(precioSugerido / 10) * 10
-      }
-    }
+// ----- AutoCalc Precio y Costo -----
+const resumenCalculo = computed(() => {
+  const costo = Number(productoActual.value.costo) || 0
+  const margen = Number(productoActual.value.margen_ganancia) || 0
+  const iva = Number(productoActual.value.iva) ?? 19 // Usar 19 por defecto en la ui si borra todo
+  
+  const gananciaMonto = costo * (margen / 100)
+  const precioNeto = costo + gananciaMonto
+  const ivaMonto = precioNeto * (iva / 100)
+  const precioPublico = Math.round((precioNeto + ivaMonto) / 10) * 10
+  
+  return { costo, gananciaMonto, precioNeto, ivaMonto, precioPublico }
+})
+
+function handleCostoInput(e: any) {
+  productoActual.value.costo = e.value || 0
+  onCostoChange()
+}
+
+function handleMargenInput(e: any) {
+  productoActual.value.margen_ganancia = e.value || 0
+  onCostoChange()
+}
+
+function handleIvaInput(e: any) {
+  productoActual.value.iva = e.value || 0
+  onCostoChange()
+}
+
+function handlePrecioInput(e: any) {
+  productoActual.value.precio = e.value || 0
+  onPrecioChange()
+}
+
+function onCostoChange() {
+  // Al cambiar costo, margen o iva -> calculamos el Precio de Venta
+  const costo = Number(productoActual.value.costo) || 0
+  const margen = Number(productoActual.value.margen_ganancia) || 0
+  const iva = Number(productoActual.value.iva) || 0
+  
+  if (costo >= 0) {
+    const precioNeto = costo * (1 + margen / 100)
+    const precioBruto = precioNeto * (1 + iva / 100)
+    productoActual.value.precio = Math.round(precioBruto / 10) * 10
   }
-)
+}
+
+function onPrecioChange() {
+  // Al cambiar precio directo -> calculamos el Costo
+  const precioBruto = Number(productoActual.value.precio) || 0
+  const margen = Number(productoActual.value.margen_ganancia) || 0
+  const iva = Number(productoActual.value.iva) || 0
+  
+  if (precioBruto >= 0) {
+    const precioNeto = precioBruto / (1 + iva / 100)
+    const costoSugerido = precioNeto / (1 + margen / 100)
+    productoActual.value.costo = Math.round(costoSugerido)
+  }
+}
 
 </script>
 

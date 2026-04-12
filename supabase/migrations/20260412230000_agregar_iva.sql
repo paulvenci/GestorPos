@@ -1,0 +1,1 @@
+ALTER TABLE " public\.\productos\ ADD COLUMN \iva\ numeric DEFAULT 19;

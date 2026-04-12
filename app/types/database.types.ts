@@ -281,6 +281,7 @@ export type Database = {
           es_pesable: boolean | null
           stock_minimo: number | null
           margen_ganancia: number | null
+          iva: number | null
         }
         Insert: {
           activo?: boolean | null
@@ -298,6 +299,7 @@ export type Database = {
           es_pesable?: boolean | null
           stock_minimo?: number | null
           margen_ganancia?: number | null
+          iva?: number | null
         }
         Update: {
           activo?: boolean | null
@@ -315,6 +317,7 @@ export type Database = {
           es_pesable?: boolean | null
           stock_minimo?: number | null
           margen_ganancia?: number | null
+          iva?: number | null
         }
         Relationships: [
           {
@@ -623,3 +626,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
