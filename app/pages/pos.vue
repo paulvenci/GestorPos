@@ -563,6 +563,18 @@ function limpiarSoloBusqueda() {
 }
 
 function limpiarBusqueda() {
+  const algunModalAbierto = mostrarConfirmacion.value || 
+                            mostrarModalPeso.value || 
+                            mostrarScanner.value || 
+                            mostrarReservas.value || 
+                            mostrarModalAuth.value || 
+                            mostrarModalNuevoProd.value || 
+                            consultaPrecioVisible.value;
+
+  if (algunModalAbierto) {
+    return
+  }
+
   limpiarSoloBusqueda()
   posStore.vaciarCarrito()
 }
@@ -1174,6 +1186,16 @@ function onKeydown(e: KeyboardEvent) {
   }
 
   if (e.key === 'Escape') {
+    const algunModalAbierto = mostrarConfirmacion.value || 
+                              mostrarModalPeso.value || 
+                              mostrarScanner.value || 
+                              mostrarReservas.value || 
+                              mostrarModalAuth.value || 
+                              mostrarModalNuevoProd.value || 
+                              consultaPrecioVisible.value;
+    if (algunModalAbierto) {
+      return
+    }
     e.preventDefault()
     limpiarBusqueda()
   }
