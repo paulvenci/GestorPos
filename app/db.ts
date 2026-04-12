@@ -29,9 +29,27 @@ export interface VentaOffline {
   created_at: string;
 }
 
+export interface ItemCarritoLocal {
+  id_producto: string;
+  nombre: string;
+  sku: string;
+  precio: number;
+  cantidad: number;
+  descuento: number;
+  es_pesable?: boolean;
+}
+
+export interface VentaReservadaLocal {
+  id?: number;
+  items: ItemCarritoLocal[];
+  total: number;
+  created_at: string;
+}
+
 export class GestorPOSDatabase extends Dexie {
   productos!: Table<ProductoLocal, string>;
   ventas_offline!: Table<VentaOffline, number>;
+  ventas_reservadas!: Table<VentaReservadaLocal, number>;
 
   constructor() {
     super('GestorPOSDatabase');
@@ -42,6 +60,11 @@ export class GestorPOSDatabase extends Dexie {
     this.version(2).stores({
       productos: 'id, sku, nombre',
       ventas_offline: '++id, sync_status, created_at'
+    });
+    this.version(3).stores({
+      productos: 'id, sku, nombre',
+      ventas_offline: '++id, sync_status, created_at',
+      ventas_reservadas: '++id'
     });
   }
 }

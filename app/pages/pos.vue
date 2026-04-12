@@ -84,6 +84,13 @@
               <div class="pos-resultado-derecha">
                 <span class="pos-resultado-precio">{{ formatMonto(prod.precio) }}</span>
                 <Tag
+                  v-if="prod.es_pesable"
+                  value="A granel"
+                  severity="info"
+                  class="pos-resultado-stock"
+                />
+                <Tag
+                  v-else
                   :value="`Stock: ${prod.stock}`"
                   :severity="prod.stock > 0 ? 'success' : 'danger'"
                   class="pos-resultado-stock"
@@ -113,15 +120,39 @@
             {{ posStore.carrito.length }}
           </span>
         </h2>
-        <Button
-          v-if="posStore.carrito.length > 0"
-          icon="pi pi-trash"
-          text
-          severity="danger"
-          size="small"
-          title="Vaciar carrito (Esc)"
-          @click="confirmarVaciar"
-        />
+        <div class="pos-carrito-acciones">
+          <Button
+            v-if="posStore.carrito.length > 0"
+            icon="pi pi-pause"
+            text
+            severity="warn"
+            size="small"
+            title="Reservar venta (F4)"
+            @click="reservarVentaActual"
+          />
+          <Button
+            v-if="posStore.ventasReservadas.length > 0"
+            :label="String(posStore.ventasReservadas.length)"
+            icon="pi pi-bookmark"
+            text
+            severity="info"
+            size="small"
+            :badge="String(posStore.ventasReservadas.length)"
+            badgeSeverity="warn"
+            title="Ver ventas reservadas"
+            class="pos-reservas-btn"
+            @click="mostrarReservas = true"
+          />
+          <Button
+            v-if="posStore.carrito.length > 0"
+            icon="pi pi-trash"
+            text
+            severity="danger"
+            size="small"
+            title="Vaciar carrito (Esc)"
+            @click="confirmarVaciar"
+          />
+        </div>
       </div>
 
       <!-- Ítems del carrito -->
@@ -148,7 +179,7 @@
             </div>
 
             <div class="pos-item-precio-col">
-              <span class="pos-item-precio">{{ formatMonto(item.precio * item.cantidad * (1 - item.descuento / 100)) }}</span>
+              <span class="pos-item-precio">{{ formatMonto(redondearCLP(item.precio * item.cantidad * (1 - item.descuento / 100))) }}</span>
               <button class="pos-item-eliminar" @click="posStore.quitarItem(item.id_producto)">
                 <i class="pi pi-times" />
               </button>
@@ -230,8 +261,16 @@
           <span>Pagado</span>
           <strong>{{ formatMonto(totalPagado) }}</strong>
         </div>
-        <div class="confirm-resumen-row" :class="{ 'confirm-resumen-row--ok': saldoPendiente === 0, 'confirm-resumen-row--warn': saldoPendiente !== 0 }">
-          <span>{{ saldoPendiente >= 0 ? 'Pendiente' : 'Excedente' }}</span>
+        <div v-if="saldoPendiente > 0" class="confirm-resumen-row confirm-resumen-row--warn">
+          <span>Pendiente</span>
+          <strong>{{ formatMonto(saldoPendiente) }}</strong>
+        </div>
+        <div v-else-if="saldoPendiente === 0" class="confirm-resumen-row confirm-resumen-row--ok">
+          <span>Pago exacto</span>
+          <strong>✓</strong>
+        </div>
+        <div v-else class="confirm-resumen-row confirm-vuelto">
+          <span>VUELTO</span>
           <strong>{{ formatMonto(Math.abs(saldoPendiente)) }}</strong>
         </div>
       </div>
@@ -341,13 +380,58 @@
     </div>
   </Dialog>
 
+  <!-- Dialog Ventas Reservadas -->
+  <Dialog
+    v-model:visible="mostrarReservas"
+    modal
+    header="Ventas Reservadas"
+    :style="{ width: '460px' }"
+  >
+    <div v-if="posStore.ventasReservadas.length === 0" class="pos-reservas-vacio">
+      <i class="pi pi-bookmark" style="font-size: 2rem; color: #64748b;" />
+      <p>No hay ventas reservadas</p>
+    </div>
+    <div v-else class="pos-reservas-lista">
+      <div
+        v-for="reserva in posStore.ventasReservadas"
+        :key="reserva.id"
+        class="pos-reserva-item"
+      >
+        <div class="pos-reserva-info">
+          <span class="pos-reserva-items-count">
+            <i class="pi pi-shopping-cart" />
+            {{ reserva.items.length }} producto{{ reserva.items.length > 1 ? 's' : '' }}
+          </span>
+          <span class="pos-reserva-total">{{ formatMonto(reserva.total) }}</span>
+          <span class="pos-reserva-tiempo">{{ tiempoDesde(reserva.created_at) }}</span>
+        </div>
+        <div class="pos-reserva-acciones">
+          <Button
+            label="Retomar"
+            icon="pi pi-play"
+            size="small"
+            severity="success"
+            @click="retomarVentaReservada(reserva.id!)"
+          />
+          <Button
+            icon="pi pi-trash"
+            size="small"
+            severity="danger"
+            text
+            @click="posStore.eliminarReserva(reserva.id!)"
+          />
+        </div>
+      </div>
+    </div>
+  </Dialog>
+
 </template>
 
 <script setup lang="ts">
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '~/stores/auth'
 import { useCajaStore } from '~/stores/caja'
-import { usePosStore } from '~/stores/pos'
+import { usePosStore, redondearCLP } from '~/stores/pos'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import { db } from '~/db'
 import type { ProductoLocal } from '~/db'
@@ -387,6 +471,7 @@ const pagoTarjeta = ref(0)
 const pagoTransferencia = ref(0)
 const isOnline = ref(import.meta.client ? navigator.onLine : true)
 const topVendidos = ref<ProductoLocal[]>([])
+const mostrarReservas = ref(false)
 const onDesconectado = () => { isOnline.value = false }
 
 const metodosPago = [
@@ -402,7 +487,7 @@ const totalPagado = computed(() =>
 )
 
 const saldoPendiente = computed(() => Math.round((posStore.total - totalPagado.value)))
-const pagoValido = computed(() => posStore.total > 0 && saldoPendiente.value === 0 && totalPagado.value > 0)
+const pagoValido = computed(() => posStore.total > 0 && saldoPendiente.value <= 0 && totalPagado.value > 0)
 
 type TicketItem = {
   nombre: string
@@ -417,6 +502,7 @@ type TicketItem = {
 onMounted(async () => {
   await cajaStore.fetchTurnoActivo()
   await posStore.sincronizarCatalogo()
+  await posStore.cargarReservas()
   await cargarTopVendidos()
 
   // Auto-focus en el input de búsqueda
@@ -850,7 +936,7 @@ async function confirmarCobro() {
     cantidad: item.cantidad,
     precio: item.precio,
     descuento: item.descuento,
-    subtotal: item.precio * item.cantidad * (1 - item.descuento / 100)
+    subtotal: redondearCLP(item.precio * item.cantidad * (1 - item.descuento / 100))
   }))
   const fechaTicket = new Date()
   const detallePago = construirDetallePago()
@@ -1081,6 +1167,12 @@ function onKeydown(e: KeyboardEvent) {
     return
   }
 
+  if (e.key === 'F4') {
+    e.preventDefault()
+    reservarVentaActual()
+    return
+  }
+
   if (e.key === 'Escape') {
     e.preventDefault()
     limpiarBusqueda()
@@ -1091,6 +1183,45 @@ onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 // ─── Helpers ──────────────────────────────────────────────
+
+// ─── Reserva de Ventas ────────────────────────────────────
+async function reservarVentaActual() {
+  if (posStore.carrito.length === 0) return
+  try {
+    await posStore.reservarVenta()
+    toast.add({ severity: 'success', summary: 'Venta reservada', detail: 'La venta fue pausada. Puedes retomarla después.', life: 3000 })
+    nextTick(() => searchInputRef.value?.focus())
+  } catch (err: any) {
+    toast.add({ severity: 'warn', summary: 'No se pudo reservar', detail: err.message, life: 3000 })
+  }
+}
+
+async function retomarVentaReservada(id: number) {
+  // Si hay carrito actual, reservarlo primero
+  if (posStore.carrito.length > 0) {
+    try {
+      await posStore.reservarVenta()
+      toast.add({ severity: 'info', summary: 'Venta actual reservada', detail: 'Se guardó la venta actual antes de retomar.', life: 3000 })
+    } catch (err: any) {
+      toast.add({ severity: 'warn', summary: 'Error', detail: err.message, life: 3000 })
+      return
+    }
+  }
+
+  await posStore.retomarVenta(id)
+  mostrarReservas.value = false
+  toast.add({ severity: 'success', summary: 'Venta retomada', detail: 'Se cargó la venta reservada al carrito.', life: 3000 })
+  nextTick(() => searchInputRef.value?.focus())
+}
+
+function tiempoDesde(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'hace un momento'
+  if (mins < 60) return `hace ${mins} min`
+  const hrs = Math.floor(mins / 60)
+  return `hace ${hrs}h ${mins % 60}min`
+}
 </script>
 
 <style scoped>
@@ -1769,6 +1900,115 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 .confirm-resumen-row--warn {
   color: #ea580c;
+}
+
+.confirm-vuelto {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.confirm-vuelto span {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #16a34a;
+  letter-spacing: 0.06em;
+}
+
+.confirm-vuelto strong {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #15803d;
+}
+
+/* ─── Acciones header carrito ─── */
+.pos-carrito-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.pos-reservas-btn :deep(.p-badge) {
+  font-size: 0.65rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* ─── Dialog Ventas Reservadas ─── */
+.pos-reservas-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.pos-reservas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pos-reserva-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.pos-reserva-item:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.pos-reserva-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pos-reserva-items-count {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-app);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pos-reserva-items-count .pi {
+  font-size: 0.82rem;
+  color: #6366f1;
+}
+
+.pos-reserva-total {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.pos-reserva-tiempo {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.pos-reserva-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .pos-consulta-modal {

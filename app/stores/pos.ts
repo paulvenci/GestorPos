@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { db } from '~/db'
-import type { ProductoLocal } from '~/db'
+import type { ProductoLocal, VentaReservadaLocal } from '~/db'
 import type { Database } from '~/types/database.types'
 
 export interface ItemCarrito {
@@ -13,6 +13,14 @@ export interface ItemCarrito {
   es_pesable?: boolean
 }
 
+/**
+ * Redondeo Ley Chile: redondea a la decena más cercana ($10 CLP).
+ * Ej: $4.987,50 → $4.990
+ */
+export function redondearCLP(value: number): number {
+  return Math.round(value / 10) * 10
+}
+
 export const usePosStore = defineStore('pos', () => {
   const supabase = useSupabaseClient<Database>()
 
@@ -22,6 +30,7 @@ export const usePosStore = defineStore('pos', () => {
   const resultados = ref<ProductoLocal[]>([])
   const buscando = ref(false)
   const procesando = ref(false)
+  const ventasReservadas = ref<VentaReservadaLocal[]>([])
 
   function esErrorDeRed(error: any) {
     if (import.meta.client && !navigator.onLine) return true
@@ -116,9 +125,9 @@ export const usePosStore = defineStore('pos', () => {
     carrito.value = []
   }
 
-  // ─── Totales ──────────────────────────────────────────
+  // ─── Totales (con Ley de Redondeo Chile → $10) ──────
   const subtotal = computed(() =>
-    carrito.value.reduce((acc, i) => acc + i.precio * i.cantidad * (1 - i.descuento / 100), 0)
+    carrito.value.reduce((acc, i) => acc + redondearCLP(i.precio * i.cantidad * (1 - i.descuento / 100)), 0)
   )
   const total = computed(() => subtotal.value)
 
@@ -130,8 +139,8 @@ export const usePosStore = defineStore('pos', () => {
     const items = carrito.value.map(i => ({
       id_producto: i.id_producto,
       cantidad: i.cantidad,
-      precio_unitario: i.precio * (1 - i.descuento / 100),
-      subtotal: i.precio * i.cantidad * (1 - i.descuento / 100)
+      precio_unitario: Math.round(i.precio * (1 - i.descuento / 100)),
+      subtotal: redondearCLP(i.precio * i.cantidad * (1 - i.descuento / 100))
     }))
 
     try {
@@ -174,11 +183,65 @@ export const usePosStore = defineStore('pos', () => {
     }
   }
 
+  // ─── Reserva de Ventas (Dexie) ────────────────────────
+  async function cargarReservas() {
+    try {
+      ventasReservadas.value = await db.ventas_reservadas.toArray()
+    } catch (_) {
+      ventasReservadas.value = []
+    }
+  }
+
+  async function reservarVenta() {
+    if (carrito.value.length === 0) throw new Error('El carrito está vacío')
+    if (ventasReservadas.value.length >= 5) throw new Error('Máximo 5 ventas reservadas')
+
+    const reserva: VentaReservadaLocal = {
+      items: carrito.value.map(i => ({
+        id_producto: i.id_producto,
+        nombre: i.nombre,
+        sku: i.sku,
+        precio: i.precio,
+        cantidad: i.cantidad,
+        descuento: i.descuento,
+        es_pesable: i.es_pesable
+      })),
+      total: total.value,
+      created_at: new Date().toISOString()
+    }
+
+    const id = await db.ventas_reservadas.add(reserva)
+    reserva.id = id as number
+    ventasReservadas.value.push(reserva)
+    vaciarCarrito()
+  }
+
+  async function retomarVenta(id: number) {
+    const reserva = ventasReservadas.value.find(v => v.id === id)
+    if (!reserva) return
+
+    // Reemplazar carrito actual con la reserva
+    carrito.value = reserva.items.map(i => ({ ...i }))
+
+    // Eliminar de reservas
+    await db.ventas_reservadas.delete(id)
+    ventasReservadas.value = ventasReservadas.value.filter(v => v.id !== id)
+  }
+
+  async function eliminarReserva(id: number) {
+    await db.ventas_reservadas.delete(id)
+    ventasReservadas.value = ventasReservadas.value.filter(v => v.id !== id)
+  }
+
   return {
     carrito, busqueda, resultados, buscando, procesando,
     subtotal, total,
+    ventasReservadas,
     sincronizarCatalogo, buscarProductos,
     agregarItem, quitarItem, setCantidad, setDescuento, vaciarCarrito,
-    registrarVenta
+    registrarVenta,
+    cargarReservas, reservarVenta, retomarVenta, eliminarReserva,
+    redondearCLP
   }
 })
+
