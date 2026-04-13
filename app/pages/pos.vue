@@ -1009,9 +1009,19 @@ async function onConectado() {
 // ─── Búsqueda ─────────────────────────────────────────────
 async function onBusqueda() {
   await posStore.buscarProductos(posStore.busqueda)
+  
+  // Agregar automáticamente si hay una coincidencia exacta de SKU
+  if (posStore.busqueda) {
+    const q = posStore.busqueda.toLowerCase()
+    const exactMatch = posStore.resultados.find(p => p.sku && p.sku.toLowerCase() === q)
+    if (exactMatch) {
+      seleccionarProducto(exactMatch)
+    }
+  }
 }
 
-function onEnterBusqueda() {
+async function onEnterBusqueda() {
+  await posStore.buscarProductos(posStore.busqueda)
   if (posStore.resultados.length === 1) {
     const prod = posStore.resultados[0]
     if (prod) {
