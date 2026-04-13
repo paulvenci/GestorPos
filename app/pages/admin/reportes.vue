@@ -174,6 +174,19 @@
                 </span>
               </template>
             </Column>
+            <Column header="Acciones" style="width: 5rem">
+              <template #body="slotProps">
+                <Button
+                  icon="pi pi-pencil"
+                  text
+                  severity="info"
+                  size="small"
+                  title="Editar método de pago"
+                  :disabled="slotProps.data.estado === 'cancelada'"
+                  @click="abrirEdicionVenta(slotProps.data)"
+                />
+              </template>
+            </Column>
 
             <!-- Expansión del Detalle de la Venta (Tailwind Nativo Forzado Claro) -->
             <template #expansion="slotProps">
@@ -258,6 +271,37 @@
               <div class="empty-state">No se han registrado ventas el día de hoy.</div>
             </template>
           </DataTable>
+
+          <!-- Diálogo Edición de Venta -->
+          <Dialog
+            v-model:visible="mostrarEdicionVenta"
+            header="Editar Venta"
+            :modal="true"
+            :style="{ width: '420px' }"
+          >
+            <div v-if="ventaEditando" class="flex flex-col gap-4">
+              <div class="flex items-center gap-2 text-sm text-slate-500">
+                <i class="pi pi-receipt"></i>
+                <span>Boleta: <strong class="font-mono">{{ ventaEditando.id.substring(0, 8) }}</strong></span>
+                <span class="ml-2">— Total: <strong class="text-emerald-600">{{ formatMonto(ventaEditando.total) }}</strong></span>
+              </div>
+              <div>
+                <label class="text-sm font-medium mb-1 block">Método de Pago</label>
+                <Select
+                  v-model="nuevoMetodoPago"
+                  :options="opcionesMetodoPago"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccionar método"
+                  class="w-full"
+                />
+              </div>
+            </div>
+            <template #footer>
+              <Button label="Cancelar" icon="pi pi-times" text severity="secondary" @click="mostrarEdicionVenta = false" />
+              <Button label="Guardar" icon="pi pi-check" :loading="guardandoEdicion" @click="guardarEdicionVenta" />
+            </template>
+          </Dialog>
         </TabPanel>
 
         <!-- =======================
@@ -525,6 +569,55 @@ const loadingVentasHoy = ref(false)
 const expandedRows = ref({})
 const filtroCajeroHoy = ref<string | null>(null)
 const fechaFiltroReporte = ref<Date>(new Date())
+
+// Edición de ventas
+const mostrarEdicionVenta = ref(false)
+const ventaEditando = ref<any>(null)
+const nuevoMetodoPago = ref<string>('')
+const guardandoEdicion = ref(false)
+const opcionesMetodoPago = [
+  { label: 'Efectivo', value: 'efectivo' },
+  { label: 'Tarjeta', value: 'tarjeta' },
+  { label: 'Transferencia', value: 'transferencia' },
+  { label: 'Mixto', value: 'mixto' }
+]
+
+function abrirEdicionVenta(venta: any) {
+  ventaEditando.value = venta
+  nuevoMetodoPago.value = venta.metodo_pago || 'efectivo'
+  mostrarEdicionVenta.value = true
+}
+
+async function guardarEdicionVenta() {
+  if (!ventaEditando.value || !nuevoMetodoPago.value) return
+  guardandoEdicion.value = true
+  try {
+    const updateData: any = { metodo_pago: nuevoMetodoPago.value }
+
+    // Si cambiamos de un método simple a otro simple, actualizar los campos de desglose
+    if (nuevoMetodoPago.value !== 'mixto') {
+      const total = ventaEditando.value.total || 0
+      updateData.pago_efectivo = nuevoMetodoPago.value === 'efectivo' ? total : 0
+      updateData.pago_tarjeta = nuevoMetodoPago.value === 'tarjeta' ? total : 0
+      updateData.pago_transferencia = nuevoMetodoPago.value === 'transferencia' ? total : 0
+    }
+
+    const { error } = await supabase
+      .from('ventas')
+      .update(updateData)
+      .eq('id', ventaEditando.value.id)
+
+    if (error) throw error
+
+    toast.add({ severity: 'success', summary: 'Venta actualizada', detail: `Método de pago cambiado a ${nuevoMetodoPago.value}.`, life: 3000 })
+    mostrarEdicionVenta.value = false
+    await fetchVentasHoy()
+  } catch (error: any) {
+    toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 5000 })
+  } finally {
+    guardandoEdicion.value = false
+  }
+}
 
 // Computed Reporte Consolidado
 const resumenCajerosConsolidado = computed(() => {

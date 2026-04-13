@@ -78,7 +78,7 @@
         <h2><i class="pi pi-history" /> Historial de Turnos</h2>
         <div class="caja-historial-filtros">
           <DatePicker v-model="filtroFecha" showIcon placeholder="Filtrar por fecha" date-format="dd/mm/yy" showButtonBar class="historial-datepicker" />
-          <Button icon="pi pi-print" label="Imprimir" outlined severity="secondary" size="small" @click="abrirDialogoImpresion" />
+          <Button v-if="authStore.rolUsuario === 'admin' || authStore.rolUsuario === 'supervisor'" icon="pi pi-print" label="Imprimir" outlined severity="secondary" size="small" @click="abrirDialogoImpresion" />
         </div>
       </div>
 
@@ -129,7 +129,7 @@
             <span class="font-bold text-indigo-500">{{ formatMonto(slotProps.data.total_general_ventas || 0) }}</span>
           </template>
         </Column>
-        <Column header="Acciones" style="width: 7rem">
+        <Column v-if="authStore.rolUsuario === 'admin' || authStore.rolUsuario === 'supervisor'" header="Acciones" style="width: 7rem">
           <template #body="slotProps">
             <Button icon="pi pi-print" text severity="secondary" size="small" title="Imprimir detalle del turno" @click="imprimirDetalleTurno80mm(slotProps.data.id)" />
           </template>
@@ -522,16 +522,32 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
     return
   }
 
-  // 2. Obtener las ventas FUERA del turno pero EN EL MISMO RANGO DE HORARIO (para el total diario/turno)
+  // 2. Obtener las ventas FUERA del turno del MISMO CAJERO en el MISMO DÍA
   const fechaApertura = turno.fecha_apertura || turno.apertura_at
   const fechaCierre = turno.fecha_cierre || turno.cierre_at || new Date().toISOString()
   
-  const { data: ventasFueraTurno } = await supabase
+  // Calcular inicio y fin del día de la apertura
+  const diaApertura = new Date(fechaApertura)
+  diaApertura.setHours(0, 0, 0, 0)
+  const inicioDia = diaApertura.toISOString()
+  const finDia = new Date(diaApertura)
+  finDia.setHours(23, 59, 59, 999)
+  const finDiaStr = finDia.toISOString()
+  
+  // Buscar ventas sin turno del mismo cajero en todo el día
+  let queryFuera = supabase
     .from('ventas')
-    .select('id, fecha, total, metodo_pago')
+    .select('id, fecha, total, metodo_pago, id_usuario')
     .is('id_turno', null)
-    .gte('fecha', fechaApertura)
-    .lte('fecha', fechaCierre)
+    .gte('fecha', inicioDia)
+    .lte('fecha', finDiaStr)
+  
+  // Filtrar por el mismo usuario si el turno tiene id_usuario
+  if (turno.id_usuario) {
+    queryFuera = queryFuera.eq('id_usuario', turno.id_usuario)
+  }
+  
+  const { data: ventasFueraTurno } = await queryFuera
 
   const calcResumen = (ventas: any[]) => {
     return (ventas || []).reduce((acc: Record<string, number>, venta: any) => {
@@ -551,45 +567,49 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
   const resumenAfuera = calcResumen(ventasFueraTurno || [])
   const totalGeneral = resumenAdentro.total + resumenAfuera.total
 
-  const htmlAdentro = [
-    `<div class="row"><span>Efectivo</span><span>${formatMonto(resumenAdentro.efectivo)}</span></div>`,
-    `<div class="row"><span>Tarjeta</span><span>${formatMonto(resumenAdentro.tarjeta)}</span></div>`,
-    `<div class="row"><span>Transfer.</span><span>${formatMonto(resumenAdentro.transferencia)}</span></div>`,
-    resumenAdentro.mixto > 0 ? `<div class="row"><span>Mixto</span><span>${formatMonto(resumenAdentro.mixto)}</span></div>` : '',
-    resumenAdentro.otros > 0 ? `<div class="row"><span>Otros</span><span>${formatMonto(resumenAdentro.otros)}</span></div>` : '',
-  ].filter(Boolean).join('')
+  const htmlAdentro = `
+    <div class="item">
+      <div class="strong">${(turno.usuario_nombre || 'USUARIO').toUpperCase()} (EN TURNO)</div>
+      <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenAdentro.efectivo)}</span></div>
+      <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenAdentro.tarjeta)}</span></div>
+      <div class="row"><span>Transf.:</span><span>${formatMonto(resumenAdentro.transferencia)}</span></div>
+      ${resumenAdentro.mixto > 0 ? `<div class="row"><span>Mixto:</span><span>${formatMonto(resumenAdentro.mixto)}</span></div>` : ''}
+      ${resumenAdentro.otros > 0 ? `<div class="row"><span>Otros:</span><span>${formatMonto(resumenAdentro.otros)}</span></div>` : ''}
+      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenAdentro.total)}</span></div>
+    </div>
+  `
 
-  const htmlAfuera = [
-    resumenAfuera.efectivo > 0 ? `<div class="row"><span>Efectivo</span><span>${formatMonto(resumenAfuera.efectivo)}</span></div>` : '',
-    resumenAfuera.tarjeta > 0 ? `<div class="row"><span>Tarjeta</span><span>${formatMonto(resumenAfuera.tarjeta)}</span></div>` : '',
-    resumenAfuera.transferencia > 0 ? `<div class="row"><span>Transfer.</span><span>${formatMonto(resumenAfuera.transferencia)}</span></div>` : '',
-    resumenAfuera.mixto > 0 ? `<div class="row"><span>Mixto</span><span>${formatMonto(resumenAfuera.mixto)}</span></div>` : '',
-    resumenAfuera.otros > 0 ? `<div class="row"><span>Otros</span><span>${formatMonto(resumenAfuera.otros)}</span></div>` : '',
-  ].filter(Boolean).join('')
+  const htmlAfuera = resumenAfuera.total > 0 ? `
+    <div class="item">
+      <div class="strong">${(turno.usuario_nombre || 'USUARIO').toUpperCase()} (FUERA DE TURNO)</div>
+      <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenAfuera.efectivo)}</span></div>
+      <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenAfuera.tarjeta)}</span></div>
+      <div class="row"><span>Transf.:</span><span>${formatMonto(resumenAfuera.transferencia)}</span></div>
+      ${resumenAfuera.mixto > 0 ? `<div class="row"><span>Mixto:</span><span>${formatMonto(resumenAfuera.mixto)}</span></div>` : ''}
+      ${resumenAfuera.otros > 0 ? `<div class="row"><span>Otros:</span><span>${formatMonto(resumenAfuera.otros)}</span></div>` : ''}
+      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenAfuera.total)}</span></div>
+    </div>
+  ` : ''
 
   const body = `
-    <div class="title">Detalle de Turno</div>
+    <div class="title">CIERRE DE CAJA</div>
+    <div class="muted">Apertura: ${formatFechaLarga(fechaApertura)}</div>
+    <div class="muted">Cierre: ${turno.cierre_at || turno.fecha_cierre ? formatFechaLarga(fechaCierre) : 'Activo'}</div>
     <div class="line"></div>
-    <div class="row"><span>Cajero</span><span>${turno.usuario_nombre || '-'}</span></div>
-    <div class="row"><span>Apertura</span><span>${formatFechaLarga(fechaApertura)}</span></div>
-    <div class="row"><span>Cierre</span><span>${turno.cierre_at || turno.fecha_cierre ? formatFechaLarga(fechaCierre) : 'Activo'}</span></div>
-    <div class="row"><span>Fondo Inicial</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
+    <div class="row"><span>Fondo Inicial:</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
     <div class="line"></div>
     
-    <div class="strong">Recaudado EN CAJA (Turno)</div>
+    <h3 style="text-align:center; font-size:13px; margin:4px 0; font-weight:bold;">DETALLE DEL CAJERO</h3>
     ${htmlAdentro}
-    <div class="row strong" style="margin-top:2px;"><span>Subtotal Caja</span><span>${formatMonto(resumenAdentro.total)}</span></div>
-    
-    ${resumenAfuera.total > 0 ? `
-      <div class="line"></div>
-      <div class="strong">Ventas Externas (Fuera de turno)</div>
-      ${htmlAfuera}
-      <div class="row strong" style="margin-top:2px;"><span>Subtotal Externas</span><span>${formatMonto(resumenAfuera.total)}</span></div>
-    ` : ''}
+    ${htmlAfuera}
 
-    <div class="line"></div>
-    <div class="title" style="font-size:14px;">TOTAL GENERAL</div>
-    <div class="title" style="font-size:18px;">${formatMonto(totalGeneral)}</div>
+    <div class="grand-total" style="border-top: 2px solid #111; padding-top: 8px; margin-top: 8px;">
+      <h3 style="margin-bottom:8px; text-align:center; font-size:13px; font-weight:bold;">TOTALES GENERALES</h3>
+      <div class="row"><span>Total Efectivo:</span><span>${formatMonto(resumenAdentro.efectivo + resumenAfuera.efectivo)}</span></div>
+      <div class="row"><span>Total Tarjeta:</span><span>${formatMonto(resumenAdentro.tarjeta + resumenAfuera.tarjeta)}</span></div>
+      <div class="row"><span>Total Transf.:</span><span>${formatMonto(resumenAdentro.transferencia + resumenAfuera.transferencia)}</span></div>
+      <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL DÍA:</span><span>${formatMonto(totalGeneral)}</span></div>
+    </div>
   `
 
   abrirVentanaImpresion80mm('Detalle de Turno', body)
@@ -624,12 +644,19 @@ async function confirmarApertura() {
 async function confirmarCierre() {
   if (montoCierre.value === null) return
   try {
+    // Guardar el ID del turno antes de cerrarlo para imprimir después
+    const turnoIdParaImprimir = cajaStore.turnoActivo?.id
     const resumen = await cajaStore.cerrarTurno(montoCierre.value, observacionesCierre.value)
     mostrarCierre.value = false
     montoCierre.value = null
     observacionesCierre.value = ''
     toast.add({ severity: 'success', summary: 'Turno cerrado', detail: 'La caja fue cerrada con éxito', life: 3000 })
     await fetchHistorial()
+    
+    // Imprimir comprobante de cierre automáticamente
+    if (turnoIdParaImprimir) {
+      await imprimirDetalleTurno80mm(turnoIdParaImprimir)
+    }
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: e.message ?? 'No se pudo cerrar la caja', life: 5000 })
   }
