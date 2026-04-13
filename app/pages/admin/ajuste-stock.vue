@@ -8,15 +8,18 @@
     <Dialog v-model:visible="mostrarDialogo" header="Registrar Ajuste de Stock" :modal="true" :style="{ width: '520px' }" class="p-fluid">
       <div class="ajuste-form">
         <div class="ajuste-field">
-          <label>Producto</label>
-          <Select
-            v-model="form.id_producto"
-            :options="productosOptions"
+          <label>Producto (buscar por nombre o código)</label>
+          <AutoComplete
+            v-model="productoAutoComplete"
+            :suggestions="productosSugeridos"
             optionLabel="label"
-            optionValue="value"
-            placeholder="Buscar producto..."
-            filter
+            placeholder="Escribir nombre o escanear código..."
             :loading="loadingProductos"
+            @complete="buscarProducto"
+            @item-select="onProductoSeleccionado"
+            forceSelection
+            dropdown
+            class="w-full"
           />
         </div>
 
@@ -169,12 +172,37 @@ const form = ref({
   observaciones: ''
 })
 
+const productoAutoComplete = ref<any>(null)
+const productosSugeridos = ref<any[]>([])
+
 const productosOptions = computed(() =>
   productos.value.map(p => ({
-    label: `${p.nombre} (Stock: ${p.stock})`,
-    value: p.id
+    label: `${p.nombre}${p.sku ? ' [' + p.sku + ']' : ''} (Stock: ${p.stock})`,
+    value: p.id,
+    nombre: p.nombre,
+    sku: p.sku || ''
   }))
 )
+
+function buscarProducto(event: any) {
+  const query = (event.query || '').toLowerCase().trim()
+  if (!query) {
+    productosSugeridos.value = productosOptions.value
+    return
+  }
+  productosSugeridos.value = productosOptions.value.filter(p =>
+    p.nombre.toLowerCase().includes(query) ||
+    p.sku.toLowerCase().includes(query) ||
+    p.label.toLowerCase().includes(query)
+  )
+}
+
+function onProductoSeleccionado(event: any) {
+  const item = event.value
+  if (item?.value) {
+    form.value.id_producto = item.value
+  }
+}
 
 const productoSeleccionado = computed(() =>
   productos.value.find(p => p.id === form.value.id_producto) || null
@@ -207,7 +235,7 @@ async function fetchProductos() {
   try {
     const { data } = await supabase
       .from('productos')
-      .select('id, nombre, stock, costo')
+      .select('id, nombre, sku, stock, costo')
       .eq('activo', true)
       .order('nombre')
     productos.value = data || []
@@ -261,6 +289,7 @@ async function fetchAjustes() {
 
 function abrirNuevo() {
   form.value = { id_producto: null, tipo: 'ingreso', cantidad: 1, costo: null, motivo: null, observaciones: '' }
+  productoAutoComplete.value = null
   mostrarDialogo.value = true
 }
 
