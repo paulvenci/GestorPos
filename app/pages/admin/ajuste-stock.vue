@@ -9,18 +9,21 @@
       <div class="ajuste-form">
         <div class="ajuste-field">
           <label>Producto (buscar por nombre o código)</label>
-          <AutoComplete
-            v-model="productoAutoComplete"
-            :suggestions="productosSugeridos"
-            optionLabel="label"
-            placeholder="Escribir nombre o escanear código..."
-            :loading="loadingProductos"
-            @complete="buscarProducto"
-            @item-select="onProductoSeleccionado"
-            forceSelection
-            dropdown
-            class="w-full"
-          />
+          <div class="p-inputgroup flex-1">
+            <AutoComplete
+              v-model="productoAutoComplete"
+              :suggestions="productosSugeridos"
+              optionLabel="label"
+              placeholder="Escribir nombre o escanear código..."
+              :loading="loadingProductos"
+              @complete="buscarProducto"
+              @item-select="onProductoSeleccionado"
+              forceSelection
+              dropdown
+              class="w-full"
+            />
+            <Button icon="pi pi-camera" @click="abrirScanner" title="Escanear código de barras" />
+          </div>
         </div>
 
         <div v-if="productoSeleccionado" class="ajuste-stock-actual">
@@ -83,6 +86,17 @@
       </template>
     </Dialog>
 
+    <!-- Modal Scanner de Código de Barras -->
+    <Dialog v-model:visible="mostrarScanner" header="Escanear Código" :modal="true" :style="{ width: '400px' }" @hide="cerrarScanner">
+      <div class="flex flex-col items-center justify-center p-2">
+        <div class="relative w-full rounded overflow-hidden bg-black aspect-video flex items-center justify-center">
+          <video ref="videoScannerRef" class="w-full h-full object-cover" autoplay muted playsinline></video>
+          <div class="absolute inset-x-4 top-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+        </div>
+        <p class="mt-4 text-center text-sm text-slate-500">Apunta la cámara al código de barras.</p>
+      </div>
+    </Dialog>
+
     <!-- Tabla de historial de ajustes -->
     <DataTable
       :value="ajustes"
@@ -135,6 +149,8 @@
 import { useToast } from 'primevue/usetoast'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import type { Database } from '~/types/database.types'
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
+import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 
 const supabase = useSupabaseClient<Database>()
 const toast = useToast()
@@ -292,6 +308,117 @@ function abrirNuevo() {
   productoAutoComplete.value = null
   mostrarDialogo.value = true
 }
+
+// ─── Scanner de Código de Barras ───
+const mostrarScanner = ref(false)
+const videoScannerRef = ref<HTMLVideoElement | null>(null)
+let codeReader: BrowserMultiFormatReader | null = null
+let activeStream: MediaStream | null = null
+let scannerControls: IScannerControls | null = null
+let detectorInterval: ReturnType<typeof setInterval> | null = null
+
+function procesarCodigoDetectado(rawCode: string) {
+  if (!mostrarScanner.value) return
+  const sku = rawCode.trim()
+  if (!sku) return
+
+  // Buscar producto por SKU
+  const producto = productos.value.find(p => p.sku?.toLowerCase() === sku.toLowerCase())
+  if (producto) {
+    form.value.id_producto = producto.id
+    const opcion = productosOptions.value.find(o => o.value === producto.id)
+    productoAutoComplete.value = opcion || null
+    toast.add({ severity: 'success', summary: 'Producto encontrado', detail: producto.nombre, life: 3000 })
+  } else {
+    toast.add({ severity: 'warn', summary: 'No encontrado', detail: `No se encontró producto con código: ${sku}`, life: 4000 })
+  }
+  cerrarScanner()
+}
+
+async function iniciarFallbackBarcodeDetector() {
+  if (!videoScannerRef.value) return
+  if (!(window as any).BarcodeDetector) return
+  try {
+    const BarcodeDetectorCtor = (window as any).BarcodeDetector
+    const supported = await BarcodeDetectorCtor.getSupportedFormats?.()
+    const preferred = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code']
+    const formats = Array.isArray(supported) ? preferred.filter((f) => supported.includes(f)) : preferred
+    const detector = new BarcodeDetectorCtor({ formats })
+    detectorInterval = setInterval(async () => {
+      if (!mostrarScanner.value || !videoScannerRef.value) return
+      if (videoScannerRef.value.readyState < 2) return
+      try {
+        const barcodes = await detector.detect(videoScannerRef.value)
+        const raw = barcodes?.[0]?.rawValue
+        if (raw) procesarCodigoDetectado(raw)
+      } catch (_) {}
+    }, 250)
+  } catch (_) {}
+}
+
+async function abrirScanner() {
+  if (mostrarScanner.value) return
+  mostrarScanner.value = true
+  await nextTick()
+
+  if (!codeReader) {
+    const hints = new Map()
+    const formats = [
+      BarcodeFormat.CODE_128, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8,
+      BarcodeFormat.QR_CODE, BarcodeFormat.CODE_39, BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E, BarcodeFormat.ITF, BarcodeFormat.CODABAR, BarcodeFormat.CODE_93
+    ]
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, formats)
+    hints.set(DecodeHintType.TRY_HARDER, true)
+    codeReader = new BrowserMultiFormatReader(hints, {
+      delayBetweenScanAttempts: 100,
+      delayBetweenScanSuccess: 500,
+      tryPlayVideoTimeout: 5000
+    })
+  }
+
+  if (!videoScannerRef.value) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo inicializar la cámara', life: 3000 })
+    cerrarScanner()
+    return
+  }
+
+  try {
+    scannerControls = await codeReader.decodeFromConstraints(
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
+      videoScannerRef.value,
+      (result, error) => {
+        if (result) { procesarCodigoDetectado(result.getText()); return }
+        if (error && (error as any).name === 'NotFoundException') return
+      }
+    )
+    if (videoScannerRef.value.srcObject instanceof MediaStream) {
+      activeStream = videoScannerRef.value.srcObject
+    }
+    await iniciarFallbackBarcodeDetector()
+  } catch (err: any) {
+    console.error('Error cámara:', err)
+    toast.add({ severity: 'error', summary: 'Error de cámara', detail: 'No se pudo iniciar el escáner.', life: 3000 })
+    cerrarScanner()
+  }
+}
+
+function cerrarScanner() {
+  if (detectorInterval) { clearInterval(detectorInterval); detectorInterval = null }
+  if (scannerControls) { try { scannerControls.stop() } catch (_) {}; scannerControls = null }
+  if (codeReader) { try { codeReader.reset() } catch (_) {} }
+  if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null }
+  if (videoScannerRef.value) {
+    const stream = videoScannerRef.value.srcObject
+    if (stream instanceof MediaStream) stream.getTracks().forEach(t => t.stop())
+    videoScannerRef.value.srcObject = null
+  }
+  mostrarScanner.value = false
+}
+
+onUnmounted(() => {
+  if (mostrarScanner.value) cerrarScanner()
+})
 
 async function registrarAjuste() {
   if (!form.value.id_producto || !form.value.cantidad || !form.value.motivo) return
