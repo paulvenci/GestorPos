@@ -11,10 +11,11 @@
     <Tabs value="0">
       <TabList>
         <Tab value="0"><i class="pi pi-clock text-indigo-500 mr-2"></i>Turnos de Caja</Tab>
-        <Tab value="1"><i class="pi pi-receipt text-emerald-500 mr-2"></i>Ventas de Hoy</Tab>
+        <Tab value="1"><i class="pi pi-receipt text-emerald-500 mr-2"></i>Ventas del Día</Tab>
         <Tab value="2"><i class="pi pi-chart-bar text-amber-500 mr-2"></i>Rotación y Top 10</Tab>
         <Tab value="3"><i class="pi pi-dollar text-primary mr-2"></i>Rentabilidad</Tab>
         <Tab value="4"><i class="pi pi-calendar text-cyan-500 mr-2"></i>Historial de Ventas</Tab>
+        <Tab value="5"><i class="pi pi-users text-purple-500 mr-2"></i>Reporte Consolidado</Tab>
       </TabList>
 
       <TabPanels class="pt-6 px-0 pb-0">
@@ -89,8 +90,18 @@
           <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
             <div class="flex flex-wrap items-end gap-3">
               <div>
-                <h2 class="text-lg font-bold">Ventas de Hoy</h2>
-                <p class="text-sm text-muted">Filtra el reporte por cajero antes de revisar o imprimir.</p>
+                <h2 class="text-lg font-bold">Ventas del Día</h2>
+                <p class="text-sm text-muted">Selecciona un día y un cajero.</p>
+              </div>
+              <div class="w-48 max-w-full">
+                <label class="text-xs text-muted">Fecha del Reporte</label>
+                <DatePicker 
+                  v-model="fechaFiltroReporte" 
+                  dateFormat="dd/mm/yy" 
+                  class="w-full"
+                  :maxDate="new Date()"
+                  @update:modelValue="fetchVentasHoy"
+                />
               </div>
               <div class="w-72 max-w-full">
                 <label class="text-xs text-muted">Cajero</label>
@@ -414,6 +425,79 @@
             </Column>
           </DataTable>
         </TabPanel>
+
+        <!-- =======================
+             TAB 5: REPORTE CONSOLIDADO
+        ======================== -->
+        <TabPanel value="5">
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div class="flex flex-wrap items-end gap-3">
+              <div>
+                <h2 class="text-lg font-bold">Reporte Consolidado Diario</h2>
+                <p class="text-sm text-muted">Muestra el desglose por cajero del día seleccionado.</p>
+              </div>
+              <div class="w-48 max-w-full">
+                <label class="text-xs text-muted">Fecha del Reporte</label>
+                <DatePicker 
+                  v-model="fechaFiltroReporte" 
+                  dateFormat="dd/mm/yy" 
+                  class="w-full"
+                  :maxDate="new Date()"
+                  @update:modelValue="fetchVentasHoy"
+                />
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <Button icon="pi pi-print" label="Imprimir Consolidado" @click="imprimirConsolidadoDiario" size="small" variant="outlined" severity="secondary" />
+              <Button icon="pi pi-refresh" label="Actualizar" @click="fetchVentasHoy" :loading="loadingVentasHoy" size="small" variant="outlined" />
+            </div>
+          </div>
+          
+          <DataTable
+            :value="resumenCajerosConsolidado"
+            :loading="loadingVentasHoy"
+            responsiveLayout="scroll"
+            class="p-datatable-sm modern-table border border-slate-200 rounded"
+          >
+            <Column field="nombre" header="Cajero" class="font-bold"></Column>
+            <Column field="efectivo" header="Efectivo">
+              <template #body="p">
+                <span :class="{'text-emerald-600': p.data.efectivo > 0}">{{ formatMonto(p.data.efectivo) }}</span>
+              </template>
+            </Column>
+            <Column field="tarjeta" header="Tarjeta">
+              <template #body="p">
+                <span :class="{'text-blue-600': p.data.tarjeta > 0}">{{ formatMonto(p.data.tarjeta) }}</span>
+              </template>
+            </Column>
+            <Column field="transferencia" header="Transferencia">
+              <template #body="p">
+                <span :class="{'text-indigo-600': p.data.transferencia > 0}">{{ formatMonto(p.data.transferencia) }}</span>
+              </template>
+            </Column>
+            <Column field="total" header="Total Cajero">
+              <template #body="p">
+                <span class="font-bold text-slate-800">{{ formatMonto(p.data.total) }}</span>
+              </template>
+            </Column>
+            
+            <template #footer>
+              <div class="flex justify-between items-center w-full px-2">
+                <span class="font-bold text-lg">TOTAL GENERAL:</span>
+                <div class="flex gap-4 font-bold text-base">
+                  <span class="text-emerald-700" title="Tot. Efec">EF: {{ formatMonto(totalConsolidado.efectivo) }}</span>
+                  <span class="text-blue-700" title="Tot. Tarj">TJ: {{ formatMonto(totalConsolidado.tarjeta) }}</span>
+                  <span class="text-indigo-700" title="Tot. Tran">TR: {{ formatMonto(totalConsolidado.transferencia) }}</span>
+                  <span class="text-slate-900 border-l border-slate-300 pl-4">TOTAL: {{ formatMonto(totalConsolidado.total) }}</span>
+                </div>
+              </div>
+            </template>
+            <template #empty>
+              <div class="empty-state">No hay ventas en la fecha seleccionada.</div>
+            </template>
+          </DataTable>
+        </TabPanel>
+
       </TabPanels>
     </Tabs>
   </div>
@@ -435,11 +519,72 @@ const perfiles = ref<Record<string, any>>({})
 const turnos = ref<any[]>([])
 const loadingTurnos = ref(false)
 
-// Tab 1
+// Tab 1 & Tab 5
 const ventasHoy = ref<any[]>([])
 const loadingVentasHoy = ref(false)
 const expandedRows = ref({})
 const filtroCajeroHoy = ref<string | null>(null)
+const fechaFiltroReporte = ref<Date>(new Date())
+
+// Computed Reporte Consolidado
+const resumenCajerosConsolidado = computed(() => {
+  const mapCajeros = new Map<string, any>()
+  
+  ventasHoy.value.forEach(v => {
+    // Si la venta está cancelada, no sumarla al total de cajas del consolidado
+    if (v.estado === 'cancelada') return
+    
+    const rawId = v.id_usuario || v.turnos_caja?.id_usuario || 'sin_asignar'
+    const esDentro = !!v.id_turno
+    const cId = rawId + (esDentro ? '_dentro' : '_fuera')
+    
+    if (!mapCajeros.has(cId)) {
+      const baseNombre = rawId === 'sin_asignar' ? 'Ventas sin cajero asignado' : (perfiles.value[rawId]?.nombre || 'Usuario Desconocido')
+      mapCajeros.set(cId, {
+        id: cId,
+        nombre: baseNombre + (esDentro ? ' (En Turno)' : ' (Fuera de Turno)'),
+        efectivo: 0,
+        tarjeta: 0,
+        transferencia: 0,
+        mixto: 0,
+        otros: 0,
+        total: 0
+      })
+    }
+    const cData = mapCajeros.get(cId)
+    const metodo = String(v.metodo_pago || '').toLowerCase()
+    const total = Number(v.total || 0)
+    
+    cData.total += total
+    if (metodo === 'efectivo') cData.efectivo += total
+    else if (metodo === 'tarjeta') cData.tarjeta += total
+    else if (metodo === 'transferencia') cData.transferencia += total
+    else if (metodo === 'mixto') {
+      cData.efectivo += Number(v.pago_efectivo || 0)
+      cData.tarjeta += Number(v.pago_tarjeta || 0)
+      cData.transferencia += Number(v.pago_transferencia || 0)
+    }
+  })
+  
+  // Ordenar por ID base (cajero) y luego por total para juntar las ramas del mismo cajero
+  return Array.from(mapCajeros.values()).sort((a, b) => {
+    const nameA = a.nombre.split(' (')[0]
+    const nameB = b.nombre.split(' (')[0]
+    if (nameA < nameB) return -1
+    if (nameA > nameB) return 1
+    return b.total - a.total
+  })
+})
+
+const totalConsolidado = computed(() => {
+  return resumenCajerosConsolidado.value.reduce((acc, c) => {
+    acc.efectivo += c.efectivo
+    acc.tarjeta += c.tarjeta
+    acc.transferencia += c.transferencia
+    acc.total += c.total
+    return acc
+  }, { efectivo: 0, tarjeta: 0, transferencia: 0, total: 0 })
+})
 
 // Tab 2
 const topProductos = ref<any[]>([])
@@ -542,14 +687,19 @@ async function fetchVentasHoy() {
   loadingVentasHoy.value = true
   try {
     // Obtenemos inicio del día de hoy en ISO
-    const hoy = new Date()
-    hoy.setHours(0, 0, 0, 0)
-    const inicioDia = hoy.toISOString()
+    const fecha = new Date(fechaFiltroReporte.value || new Date())
+    fecha.setHours(0, 0, 0, 0)
+    const inicioDia = fecha.toISOString()
+
+    const fin = new Date(fecha)
+    fin.setHours(23, 59, 59, 999)
+    const finDia = fin.toISOString()
 
     const { data, error } = await supabase
       .from('ventas')
       .select('id, fecha, total, subtotal, metodo_pago, estado, pago_efectivo, pago_tarjeta, pago_transferencia, id_turno, id_usuario, turnos_caja(id_usuario), detalle_ventas(cantidad, precio_unitario, subtotal, productos(nombre))')
       .gte('fecha', inicioDia)
+      .lte('fecha', finDia)
       .order('fecha', { ascending: false })
 
     if (error) throw error
@@ -779,6 +929,74 @@ function imprimirRotacion() {
     `<h2>Top 10 Vendidos</h2><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Ingreso</th></tr></thead><tbody>${topRows}</tbody></table>
      <h2>Sin Rotación</h2><table><thead><tr><th>Producto</th><th>Stock</th><th>Precio</th></tr></thead><tbody>${sinRows}</tbody></table>`
   )
+}
+
+function imprimirConsolidadoDiario() {
+  const width = 380
+  const height = 760
+  const printWindow = window.open('', '_blank', `width=${width},height=${height}`)
+  if (!printWindow) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Por favor permite las ventanas emergentes (pop-ups) para imprimir.', life: 3000 })
+    return
+  }
+
+  const filasCajeros = resumenCajerosConsolidado.value.map(c => `
+    <div class="item">
+      <div class="strong">${c.nombre.toUpperCase()}</div>
+      <div class="row"><span>Efectivo:</span><span>${formatMonto(c.efectivo)}</span></div>
+      <div class="row"><span>Tarjeta:</span><span>${formatMonto(c.tarjeta)}</span></div>
+      <div class="row"><span>Transf.:</span><span>${formatMonto(c.transferencia)}</span></div>
+      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(c.total)}</span></div>
+    </div>
+  `).join('')
+
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>Reporte Consolidado Diario</title>
+      <style>
+        @page { size: 80mm auto; margin: 2mm; }
+        body { font-family: "Courier New", monospace; width: 76mm; margin: 0 auto; font-size: 12px; color: #111; }
+        .title { text-align: center; font-weight: 700; font-size: 15px; margin-top: 6px; }
+        h3 { text-align: center; font-size: 13px; margin: 4px 0; font-weight: bold; }
+        .line { border-top: 1px dashed #555; margin: 6px 0; }
+        .row { display: flex; justify-content: space-between; gap: 6px; margin: 2px 0; }
+        .muted { color: #444; font-size: 11px; text-align: center; }
+        .item { padding: 8px 0; border-bottom: 1px dashed #ccc; }
+        .item:last-child { border-bottom: none; }
+        .strong { font-weight: 700; }
+        .grand-total { border-top: 2px solid #111; padding-top: 8px; margin-top: 8px;}
+        .grand-total .row { font-size: 13px; margin: 4px 0;}
+      </style>
+    </head>
+    <body>
+      <div class="title">CONSOLIDADO DIARIO</div>
+      <div class="muted">Fecha: ${new Date(fechaFiltroReporte.value).toLocaleDateString('es-CL')}</div>
+      <div class="line"></div>
+      
+      <h3>DETALLE POR CAJERO</h3>
+      ${filasCajeros || '<div class="muted">Sin ventas.</div>'}
+      
+      <div class="grand-total">
+        <h3 style="margin-bottom:8px;">TOTALES GENERALES</h3>
+        <div class="row"><span>Total Efectivo:</span><span>${formatMonto(totalConsolidado.value.efectivo)}</span></div>
+        <div class="row"><span>Total Tarjeta:</span><span>${formatMonto(totalConsolidado.value.tarjeta)}</span></div>
+        <div class="row"><span>Total Transf.:</span><span>${formatMonto(totalConsolidado.value.transferencia)}</span></div>
+        <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL DÍA:</span><span>${formatMonto(totalConsolidado.value.total)}</span></div>
+      </div>
+      
+      <script>
+        window.onload = () => {
+          setTimeout(() => {
+            window.print();
+            setTimeout(() => window.close(), 700);
+          }, 300);
+        }
+      <\/script>
+    </body>
+    </html>
+  `)
+  printWindow.document.close()
 }
 
 function imprimirRentabilidad() {
