@@ -1008,7 +1008,11 @@ async function onConectado() {
 
 // ─── Búsqueda ─────────────────────────────────────────────
 async function onBusqueda() {
+  const consultaEnCurso = posStore.busqueda
   await posStore.buscarProductos(posStore.busqueda)
+  
+  // Condición antimultiplicidad: si la búsqueda se limpió (por ej. por un Enter simultaneo) no seguimos
+  if (posStore.busqueda !== consultaEnCurso) return
   
   // Agregar automáticamente si hay una coincidencia exacta de SKU
   if (posStore.busqueda) {
@@ -1021,7 +1025,14 @@ async function onBusqueda() {
 }
 
 async function onEnterBusqueda() {
+  const consultaEnCurso = posStore.busqueda
+  if (!consultaEnCurso) return
+
   await posStore.buscarProductos(posStore.busqueda)
+
+  // Condición antimultiplicidad: evitar que se agregue de nuevo si onBusqueda ya lo procesó y limpió el input
+  if (posStore.busqueda !== consultaEnCurso) return
+
   if (posStore.resultados.length === 1) {
     const prod = posStore.resultados[0]
     if (prod) {
@@ -1093,7 +1104,20 @@ function onCambioTotal(value: number | null | undefined) {
   origenEdicionPeso = null
 }
 
+const ultimoProductoAgregado = ref<{ id: string, timestamp: number } | null>(null)
+
 function seleccionarProducto(prod: ProductoLocal) {
+  // Evitar doble escaneo hiper r\u00e1pido del mismo producto (lectores en modo continuo)
+  const ahora = Date.now()
+  if (
+    ultimoProductoAgregado.value && 
+    ultimoProductoAgregado.value.id === prod.id && 
+    (ahora - ultimoProductoAgregado.value.timestamp) < 400
+  ) {
+    // Ignoramos la selecci\u00f3n si pasaron menos de 400ms para el MISMO producto
+    return
+  }
+
   if (prod.es_pesable) {
     productoPendientePeso.value = prod
     cantidadPesoCalculada.value = 1
@@ -1108,6 +1132,7 @@ function seleccionarProducto(prod: ProductoLocal) {
   }
 
   posStore.agregarItem(prod)
+  ultimoProductoAgregado.value = { id: prod.id, timestamp: ahora }
   posStore.busqueda = ''
   posStore.resultados = []
   enfocarBusqueda()
