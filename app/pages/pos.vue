@@ -274,7 +274,38 @@
         </div>
         <div class="confirm-pago-row">
           <label>Transferencia</label>
-          <InputNumber ref="pagoTransferenciaRef" inputId="pos-pago-transferencia" v-model="pagoTransferencia" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" @focus="seleccionarTextoPago" />
+          <InputNumber ref="pagoTransferenciaRef" inputId="pos-pago-transferencia" v-model="pagoTransferencia" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" :disabled="esFiado" @focus="seleccionarTextoPago" />
+        </div>
+
+        <!-- Botón Fiado -->
+        <div class="mt-2 border-t pt-3" style="border-color: var(--border-subtle)">
+          <div class="flex items-center gap-2 mb-2">
+            <Checkbox v-model="esFiado" :binary="true" inputId="chk-fiado" :disabled="ventaActualGuardada" />
+            <label for="chk-fiado" class="cursor-pointer font-semibold text-sm flex items-center gap-1">
+              <i class="pi pi-wallet text-amber-500"></i> Venta a Crédito (Fiado)
+            </label>
+          </div>
+          <div v-if="esFiado" class="flex flex-col gap-2 p-3 rounded-lg" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2)">
+            <label class="text-xs font-semibold text-amber-700">Seleccionar cliente</label>
+            <AutoComplete
+              v-model="clienteFiadoSeleccionado"
+              :suggestions="clientesSugeridos"
+              optionLabel="nombre"
+              placeholder="Buscar por nombre o teléfono..."
+              @complete="buscarClientesFiado"
+              @item-select="onClienteFiadoSelect"
+              dropdown
+              class="w-full"
+            />
+            <Button v-if="!clienteFiadoId" icon="pi pi-plus" label="Crear cliente rápido" size="small" text severity="warning" @click="mostrarCrearClienteRapido = true" />
+            <div v-if="clienteFiadoId && clienteFiadoObj" class="text-xs text-amber-700 flex items-center gap-2 mt-1">
+              <i class="pi pi-check-circle text-emerald-500"></i>
+              <span><strong>{{ clienteFiadoObj.nombre }}</strong> — Deuda actual: {{ formatMonto(clienteFiadoObj.saldo_pendiente || 0) }}</span>
+              <span v-if="clienteFiadoObj.limite_credito && (clienteFiadoObj.saldo_pendiente || 0) + totalCobroActual > clienteFiadoObj.limite_credito" class="text-red-500 font-bold ml-1">
+                ⚠ Supera límite ({{ formatMonto(clienteFiadoObj.limite_credito) }})
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -298,7 +329,11 @@
       </div>
     </div>
     <template #footer>
-      <Button :label="ventaActualGuardada ? 'Cerrar (Esc)' : 'Cancelar (Esc)'" text severity="secondary" @click="mostrarConfirmacion = false" />
+      <Button
+        :label="ventaActualGuardada ? 'Cerrar (Esc)' : 'Cancelar (Esc)'"
+        text severity="secondary"
+        @click="mostrarConfirmacion = false"
+      />
       <Button
         label="Guardar (F2)"
         icon="pi pi-save"
@@ -316,6 +351,24 @@
         class="pos-btn-cta"
         @click="confirmarCobro(true)"
       />
+    </template>
+  </Dialog>
+
+  <!-- Diálogo: Crear Cliente Rápido (Fiado) -->
+  <Dialog v-model:visible="mostrarCrearClienteRapido" header="Crear Cliente Rápido" :modal="true" :style="{ width: '380px' }" class="p-fluid">
+    <div class="flex flex-col gap-3 pt-2">
+      <div>
+        <label class="text-sm font-medium mb-1 block">Nombre *</label>
+        <InputText v-model="clienteRapidoNombre" placeholder="Nombre del cliente" autofocus />
+      </div>
+      <div>
+        <label class="text-sm font-medium mb-1 block">Teléfono</label>
+        <InputText v-model="clienteRapidoTelefono" placeholder="+56 9 ..." />
+      </div>
+    </div>
+    <template #footer>
+      <Button label="Cancelar" text severity="secondary" @click="mostrarCrearClienteRapido = false" />
+      <Button label="Crear" icon="pi pi-check" :disabled="!clienteRapidoNombre.trim()" @click="crearClienteRapido" />
     </template>
   </Dialog>
 
@@ -605,6 +658,64 @@ const supabase = useSupabaseClient<Database>()
 const consultaPrecioVisible = useState<boolean>('consulta-precio-open', () => false)
 const ultimosToasts = new Map<string, number>()
 
+// ─── Fiado / Crédito ───
+const { useClientesStore } = await import('~/stores/clientes')
+const clientesStoreRef = useClientesStore()
+const esFiado = ref(false)
+const clienteFiadoSeleccionado = ref<any>(null)
+const clienteFiadoId = ref<string | null>(null)
+const clientesSugeridos = ref<any[]>([])
+const mostrarCrearClienteRapido = ref(false)
+const clienteRapidoNombre = ref('')
+const clienteRapidoTelefono = ref('')
+
+const clienteFiadoObj = computed(() => {
+  if (!clienteFiadoId.value) return null
+  return clientesStoreRef.clientes.find(c => c.id === clienteFiadoId.value) || null
+})
+
+async function buscarClientesFiado(event: any) {
+  const resultado = await clientesStoreRef.buscarClientes(event.query || '')
+  clientesSugeridos.value = resultado
+}
+
+function onClienteFiadoSelect(event: any) {
+  const cliente = event.value
+  if (cliente?.id) {
+    clienteFiadoId.value = cliente.id
+  }
+}
+
+watch(esFiado, (val) => {
+  if (val) {
+    pagoEfectivo.value = 0
+    pagoTarjeta.value = 0
+    pagoTransferencia.value = 0
+    clientesStoreRef.fetchClientes()
+  } else {
+    clienteFiadoSeleccionado.value = null
+    clienteFiadoId.value = null
+  }
+})
+
+async function crearClienteRapido() {
+  if (!clienteRapidoNombre.value.trim()) return
+  try {
+    const nuevoCliente = await clientesStoreRef.saveCliente({
+      nombre: clienteRapidoNombre.value.trim(),
+      telefono: clienteRapidoTelefono.value.trim() || undefined
+    })
+    clienteFiadoSeleccionado.value = nuevoCliente
+    clienteFiadoId.value = nuevoCliente.id
+    mostrarCrearClienteRapido.value = false
+    clienteRapidoNombre.value = ''
+    clienteRapidoTelefono.value = ''
+    toast.add({ severity: 'success', summary: 'Cliente creado', detail: nuevoCliente.nombre, life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Error', detail: e.message, life: 5000 })
+  }
+}
+
 function addToastUnico(
   payload: { severity: string; summary: string; detail: string; life?: number },
   key?: string,
@@ -759,7 +870,10 @@ const totalPagado = computed(() =>
 
 const totalCobroActual = computed(() => mostrarConfirmacion.value ? totalCobroModal.value : posStore.total)
 const saldoPendiente = computed(() => Math.round((totalCobroActual.value - totalPagado.value)))
-const pagoValido = computed(() => totalCobroActual.value > 0 && saldoPendiente.value <= 0 && totalPagado.value > 0)
+const pagoValido = computed(() => {
+  if (esFiado.value) return totalCobroActual.value > 0 && !!clienteFiadoId.value
+  return totalCobroActual.value > 0 && saldoPendiente.value <= 0 && totalPagado.value > 0
+})
 const ventaActualIdCorto = computed(() => String(ventaActualId.value || '').slice(0, 8).toUpperCase() || 'N/A')
 const cleanupPagoInputListeners: Array<() => void> = []
 
@@ -798,6 +912,9 @@ function resetEstadoCobro() {
   pagoEfectivo.value = 0
   pagoTarjeta.value = 0
   pagoTransferencia.value = 0
+  esFiado.value = false
+  clienteFiadoSeleccionado.value = null
+  clienteFiadoId.value = null
 }
 
 function enfocarBusquedaPrincipalPOS() {
@@ -1497,22 +1614,41 @@ async function confirmarCobro(imprimir = true) {
 
   const totalCobrado = totalCobroModal.value
   const fechaTicket = new Date()
-  const detallePago = construirDetallePago()
+  const esFiadoActual = esFiado.value
+  const clienteIdFiado = clienteFiadoId.value
+  const detallePago = esFiadoActual
+    ? { metodo: 'fiado', etiqueta: `Fiado — ${clienteFiadoObj.value?.nombre || 'Cliente'}` }
+    : construirDetallePago()
   const metodoPagoFinal = detallePago.metodo
   const metodoPagoEtiqueta = detallePago.etiqueta
   const cajeroNombre = authStore.nombreUsuario || 'Cajero'
-  const totalPagadoActual = totalPagado.value
-  const vueltoActual = Math.max(0, Math.abs(saldoPendiente.value < 0 ? saldoPendiente.value : 0))
+  const totalPagadoActual = esFiadoActual ? 0 : totalPagado.value
+  const vueltoActual = esFiadoActual ? 0 : Math.max(0, Math.abs(saldoPendiente.value < 0 ? saldoPendiente.value : 0))
 
   try {
     const turnoId = cajaStore.turnoActivo?.id ?? null
     const ventaId = await posStore.registrarVenta(
       turnoId,
       metodoPagoFinal,
-      Math.round(Number(pagoEfectivo.value) || 0),
-      Math.round(Number(pagoTarjeta.value) || 0),
-      Math.round(Number(pagoTransferencia.value) || 0)
+      esFiadoActual ? 0 : Math.round(Number(pagoEfectivo.value) || 0),
+      esFiadoActual ? 0 : Math.round(Number(pagoTarjeta.value) || 0),
+      esFiadoActual ? 0 : Math.round(Number(pagoTransferencia.value) || 0)
     )
+
+    // Si es fiado, crear registro de crédito
+    if (esFiadoActual && clienteIdFiado && ventaId) {
+      try {
+        await clientesStoreRef.crearVentaCredito(
+          String(ventaId),
+          clienteIdFiado,
+          totalCobrado
+        )
+      } catch (creditErr: any) {
+        console.error('Error creando crédito:', creditErr)
+        toast.add({ severity: 'warn', summary: 'Venta registrada', detail: `Pero hubo un error creando el crédito: ${creditErr.message}`, life: 6000 })
+      }
+    }
+
     ventaActualGuardada.value = true
     ventaActualId.value = String(ventaId || '')
     ventaActualEstado.value = 'emitido'
@@ -1521,11 +1657,13 @@ async function confirmarCobro(imprimir = true) {
     ventaActualCajero.value = cajeroNombre
     ventaActualPagado.value = totalPagadoActual
     ventaActualVuelto.value = vueltoActual
-    const label = turnoId ? '¡Venta registrada!' : 'Venta fuera de turno registrada'
+    const label = esFiadoActual
+      ? `Fiado registrado — ${clienteFiadoObj.value?.nombre || 'Cliente'}`
+      : turnoId ? '¡Venta registrada!' : 'Venta fuera de turno registrada'
     toast.add({
-      severity: 'success',
+      severity: esFiadoActual ? 'warn' : 'success',
       summary: label,
-      detail: `Total cobrado: ${formatMonto(totalCobrado || 0)}`,
+      detail: `Total: ${formatMonto(totalCobrado || 0)}`,
       life: 4000
     })
     if (imprimir) imprimirVentaActualGuardada()

@@ -64,6 +64,10 @@
           <i class="pi pi-chart-bar" />
           <span>Reportes</span>
         </NuxtLink>
+        <NuxtLink v-if="canAccess('clientes')" to="/admin/clientes" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-users" />
+          <span>Clientes</span>
+        </NuxtLink>
 
         <div class="pos-nav-divider" />
 
@@ -206,6 +210,7 @@ const seccionActual = computed(() => {
   if (route.path.startsWith('/admin/ajuste-stock')) return 'Ajuste Stock'
   if (route.path.startsWith('/admin/categorias')) return 'Categorías'
   if (route.path.startsWith('/admin/reportes')) return 'Reportes'
+  if (route.path.startsWith('/admin/clientes')) return 'Clientes'
   if (route.path.startsWith('/admin/configuracion')) return 'Configuración'
   return 'GestorPOS'
 })

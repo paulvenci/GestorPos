@@ -7,6 +7,7 @@ export type SectionKey =
   | 'inventario'
   | 'ajuste_stock'
   | 'categorias'
+  | 'clientes'
   | 'reportes'
   | 'configuracion'
 
@@ -19,6 +20,7 @@ const COMPANY_SECTIONS: SectionKey[] = [
   'inventario',
   'ajuste_stock',
   'categorias',
+  'clientes',
   'reportes',
   'configuracion'
 ]
@@ -29,8 +31,8 @@ export function getDefaultRolePermissions(): RolePermissionsMap {
   return {
     super_admin: [...ALL_SECTIONS],
     admin: [...COMPANY_SECTIONS],
-    supervisor: ['dashboard', 'pos', 'caja', 'inventario', 'ajuste_stock', 'categorias', 'reportes'],
-    cajero: ['dashboard', 'pos', 'caja']
+    supervisor: ['dashboard', 'pos', 'caja', 'inventario', 'ajuste_stock', 'categorias', 'clientes', 'reportes'],
+    cajero: ['dashboard', 'pos', 'caja', 'clientes']
   }
 }
 
@@ -65,6 +67,7 @@ export function getSectionFromPath(path: string): SectionKey | null {
   if (path.startsWith('/admin/productos')) return 'inventario'
   if (path.startsWith('/admin/ajuste-stock')) return 'ajuste_stock'
   if (path.startsWith('/admin/categorias')) return 'categorias'
+  if (path.startsWith('/admin/clientes')) return 'clientes'
   if (path.startsWith('/admin/reportes')) return 'reportes'
   if (path.startsWith('/admin/configuracion')) return 'configuracion'
   return null
