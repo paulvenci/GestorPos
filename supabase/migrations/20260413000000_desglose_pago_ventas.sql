@@ -61,8 +61,9 @@ BEGIN
       (v_item->>'subtotal')::numeric
     );
 
+    -- Usar numeric para soportar productos pesables (ej: 0.89 kg)
     UPDATE public.productos
-      SET stock = stock - (v_item->>'cantidad')::integer
+      SET stock = stock - (v_item->>'cantidad')::numeric
       WHERE id = (v_item->>'id_producto')::uuid;
   END LOOP;
 
