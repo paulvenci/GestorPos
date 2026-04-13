@@ -392,6 +392,10 @@ export type Database = {
           metodo_pago: string
           subtotal: number
           total: number
+          estado: string | null
+          motivo_cancelacion: string | null
+          cancelada_por: string | null
+          fecha_cancelacion: string | null
         }
         Insert: {
           created_at?: string | null
@@ -626,4 +630,5 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
 

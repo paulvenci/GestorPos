@@ -139,7 +139,13 @@ export const usePosStore = defineStore('pos', () => {
   const total = computed(() => subtotal.value)
 
   // ─── Cobrar ───────────────────────────────────────────
-  async function registrarVenta(idTurno: string | null, metodoPago: string) {
+  async function registrarVenta(
+    idTurno: string | null,
+    metodoPago: string,
+    pagoEfectivo = 0,
+    pagoTarjeta = 0,
+    pagoTransferencia = 0
+  ) {
     if (carrito.value.length === 0) throw new Error('El carrito está vacío')
     procesando.value = true
 
@@ -160,7 +166,10 @@ export const usePosStore = defineStore('pos', () => {
         p_descuentos: 0,
         p_total: total.value,
         p_metodo_pago: metodoPago,
-        p_items: items
+        p_items: items,
+        p_pago_efectivo: pagoEfectivo,
+        p_pago_tarjeta: pagoTarjeta,
+        p_pago_transferencia: pagoTransferencia
       })
 
       if (error) {
@@ -240,6 +249,29 @@ export const usePosStore = defineStore('pos', () => {
     ventasReservadas.value = ventasReservadas.value.filter(v => v.id !== id)
   }
 
+  // ─── Ventas del Día ───────────────────────────────────
+  async function fetchVentasDia(): Promise<any[]> {
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    const { data, error } = await supabase
+      .from('ventas')
+      .select('id, fecha, total, subtotal, metodo_pago, estado, created_at, detalle_ventas(id_producto, cantidad, precio_unitario, productos(nombre))')
+      .gte('fecha', hoy.toISOString())
+      .neq('estado', 'cancelada')
+      .order('fecha', { ascending: false })
+    if (error) throw error
+    return data || []
+  }
+
+  async function cancelarVenta(idVenta: string, motivo: string | null, supervisorId: string): Promise<void> {
+    const { error } = await (supabase.rpc as any)('cancelar_venta', {
+      p_id_venta: idVenta,
+      p_motivo: motivo || null,
+      p_supervisor_id: supervisorId
+    })
+    if (error) throw new Error(error.message)
+  }
+
   return {
     carrito, busqueda, resultados, buscando, procesando,
     subtotal, total,
@@ -249,6 +281,7 @@ export const usePosStore = defineStore('pos', () => {
     agregarItem, quitarItem, setCantidad, setDescuento, vaciarCarrito,
     registrarVenta,
     cargarReservas, reservarVenta, retomarVenta, eliminarReserva,
+    fetchVentasDia, cancelarVenta,
     redondearCLP
   }
 })

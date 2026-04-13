@@ -144,6 +144,14 @@
             @click="mostrarReservas = true"
           />
           <Button
+            icon="pi pi-ban"
+            text
+            severity="danger"
+            size="small"
+            title="Cancelar una venta del día"
+            @click="abrirCancelarVenta"
+          />
+          <Button
             v-if="posStore.carrito.length > 0"
             icon="pi pi-trash"
             text
@@ -455,6 +463,125 @@
     </div>
   </Dialog>
 
+  <!-- Modal: Cancelar Venta del Día -->
+  <Dialog
+    v-model:visible="mostrarModalCancelar"
+    modal
+    header="Cancelar una Venta"
+    :style="{ width: '600px' }"
+    @hide="resetCancelarVenta"
+  >
+    <!-- Paso 1: Listado de ventas -->
+    <div v-if="!ventaSeleccionadaCancelar" class="flex flex-col gap-3">
+      <p class="text-sm text-slate-500">Selecciona la venta del día que deseas cancelar. El stock de los productos será repuesto automáticamente.</p>
+      <div v-if="cargandoVentasDia" class="flex justify-center p-6">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem" />
+      </div>
+      <div v-else-if="ventasDia.length === 0" class="text-center text-slate-500 py-6">
+        <i class="pi pi-check-circle" style="font-size:2rem" />
+        <p class="mt-2">No hay ventas del día disponibles para cancelar.</p>
+      </div>
+      <div v-else class="flex flex-col gap-2 max-h-80 overflow-y-auto">
+        <div
+          v-for="venta in ventasDia"
+          :key="venta.id"
+          class="border border-slate-200 rounded-lg p-3 cursor-pointer hover:border-red-400 hover:bg-red-50 transition-colors"
+          @click="ventaSeleccionadaCancelar = venta"
+        >
+          <div class="flex justify-between items-center">
+            <div class="flex flex-col gap-0.5">
+              <span class="font-semibold text-slate-800">{{ formatMonto(venta.total) }}</span>
+              <span class="text-xs text-slate-500">
+                {{ new Date(venta.fecha).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) }}
+                &bull; {{ venta.metodo_pago }}
+                &bull; {{ venta.detalle_ventas?.length || 0 }} producto(s)
+              </span>
+            </div>
+            <i class="pi pi-chevron-right text-slate-400" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 2: Detalle + motivo + PIN -->
+    <div v-else class="flex flex-col gap-4">
+      <!-- Botón volver -->
+      <Button
+        label="Volver al listado"
+        icon="pi pi-arrow-left"
+        text
+        severity="secondary"
+        size="small"
+        @click="ventaSeleccionadaCancelar = null; errorCancelar = ''"
+      />
+
+      <!-- Resumen de la venta -->
+      <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
+        <div class="flex justify-between mb-2">
+          <span class="text-sm font-semibold text-slate-700">Detalle de la venta</span>
+          <span class="text-sm font-bold text-slate-900">{{ formatMonto(ventaSeleccionadaCancelar.total) }}</span>
+        </div>
+        <ul class="text-sm text-slate-600 space-y-1">
+          <li
+            v-for="det in ventaSeleccionadaCancelar.detalle_ventas"
+            :key="det.id_producto"
+            class="flex justify-between"
+          >
+            <span>{{ det.productos?.nombre || 'Producto' }} × {{ det.cantidad }}</span>
+            <span>{{ formatMonto(det.precio_unitario * det.cantidad) }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Motivo -->
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-slate-700">Motivo de cancelación <span class="text-slate-400 font-normal">(opcional)</span></label>
+        <Textarea
+          v-model="motivoCancelar"
+          rows="2"
+          placeholder="Ej: Producto devuelto, error en el cobro..."
+          class="w-full"
+        />
+      </div>
+
+      <!-- Autenticación del supervisor -->
+      <div class="border border-amber-200 bg-amber-50 rounded-lg p-3 flex flex-col gap-2">
+        <span class="text-sm font-medium text-amber-800">
+          <i class="pi pi-lock mr-1" />
+          Se requiere autorización de supervisor o administrador
+        </span>
+        <InputText
+          v-model="emailSupervisor"
+          type="email"
+          placeholder="Email del supervisor"
+          class="w-full"
+        />
+        <Password
+          v-model="passwordSupervisor"
+          placeholder="Contraseña del supervisor"
+          :feedback="false"
+          toggleMask
+          class="w-full"
+          inputClass="w-full"
+        />
+        <small v-if="errorCancelar" class="text-red-600">{{ errorCancelar }}</small>
+      </div>
+    </div>
+
+    <template #footer>
+      <Button label="Cerrar" text severity="secondary" @click="mostrarModalCancelar = false" />
+      <Button
+        v-if="ventaSeleccionadaCancelar"
+        label="Confirmar Cancelación"
+        icon="pi pi-ban"
+        severity="danger"
+        :loading="cancelandoVenta"
+        :disabled="!emailSupervisor || !passwordSupervisor"
+        @click="confirmarCancelarVenta"
+      />
+    </template>
+  </Dialog>
+
 </template>
 
 <script setup lang="ts">
@@ -536,6 +663,87 @@ const isOnline = ref(import.meta.client ? navigator.onLine : true)
 const topVendidos = ref<ProductoLocal[]>([])
 const mostrarReservas = ref(false)
 const onDesconectado = () => { isOnline.value = false }
+
+// ─── Cancelar Venta ───────────────────────────────────────
+const mostrarModalCancelar = ref(false)
+const ventasDia = ref<any[]>([])
+const ventaSeleccionadaCancelar = ref<any>(null)
+const motivoCancelar = ref('')
+const emailSupervisor = ref('')
+const passwordSupervisor = ref('')
+const cancelandoVenta = ref(false)
+const cargandoVentasDia = ref(false)
+const errorCancelar = ref('')
+
+async function abrirCancelarVenta() {
+  ventaSeleccionadaCancelar.value = null
+  motivoCancelar.value = ''
+  emailSupervisor.value = ''
+  passwordSupervisor.value = ''
+  errorCancelar.value = ''
+  mostrarModalCancelar.value = true
+  cargandoVentasDia.value = true
+  try {
+    ventasDia.value = await posStore.fetchVentasDia()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las ventas del día', life: 3000 })
+  } finally {
+    cargandoVentasDia.value = false
+  }
+}
+
+function resetCancelarVenta() {
+  ventaSeleccionadaCancelar.value = null
+  motivoCancelar.value = ''
+  emailSupervisor.value = ''
+  passwordSupervisor.value = ''
+  errorCancelar.value = ''
+  ventasDia.value = []
+}
+
+async function confirmarCancelarVenta() {
+  if (!ventaSeleccionadaCancelar.value || !emailSupervisor.value || !passwordSupervisor.value) return
+  cancelandoVenta.value = true
+  errorCancelar.value = ''
+  try {
+    // 1. Autenticar al supervisor
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: emailSupervisor.value,
+      password: passwordSupervisor.value
+    })
+    if (authError || !authData?.user) {
+      errorCancelar.value = 'Credenciales incorrectas. Intenta nuevamente.'
+      return
+    }
+
+    // 2. Verificar rol del supervisor
+    const { data: perfil, error: perfilError } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', authData.user.id)
+      .single()
+
+    if (perfilError || !perfil || !['admin', 'supervisor'].includes(perfil.rol)) {
+      errorCancelar.value = 'El usuario no tiene permisos de supervisor o administrador.'
+      return
+    }
+
+    // 3. Ejecutar la cancelación
+    await posStore.cancelarVenta(
+      ventaSeleccionadaCancelar.value.id,
+      motivoCancelar.value || null,
+      authData.user.id
+    )
+
+    toast.add({ severity: 'success', summary: 'Venta cancelada', detail: 'La venta fue cancelada y el stock fue repuesto.', life: 4000 })
+    mostrarModalCancelar.value = false
+    resetCancelarVenta()
+  } catch (err: any) {
+    errorCancelar.value = err.message || 'No se pudo cancelar la venta.'
+  } finally {
+    cancelandoVenta.value = false
+  }
+}
 
 const metodosPago = [
   { value: 'efectivo', label: 'Efectivo (F12)', icon: 'pi pi-money-bill' },
@@ -1263,7 +1471,13 @@ async function confirmarCobro(imprimir = true) {
 
   try {
     const turnoId = cajaStore.turnoActivo?.id ?? null
-    const ventaId = await posStore.registrarVenta(turnoId, metodoPagoFinal)
+    const ventaId = await posStore.registrarVenta(
+      turnoId,
+      metodoPagoFinal,
+      Math.round(Number(pagoEfectivo.value) || 0),
+      Math.round(Number(pagoTarjeta.value) || 0),
+      Math.round(Number(pagoTransferencia.value) || 0)
+    )
     ventaActualGuardada.value = true
     ventaActualId.value = String(ventaId || '')
     ventaActualEstado.value = 'emitido'

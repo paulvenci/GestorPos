@@ -147,9 +147,20 @@
                 </div>
               </template>
             </Column>
+            <Column field="estado" header="Estado" sortable>
+              <template #body="slotProps">
+                <Tag
+                  :value="slotProps.data.estado === 'cancelada' ? 'CANCELADA' : 'COMPLETADA'"
+                  :severity="slotProps.data.estado === 'cancelada' ? 'danger' : 'success'"
+                  :icon="slotProps.data.estado === 'cancelada' ? 'pi pi-ban' : 'pi pi-check'"
+                />
+              </template>
+            </Column>
             <Column field="total" header="Total" sortable>
               <template #body="slotProps">
-                <span class="font-bold text-emerald-500">{{ formatMonto(slotProps.data.total) }}</span>
+                <span :class="slotProps.data.estado === 'cancelada' ? 'line-through text-slate-400' : 'font-bold text-emerald-500'">
+                  {{ formatMonto(slotProps.data.total) }}
+                </span>
               </template>
             </Column>
 
@@ -180,6 +191,54 @@
                       </tr>
                     </tbody>
                   </table>
+                </div>
+
+                <!-- Desglose de pago (siempre visible, especialmente útil en mixto) -->
+                <div class="mt-4 border-t border-indigo-200 pt-3">
+                  <h6 class="text-xs font-bold text-indigo-700 uppercase mb-2">Desglose de Pago</h6>
+                  <div class="flex flex-wrap gap-3 text-sm">
+                    <template v-if="slotProps.data.pago_efectivo > 0 || slotProps.data.pago_tarjeta > 0 || slotProps.data.pago_transferencia > 0">
+                      <div v-if="slotProps.data.pago_efectivo > 0" class="flex items-center gap-1 text-slate-700">
+                        <i class="pi pi-money-bill text-emerald-500"></i>
+                        <span>Efectivo:</span>
+                        <span class="font-bold">{{ formatMonto(slotProps.data.pago_efectivo) }}</span>
+                      </div>
+                      <div v-if="slotProps.data.pago_tarjeta > 0" class="flex items-center gap-1 text-slate-700">
+                        <i class="pi pi-credit-card text-indigo-500"></i>
+                        <span>Tarjeta:</span>
+                        <span class="font-bold">{{ formatMonto(slotProps.data.pago_tarjeta) }}</span>
+                      </div>
+                      <div v-if="slotProps.data.pago_transferencia > 0" class="flex items-center gap-1 text-slate-700">
+                        <i class="pi pi-mobile text-cyan-500"></i>
+                        <span>Transferencia:</span>
+                        <span class="font-bold">{{ formatMonto(slotProps.data.pago_transferencia) }}</span>
+                      </div>
+                    </template>
+                    <!-- Fallback para ventas anteriores a la migración -->
+                    <template v-else>
+                      <div v-if="slotProps.data.metodo_pago === 'efectivo'" class="flex items-center gap-1 text-slate-700">
+                        <i class="pi pi-money-bill text-emerald-500"></i>
+                        <span>Efectivo:</span>
+                        <span class="font-bold">{{ formatMonto(slotProps.data.total) }}</span>
+                      </div>
+                      <div v-else-if="slotProps.data.metodo_pago === 'tarjeta'" class="flex items-center gap-1 text-slate-700">
+                        <i class="pi pi-credit-card text-indigo-500"></i>
+                        <span>Tarjeta:</span>
+                        <span class="font-bold">{{ formatMonto(slotProps.data.total) }}</span>
+                      </div>
+                      <div v-else-if="slotProps.data.metodo_pago === 'transferencia'" class="flex items-center gap-1 text-slate-700">
+                        <i class="pi pi-mobile text-cyan-500"></i>
+                        <span>Transferencia:</span>
+                        <span class="font-bold">{{ formatMonto(slotProps.data.total) }}</span>
+                      </div>
+                      <div v-else class="flex items-center gap-1 text-slate-700">
+                        <i class="pi pi-wallet text-amber-500"></i>
+                        <span class="capitalize">{{ slotProps.data.metodo_pago }}:</span>
+                        <span class="font-bold">{{ formatMonto(slotProps.data.total) }}</span>
+                      </div>
+                      <span class="text-slate-400 text-xs italic">(desglose no disponible en ventas anteriores)</span>
+                    </template>
+                  </div>
                 </div>
               </div>
             </template>
@@ -431,7 +490,9 @@ const ventasHoyFiltradas = computed(() => {
 })
 
 const resumenVentasHoy = computed(() => {
+  // Solo contar ventas completadas (no canceladas) en el resumen económico
   return ventasHoyFiltradas.value.reduce((acc: Record<string, number>, venta: any) => {
+    if (venta.estado === 'cancelada') return acc
     const metodo = String(venta.metodo_pago || '').toLowerCase()
     const total = Number(venta.total || 0)
     acc.total += total
@@ -487,7 +548,7 @@ async function fetchVentasHoy() {
 
     const { data, error } = await supabase
       .from('ventas')
-      .select('id, fecha, total, subtotal, metodo_pago, id_turno, id_usuario, turnos_caja(id_usuario), detalle_ventas(cantidad, precio_unitario, subtotal, productos(nombre))')
+      .select('id, fecha, total, subtotal, metodo_pago, estado, pago_efectivo, pago_tarjeta, pago_transferencia, id_turno, id_usuario, turnos_caja(id_usuario), detalle_ventas(cantidad, precio_unitario, subtotal, productos(nombre))')
       .gte('fecha', inicioDia)
       .order('fecha', { ascending: false })
 
@@ -669,15 +730,25 @@ function imprimirTurnos() {
 }
 
 function imprimirVentasHoy() {
-  const rows = ventasHoyFiltradas.value.map((v: any) => `
+  const rows = ventasHoyFiltradas.value.map((v: any) => {
+    const tieneDesglose = v.pago_efectivo > 0 || v.pago_tarjeta > 0 || v.pago_transferencia > 0
+    const efectivo = tieneDesglose ? (v.pago_efectivo > 0 ? formatMonto(v.pago_efectivo) : '-') : (v.metodo_pago === 'efectivo' ? formatMonto(v.total) : '-')
+    const tarjeta = tieneDesglose ? (v.pago_tarjeta > 0 ? formatMonto(v.pago_tarjeta) : '-') : (v.metodo_pago === 'tarjeta' ? formatMonto(v.total) : '-')
+    const transferencia = tieneDesglose ? (v.pago_transferencia > 0 ? formatMonto(v.pago_transferencia) : '-') : (v.metodo_pago === 'transferencia' ? formatMonto(v.total) : '-')
+    return `
     <tr>
       <td>${v.id.substring(0, 8)}</td>
       <td>${formatDate(v.fecha)}</td>
       <td>${perfiles.value[v.id_usuario || v.turnos_caja?.id_usuario]?.nombre || '-'}</td>
       <td>${v.metodo_pago}</td>
-      <td>${formatMonto(v.total)}</td>
+      <td>${efectivo}</td>
+      <td>${tarjeta}</td>
+      <td>${transferencia}</td>
+      <td>${v.estado === 'cancelada' ? 'CANCELADA' : 'COMPLETADA'}</td>
+      <td>${v.estado === 'cancelada' ? `<s>${formatMonto(v.total)}</s>` : formatMonto(v.total)}</td>
     </tr>
-  `).join('')
+  `
+  }).join('')
   const resumenRows = [
     `<div class="row"><strong>Efectivo</strong><span>${formatMonto(resumenVentasHoy.value.efectivo)}</span></div>`,
     `<div class="row"><strong>Tarjeta</strong><span>${formatMonto(resumenVentasHoy.value.tarjeta)}</span></div>`,
@@ -696,8 +767,7 @@ function imprimirVentasHoy() {
      <h2>Resumen por medio de pago</h2>
      ${resumenRows}
      <h2>Detalle</h2>
-     <table><thead><tr><th>Boleta</th><th>Fecha</th><th>Cajero</th><th>Pago</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
-     ${resumenVentasHoy.value.mixto > 0 ? '<div class="meta">Nota: las ventas mixtas se informan aparte porque la base actual no guarda su desglose interno por efectivo/tarjeta/transferencia.</div>' : ''}`
+     <table><thead><tr><th>Boleta</th><th>Fecha</th><th>Cajero</th><th>Pago</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th><th>Estado</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>`
   )
 }
 
