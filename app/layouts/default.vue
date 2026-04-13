@@ -56,6 +56,10 @@
           <i class="pi pi-tags" />
           <span>Categorías</span>
         </NuxtLink>
+        <NuxtLink v-if="authStore.rolUsuario === 'admin' || authStore.rolUsuario === 'supervisor'" to="/admin/turnos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-shield" />
+          <span>Auditoría de Cajas</span>
+        </NuxtLink>
         <NuxtLink v-if="canAccess('reportes')" to="/admin/reportes" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-chart-bar" />
           <span>Reportes</span>

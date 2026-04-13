@@ -16,7 +16,7 @@
           label="Abrir turno de caja"
           icon="pi pi-play"
           class="caja-open-btn"
-          @click="mostrarDialogo = true"
+          @click="intentarAbrirTurno"
         />
       </div>
     </div>
@@ -119,9 +119,14 @@
             <span v-else style="color: var(--text-muted)">—</span>
           </template>
         </Column>
-        <Column header="Ventas">
+        <Column header="Ventas (Cantidad)">
           <template #body="slotProps">
-            <Tag :value="(slotProps.data.ventas_registradas ?? 0).toString()" severity="info" />
+            <Tag :value="(slotProps.data.ventas_registradas ?? 0).toString()" severity="secondary" />
+          </template>
+        </Column>
+        <Column header="Total Recaudado">
+          <template #body="slotProps">
+            <span class="font-bold text-indigo-500">{{ formatMonto(slotProps.data.total_general_ventas || 0) }}</span>
           </template>
         </Column>
         <Column header="Acciones" style="width: 7rem">
@@ -187,15 +192,8 @@
           Ingresa el monto físico contado en caja. El sistema calculará las diferencias automáticamente.
         </p>
 
-        <div class="cierre-resumen">
-          <div class="cierre-resumen-row">
-            <span>Monto inicial</span>
-            <strong>{{ formatMonto(cajaStore.turnoActivo?.monto_inicial ?? 0) }}</strong>
-          </div>
-        </div>
-
         <div class="dialog-field mt-4">
-          <label class="dialog-label">Monto Declarado ($)</label>
+          <label class="dialog-label">Monto Físico Visto ($)</label>
           <InputNumber
             v-model="montoCierre"
             :min="0"
@@ -205,11 +203,6 @@
             input-class="w-full"
             autofocus
           />
-        </div>
-
-        <div v-if="montoCierre !== null" class="cierre-diferencia" :class="diferenciaClass">
-          <i :class="diferenciaIcon" />
-          <span>Diferencia: <strong>{{ formatMonto(diferencia) }}</strong></span>
         </div>
 
         <div class="dialog-field">
@@ -232,6 +225,33 @@
           :disabled="montoCierre === null"
           @click="confirmarCierre"
         />
+      </template>
+    </Dialog>
+
+    <!-- ─── Diálogo: Autorización de Administrador ─── -->
+    <Dialog
+      v-model:visible="mostrarDialogoAutorizacion"
+      modal
+      header="Autorización Requerida"
+      :style="{ width: '400px' }"
+      class="pos-dialog text-center"
+    >
+      <div class="dialog-body text-left">
+        <p class="dialog-desc text-yellow-600 font-medium mb-4">
+          Ya has cerrado un turno hoy. Un administrador debe autorizar la reapertura.
+        </p>
+        <div class="dialog-field">
+          <label class="dialog-label">Email de Administrador</label>
+          <InputText v-model="adminAuthEmail" class="dialog-input" input-class="w-full" placeholder="admin@empresa.com" autofocus />
+        </div>
+        <div class="dialog-field mt-3">
+          <label class="dialog-label">Contraseña</label>
+          <Password v-model="adminAuthPassword" class="dialog-input" input-class="w-full" :feedback="false" toggleMask @keydown.enter="autorizarTurno" />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancelar" text severity="secondary" @click="mostrarDialogoAutorizacion = false" />
+        <Button label="Autorizar reapertura" icon="pi pi-unlock" severity="warning" :loading="loadingAutorizacion" @click="autorizarTurno" />
       </template>
     </Dialog>
 
@@ -278,12 +298,15 @@
 
 <script setup lang="ts">
 import { useToast } from 'primevue/usetoast'
+import { createClient } from '@supabase/supabase-js'
 import { useCajaStore } from '~/stores/caja'
+import { useAuthStore } from '~/stores/auth'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import type { Database } from '~/types/database.types'
 
 const supabase = useSupabaseClient<Database>()
 const cajaStore = useCajaStore()
+const authStore = useAuthStore()
 const toast = useToast()
 const { formatMonto, formatFecha, formatFechaLarga } = useFormatMonto()
 
@@ -319,6 +342,13 @@ async function fetchHistorial() {
       .order('fecha_apertura', { ascending: false })
       .limit(50)
 
+    if (authStore.rolUsuario !== 'admin' && authStore.rolUsuario !== 'supervisor') {
+      const { data: userData } = await supabase.auth.getUser()
+      if (userData.user?.id) {
+        query = query.eq('id_usuario', userData.user.id)
+      }
+    }
+
     if (filtroFecha.value) {
       const d = filtroFecha.value
       const inicio = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString()
@@ -329,7 +359,7 @@ async function fetchHistorial() {
     const { data, error } = await query
     if (error) throw error
 
-    // Enriquecer con nombres de usuario
+    // Enriquecer con nombres de usuario y totales
     if (data && data.length > 0) {
       const userIds = [...new Set(data.map((t: any) => t.id_usuario))]
       const { data: perfiles } = await supabase
@@ -338,16 +368,54 @@ async function fetchHistorial() {
         .in('id', userIds)
 
       const perfilMap = new Map((perfiles || []).map((p: any) => [p.id, p.nombre]))
+      
+      // Obtener ventas para sumar los totales
+      const fechasDates = data.map((t: any) => new Date(t.fecha_apertura).getTime())
+      const minFecha = new Date(Math.min(...fechasDates)).toISOString()
+      
+      const { data: ventasRango } = await supabase
+        .from('ventas')
+        .select('id_turno, total, fecha')
+        .gte('fecha', minFecha)
+        
+      const mapInternas = new Map()
+      const ventasExternas: any[] = []
+      
+      if (ventasRango) {
+        ventasRango.forEach(v => {
+          if (v.id_turno) {
+            mapInternas.set(v.id_turno, (mapInternas.get(v.id_turno) || 0) + Number(v.total))
+          } else {
+            ventasExternas.push(v)
+          }
+        })
+      }
 
-      turnosHistorial.value = data.map((t: any) => ({
-        ...t,
-        apertura_at: t.fecha_apertura,
-        cierre_at: t.fecha_cierre,
-        // En la tabla se muestra como "Monto Cierre": corresponde al monto declarado al cerrar la caja.
-        monto_cierre: typeof t.monto_declarado === 'number' ? t.monto_declarado : null,
-        usuario_nombre: perfilMap.get(t.id_usuario) || null,
-        etiqueta_impresion: `${formatFechaLarga(t.fecha_apertura)} - ${perfilMap.get(t.id_usuario) || t.id_usuario?.substring(0, 8) || 'N/A'}`
-      }))
+      turnosHistorial.value = data.map((t: any) => {
+        const adentor = mapInternas.get(t.id) || 0
+        
+        const fApertura = new Date(t.fecha_apertura).getTime()
+        const fCierre = t.fecha_cierre ? new Date(t.fecha_cierre).getTime() : new Date().getTime()
+        
+        const afuera = ventasExternas.reduce((acc, v) => {
+          const tVenta = new Date(v.fecha).getTime()
+          if (tVenta >= fApertura && tVenta <= fCierre) {
+            return acc + Number(v.total || 0)
+          }
+          return acc
+        }, 0)
+
+        return {
+          ...t,
+          apertura_at: t.fecha_apertura,
+          cierre_at: t.fecha_cierre,
+          // En la tabla se muestra como "Monto Cierre": corresponde al monto declarado al cerrar la caja.
+          monto_cierre: typeof t.monto_declarado === 'number' ? t.monto_declarado : null,
+          usuario_nombre: perfilMap.get(t.id_usuario) || null,
+          etiqueta_impresion: `${formatFechaLarga(t.fecha_apertura)} - ${perfilMap.get(t.id_usuario) || t.id_usuario?.substring(0, 8) || 'N/A'}`,
+          total_general_ventas: adentor + afuera
+        }
+      })
     } else {
       turnosHistorial.value = []
     }
@@ -443,90 +511,91 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
   const turno = turnosHistorial.value.find((t) => t.id === turnoId)
   if (!turno) return
 
-  const { data: ventas, error } = await supabase
+  // 1. Obtener las ventas DENTRO del turno
+  const { data: ventasTurno, error } = await supabase
     .from('ventas')
     .select('id, fecha, total, metodo_pago')
     .eq('id_turno', turnoId)
-    .order('fecha', { ascending: true })
 
   if (error) {
     toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 4000 })
     return
   }
 
-  const resumenPagos = (ventas || []).reduce((acc: Record<string, number>, venta: any) => {
-    const metodo = String(venta.metodo_pago || '').toLowerCase()
-    const total = Number(venta.total || 0)
-    acc.total += total
-    if (metodo === 'efectivo') acc.efectivo += total
-    else if (metodo === 'tarjeta') acc.tarjeta += total
-    else if (metodo === 'transferencia') acc.transferencia += total
-    else if (metodo === 'mixto') acc.mixto += total
-    else acc.otros += total
-    return acc
-  }, {
-    efectivo: 0,
-    tarjeta: 0,
-    transferencia: 0,
-    mixto: 0,
-    otros: 0,
-    total: 0
-  })
+  // 2. Obtener las ventas FUERA del turno pero EN EL MISMO RANGO DE HORARIO (para el total diario/turno)
+  const fechaApertura = turno.fecha_apertura || turno.apertura_at
+  const fechaCierre = turno.fecha_cierre || turno.cierre_at || new Date().toISOString()
+  
+  const { data: ventasFueraTurno } = await supabase
+    .from('ventas')
+    .select('id, fecha, total, metodo_pago')
+    .is('id_turno', null)
+    .gte('fecha', fechaApertura)
+    .lte('fecha', fechaCierre)
 
-  const ventasHtml = (ventas || []).map((v: any) => `
-    <div class="item">
-      <div class="row"><span>ID</span><span>${String(v.id).substring(0, 8)}</span></div>
-      <div class="row"><span>${new Date(v.fecha).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</span><span>${formatMonto(v.total)}</span></div>
-      <div class="muted">Pago: ${v.metodo_pago}</div>
-    </div>
-  `).join('')
+  const calcResumen = (ventas: any[]) => {
+    return (ventas || []).reduce((acc: Record<string, number>, venta: any) => {
+      const metodo = String(venta.metodo_pago || '').toLowerCase()
+      const total = Number(venta.total || 0)
+      acc.total += total
+      if (metodo === 'efectivo') acc.efectivo += total
+      else if (metodo === 'tarjeta') acc.tarjeta += total
+      else if (metodo === 'transferencia') acc.transferencia += total
+      else if (metodo === 'mixto') acc.mixto += total
+      else acc.otros += total
+      return acc
+    }, { efectivo: 0, tarjeta: 0, transferencia: 0, mixto: 0, otros: 0, total: 0 })
+  }
 
-  const resumenHtml = [
-    `<div class="row"><span>Efectivo</span><span>${formatMonto(resumenPagos.efectivo)}</span></div>`,
-    `<div class="row"><span>Tarjeta</span><span>${formatMonto(resumenPagos.tarjeta)}</span></div>`,
-    `<div class="row"><span>Transfer.</span><span>${formatMonto(resumenPagos.transferencia)}</span></div>`,
-    resumenPagos.mixto > 0 ? `<div class="row"><span>Mixto</span><span>${formatMonto(resumenPagos.mixto)}</span></div>` : '',
-    resumenPagos.otros > 0 ? `<div class="row"><span>Otros</span><span>${formatMonto(resumenPagos.otros)}</span></div>` : '',
-    `<div class="row strong"><span>Total ventas</span><span>${formatMonto(resumenPagos.total)}</span></div>`
+  const resumenAdentro = calcResumen(ventasTurno || [])
+  const resumenAfuera = calcResumen(ventasFueraTurno || [])
+  const totalGeneral = resumenAdentro.total + resumenAfuera.total
+
+  const htmlAdentro = [
+    `<div class="row"><span>Efectivo</span><span>${formatMonto(resumenAdentro.efectivo)}</span></div>`,
+    `<div class="row"><span>Tarjeta</span><span>${formatMonto(resumenAdentro.tarjeta)}</span></div>`,
+    `<div class="row"><span>Transfer.</span><span>${formatMonto(resumenAdentro.transferencia)}</span></div>`,
+    resumenAdentro.mixto > 0 ? `<div class="row"><span>Mixto</span><span>${formatMonto(resumenAdentro.mixto)}</span></div>` : '',
+    resumenAdentro.otros > 0 ? `<div class="row"><span>Otros</span><span>${formatMonto(resumenAdentro.otros)}</span></div>` : '',
+  ].filter(Boolean).join('')
+
+  const htmlAfuera = [
+    resumenAfuera.efectivo > 0 ? `<div class="row"><span>Efectivo</span><span>${formatMonto(resumenAfuera.efectivo)}</span></div>` : '',
+    resumenAfuera.tarjeta > 0 ? `<div class="row"><span>Tarjeta</span><span>${formatMonto(resumenAfuera.tarjeta)}</span></div>` : '',
+    resumenAfuera.transferencia > 0 ? `<div class="row"><span>Transfer.</span><span>${formatMonto(resumenAfuera.transferencia)}</span></div>` : '',
+    resumenAfuera.mixto > 0 ? `<div class="row"><span>Mixto</span><span>${formatMonto(resumenAfuera.mixto)}</span></div>` : '',
+    resumenAfuera.otros > 0 ? `<div class="row"><span>Otros</span><span>${formatMonto(resumenAfuera.otros)}</span></div>` : '',
   ].filter(Boolean).join('')
 
   const body = `
     <div class="title">Detalle de Turno</div>
     <div class="line"></div>
     <div class="row"><span>Cajero</span><span>${turno.usuario_nombre || '-'}</span></div>
-    <div class="row"><span>Apertura</span><span>${formatFechaLarga(turno.apertura_at)}</span></div>
-    <div class="row"><span>Cierre</span><span>${turno.cierre_at ? formatFechaLarga(turno.cierre_at) : 'Activo'}</span></div>
-    <div class="row"><span>Inicial</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
-    <div class="row"><span>Cierre</span><span>${typeof turno.monto_cierre === 'number' ? formatMonto(turno.monto_cierre) : '—'}</span></div>
+    <div class="row"><span>Apertura</span><span>${formatFechaLarga(fechaApertura)}</span></div>
+    <div class="row"><span>Cierre</span><span>${turno.cierre_at || turno.fecha_cierre ? formatFechaLarga(fechaCierre) : 'Activo'}</span></div>
+    <div class="row"><span>Fondo Inicial</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
     <div class="line"></div>
-    <div class="strong">Resumen pagos</div>
-    ${resumenHtml}
-    ${resumenPagos.mixto > 0 ? '<div class="muted">Nota: el pago mixto se informa aparte porque no existe desglose interno por medio.</div>' : ''}
+    
+    <div class="strong">Recaudado EN CAJA (Turno)</div>
+    ${htmlAdentro}
+    <div class="row strong" style="margin-top:2px;"><span>Subtotal Caja</span><span>${formatMonto(resumenAdentro.total)}</span></div>
+    
+    ${resumenAfuera.total > 0 ? `
+      <div class="line"></div>
+      <div class="strong">Ventas Externas (Fuera de turno)</div>
+      ${htmlAfuera}
+      <div class="row strong" style="margin-top:2px;"><span>Subtotal Externas</span><span>${formatMonto(resumenAfuera.total)}</span></div>
+    ` : ''}
+
     <div class="line"></div>
-    <div class="strong">Ventas del turno</div>
-    ${ventasHtml || '<div class="muted">Sin ventas asociadas.</div>'}
+    <div class="title" style="font-size:14px;">TOTAL GENERAL</div>
+    <div class="title" style="font-size:18px;">${formatMonto(totalGeneral)}</div>
   `
 
   abrirVentanaImpresion80mm('Detalle de Turno', body)
 }
 
-// Calcular diferencia en cierre
-const diferencia = computed(() => {
-  if (montoCierre.value === null || !cajaStore.turnoActivo) return 0
-  return montoCierre.value - cajaStore.turnoActivo.monto_inicial
-})
-
-const diferenciaClass = computed(() => {
-  if (diferencia.value > 0) return 'cierre-diferencia--sobrante'
-  if (diferencia.value < 0) return 'cierre-diferencia--faltante'
-  return 'cierre-diferencia--exacto'
-})
-
-const diferenciaIcon = computed(() => {
-  if (diferencia.value > 0) return 'pi pi-arrow-up'
-  if (diferencia.value < 0) return 'pi pi-arrow-down'
-  return 'pi pi-check'
-})
+// Evaluaciones de calculos de caja borrados por modalidad de cierre ciego
 
 // Tiempo transcurrido desde apertura
 const tiempoTranscurrido = computed(() => {
@@ -563,6 +632,52 @@ async function confirmarCierre() {
     await fetchHistorial()
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: e.message ?? 'No se pudo cerrar la caja', life: 5000 })
+  }
+}
+
+// ─── Lógica de Autorización ───
+const mostrarDialogoAutorizacion = ref(false)
+const adminAuthEmail = ref('')
+const adminAuthPassword = ref('')
+const loadingAutorizacion = ref(false)
+
+async function intentarAbrirTurno() {
+  const puede = await cajaStore.checkPuedeAbrirTurno()
+  if (puede || authStore.rolUsuario === 'admin' || authStore.rolUsuario === 'supervisor') {
+    mostrarDialogo.value = true
+  } else {
+    mostrarDialogoAutorizacion.value = true
+  }
+}
+
+async function autorizarTurno() {
+  if (!adminAuthEmail.value || !adminAuthPassword.value) return
+  loadingAutorizacion.value = true
+  try {
+    const config = useRuntimeConfig()
+    const tempClient = createClient(config.public.supabase.url, config.public.supabase.key)
+    const { data: authData, error: authError } = await tempClient.auth.signInWithPassword({
+      email: adminAuthEmail.value,
+      password: adminAuthPassword.value
+    })
+    
+    if (authError || !authData.user) throw new Error('Credenciales inválidas')
+    
+    const { data: perfil } = await tempClient.from('perfiles').select('rol').eq('id', authData.user.id).single()
+    if (perfil?.rol !== 'admin' && perfil?.rol !== 'supervisor') {
+      throw new Error('El usuario no tiene permisos de administrador')
+    }
+    
+    // Aprobado!
+    toast.add({ severity: 'success', summary: 'Autorizado', detail: 'Reapertura aprobada por admin.', life: 3000 })
+    mostrarDialogoAutorizacion.value = false
+    mostrarDialogo.value = true
+    adminAuthEmail.value = ''
+    adminAuthPassword.value = ''
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Error de autorización', detail: e.message, life: 4000 })
+  } finally {
+    loadingAutorizacion.value = false
   }
 }
 </script>

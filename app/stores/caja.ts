@@ -38,6 +38,28 @@ export const useCajaStore = defineStore('caja', () => {
     }
   }
 
+  async function checkPuedeAbrirTurno() {
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser) return true
+
+    const d = new Date()
+    const inicio = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString()
+    const fin = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString()
+
+    const { data } = await supabase.from('turnos_caja')
+      .select('id, estado')
+      .eq('id_usuario', currentUser.id)
+      .gte('fecha_apertura', inicio)
+      .lt('fecha_apertura', fin)
+      .in('estado', ['cerrado', 'cerrado_pendiente_revision'])
+      .limit(1)
+
+    if (data && data.length > 0) {
+      return false
+    }
+    return true
+  }
+
   async function abrirTurno(montoInicial: number) {
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     if (!currentUser) throw new Error('Sin sesión activa')
@@ -71,7 +93,7 @@ export const useCajaStore = defineStore('caja', () => {
           fecha_cierre: new Date().toISOString(),
           monto_declarado: montoDeclarado,
           observaciones,
-          estado: 'cerrado'
+          estado: 'cerrado_pendiente_revision'
         })
         .eq('id', turnoActivo.value.id)
         .select()
@@ -92,6 +114,7 @@ export const useCajaStore = defineStore('caja', () => {
     loading,
     hayTurnoActivo,
     fetchTurnoActivo,
+    checkPuedeAbrirTurno,
     abrirTurno,
     cerrarTurno
   }

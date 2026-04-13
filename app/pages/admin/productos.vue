@@ -42,13 +42,28 @@
           <span class="font-mono text-sm text-slate-400">{{ slotProps.data.sku || 'N/A' }}</span>
         </template>
       </Column>
-      <Column field="categoria" header="Categoría" sortable />
+      <Column field="categoria" header="Categoría" sortable :showFilterMatchModes="false">
+        <template #filter="{ filterModel, filterCallback }">
+          <Select 
+            v-model="filterModel.value" 
+            :options="categoriasOptions" 
+            optionLabel="label" 
+            optionValue="value" 
+            placeholder="Cualquiera" 
+            showClear 
+            @change="filterCallback()" 
+          />
+        </template>
+      </Column>
       <Column field="precio" header="Precio" sortable>
         <template #body="slotProps">
           <span class="precio-cell">{{ formatMonto(slotProps.data.precio) }}</span>
         </template>
       </Column>
-      <Column field="stock" header="Stock" sortable>
+      <Column field="stock" header="Stock" sortable dataType="numeric" :showFilterMatchModes="false">
+        <template #filter="{ filterModel, filterCallback }">
+          <InputNumber v-model="filterModel.value" placeholder="Mínimo" @input="filterCallback()" />
+        </template>
         <template #body="slotProps">
           <Tag
             :value="slotProps.data.stock.toString()"
@@ -56,7 +71,18 @@
           />
         </template>
       </Column>
-      <Column field="activo" header="Estado" sortable>
+      <Column field="activo" header="Estado" sortable :showFilterMatchModes="false">
+        <template #filter="{ filterModel, filterCallback }">
+          <Select
+            v-model="filterModel.value"
+            :options="[{ label: 'Activo', value: true }, { label: 'Inactivo', value: false }]"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Cualquiera"
+            showClear
+            @change="filterCallback()"
+          />
+        </template>
         <template #body="slotProps">
           <InputSwitch 
             :modelValue="slotProps.data.activo" 
@@ -314,7 +340,10 @@ const router = useRouter()
 
 // ----- DataTable & Filters -----
 const filters = ref({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  categoria: { value: null, matchMode: FilterMatchMode.EQUALS },
+  activo: { value: null, matchMode: FilterMatchMode.EQUALS },
+  stock: { value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }
 })
 
 // Opciones de categorías para el Select
