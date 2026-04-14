@@ -41,16 +41,25 @@ export interface AbonoCredito {
 
 export const useClientesStore = defineStore('clientes', () => {
   const supabase = useSupabaseClient<Database>()
+  const authStore = useAuthStore()
 
   const clientes = ref<Cliente[]>([])
   const loading = ref(false)
+
+  function getEmpresaId(): string {
+    const id = authStore.empresaId
+    if (!id) throw new Error('No hay empresa asociada al usuario.')
+    return id
+  }
 
   // ─── CRUD Clientes ──────────────────────────────────
   async function fetchClientes() {
     loading.value = true
     try {
+      const empresaId = getEmpresaId()
       const { data, error } = await (supabase.from('clientes') as any)
         .select('*')
+        .eq('empresa_id', empresaId)
         .order('nombre')
       if (error) throw error
       clientes.value = data || []
@@ -80,9 +89,11 @@ export const useClientesStore = defineStore('clientes', () => {
       await fetchClientes()
       return data
     } else {
-      // Insert
+      // Insert — asignar empresa_id del usuario autenticado
+      const empresaId = getEmpresaId()
       const { data, error } = await (supabase.from('clientes') as any)
         .insert({
+          empresa_id: empresaId,
           nombre: cliente.nombre,
           telefono: cliente.telefono || null,
           rut: cliente.rut || null,
