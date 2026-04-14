@@ -3,10 +3,10 @@
     <!-- Encabezado -->
     <div class="admin-header">
       <div class="admin-header-actions">
-        <IconField class="admin-search">
-          <InputIcon class="pi pi-search" />
+        <div class="p-inputgroup" style="width: 250px;">
           <InputText v-model="filters['global'].value" placeholder="Buscar producto..." />
-        </IconField>
+          <Button icon="pi pi-camera" severity="secondary" @click="abrirScanner('busqueda')" title="Escanear código base" />
+        </div>
         <Button
           v-if="selectedProducts.length > 0"
           :label="`Imprimir códigos (${selectedProducts.length})`"
@@ -176,7 +176,7 @@
               <label for="sku">Cód. Barras (SKU)</label>
               <div class="p-inputgroup flex-1">
                 <InputText id="sku" v-model.trim="productoActual.sku" />
-                <Button icon="pi pi-camera" @click="abrirScanner" />
+                <Button icon="pi pi-camera" @click="abrirScanner('sku')" />
               </div>
             </div>
             <div class="producto-field">
@@ -743,6 +743,7 @@ function imprimirEtiquetas() {
 }
 // ----- Scanner Logica -----
 const mostrarScanner = ref(false)
+const scannerDestino = ref<'sku' | 'busqueda'>('sku')
 const videoScannerRef = ref<HTMLVideoElement | null>(null)
 let codeReader: BrowserMultiFormatReader | null = null
 let activeStream: MediaStream | null = null
@@ -752,11 +753,17 @@ let detectorInterval: ReturnType<typeof setInterval> | null = null
 function procesarCodigoDetectado(rawCode: string) {
   if (!mostrarScanner.value) return
 
-  const sku = rawCode.trim()
-  if (!sku) return
+  const codigo = rawCode.trim()
+  if (!codigo) return
 
-  productoActual.value.sku = sku
-  toast.add({ severity: 'success', summary: 'Escaneado', detail: sku, life: 3000 })
+  if (scannerDestino.value === 'busqueda') {
+    filters.value['global'].value = codigo
+    toast.add({ severity: 'success', summary: 'Buscando', detail: codigo, life: 2000 })
+  } else {
+    productoActual.value.sku = codigo
+    toast.add({ severity: 'success', summary: 'Escaneado', detail: codigo, life: 3000 })
+  }
+  
   cerrarScanner()
 }
 
@@ -788,7 +795,8 @@ async function iniciarFallbackBarcodeDetector() {
   }
 }
 
-async function abrirScanner() {
+async function abrirScanner(destino: 'sku' | 'busqueda' = 'sku') {
+  scannerDestino.value = destino
   if (mostrarScanner.value) return
 
   mostrarScanner.value = true
