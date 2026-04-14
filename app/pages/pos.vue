@@ -1786,8 +1786,8 @@ function imprimirComprobante80mm(payload: {
       <head>
         <title>Comprobante ${payload.ventaId}</title>
         <style>
-          @page { size: 58mm auto; margin: 1.5mm; }
-          body { font-family: "Courier New", monospace; width: 54mm; margin: 0 auto; color: #111; font-size: 10px; line-height: 1.2; }
+          @page { margin: 0; }
+          body { font-family: "Courier New", monospace; width: 54mm; margin: 0 auto; color: #111; font-size: 10px; line-height: 1.2; padding-top: 2mm; padding-bottom: 2mm; }
           .center { text-align: center; }
           .title { font-weight: 700; font-size: 13px; margin-top: 4px; }
           .line { border-top: 1px dashed #555; margin: 4px 0; }
