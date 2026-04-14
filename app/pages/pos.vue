@@ -224,13 +224,13 @@
         </div>
 
         <Button
-          label="Cobrar (F11/F12)"
+          label="Cobrar (F10/F11/F12)"
           icon="pi pi-check-circle"
           size="large"
           class="pos-cobrar-btn"
           :loading="posStore.procesando"
           :disabled="posStore.carrito.length === 0"
-          @click="cobrar"
+          @click="() => cobrar()"
         />
       </div>
     </div>
@@ -859,7 +859,7 @@ async function confirmarCancelarVenta() {
 const metodosPago = [
   { value: 'efectivo', label: 'Efectivo (F12)', icon: 'pi pi-money-bill' },
   { value: 'tarjeta', label: 'Tarjeta (F11)', icon: 'pi pi-credit-card' },
-  { value: 'transferencia', label: 'Transferencia', icon: 'pi pi-send' }
+  { value: 'transferencia', label: 'Transferencia (F10)', icon: 'pi pi-send' }
 ]
 
 const totalPagado = computed(() =>
@@ -1894,6 +1894,14 @@ function onKeydown(e: KeyboardEvent) {
       return
     }
 
+    if (e.key === 'F10') {
+      e.preventDefault()
+      metodoPago.value = 'transferencia'
+      if (!ventaActualGuardada.value) prepararPagosSegunMetodo()
+      else enfocarCampoPagoSeleccionado()
+      return
+    }
+
     if (e.key === 'F12') {
       e.preventDefault()
       metodoPago.value = 'efectivo'
@@ -1925,6 +1933,12 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'F11') {
     e.preventDefault()
     cobrar('tarjeta')
+    return
+  }
+
+  if (e.key === 'F10') {
+    e.preventDefault()
+    cobrar('transferencia')
     return
   }
 
