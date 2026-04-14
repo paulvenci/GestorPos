@@ -56,10 +56,7 @@
           <i class="pi pi-tags" />
           <span>Categorías</span>
         </NuxtLink>
-        <NuxtLink v-if="authStore.rolUsuario === 'admin' || authStore.rolUsuario === 'supervisor'" to="/admin/turnos" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
-          <i class="pi pi-shield" />
-          <span>Auditoría de Cajas</span>
-        </NuxtLink>
+
         <NuxtLink v-if="canAccess('reportes')" to="/admin/reportes" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-chart-bar" />
           <span>Reportes</span>
@@ -130,6 +127,17 @@
             class="pos-turno-tag"
           />
           <span class="pos-app-version">v{{ appVersion }}</span>
+
+          <!-- PWA Install Button -->
+          <Button
+            v-if="mostrarInstalador"
+            icon="pi pi-download"
+            label="Instalar App"
+            severity="info"
+            size="small"
+            class="hidden md:flex"
+            @click="instalarApp"
+          />
 
           <!-- Notificaciones Stock Minimo -->
           <div ref="notificacionesRef" class="relative">
@@ -300,6 +308,7 @@ onMounted(() => {
   configStore.fetchConfig()
   window.addEventListener('online', onConectado)
   window.addEventListener('offline', onDesconectado)
+  window.addEventListener('beforeinstallprompt', handleInstallPrompt)
   document.addEventListener('click', onClickFueraNotificaciones)
   document.addEventListener('keydown', onKeydownLayout)
 })
@@ -307,9 +316,34 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('online', onConectado)
   window.removeEventListener('offline', onDesconectado)
+  window.removeEventListener('beforeinstallprompt', handleInstallPrompt)
   document.removeEventListener('click', onClickFueraNotificaciones)
   document.removeEventListener('keydown', onKeydownLayout)
 })
+
+// PWA Install Logic
+const deferredPrompt = ref<any>(null)
+const mostrarInstalador = ref(false)
+
+function handleInstallPrompt(e: any) {
+  // Prevent default to show our own custom button instead of the browser's generic prompt
+  e.preventDefault()
+  deferredPrompt.value = e
+  mostrarInstalador.value = true
+}
+
+async function instalarApp() {
+  if (!deferredPrompt.value) return
+  deferredPrompt.value.prompt()
+  const { outcome } = await deferredPrompt.value.userChoice
+  if (outcome === 'accepted') {
+    console.log('PWA installation accepted by user')
+  } else {
+    console.log('PWA installation dismissed')
+  }
+  deferredPrompt.value = null
+  mostrarInstalador.value = false
+}
 </script>
 
 <style scoped>
