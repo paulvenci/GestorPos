@@ -116,6 +116,7 @@ export type Database = {
           margen_ganancia_defecto: number | null
           role_permissions: Json | null
           stock_minimo_defecto: number | null
+          impresion_tamano_fuente: number | null
           updated_at: string | null
         }
         Insert: {
@@ -124,6 +125,7 @@ export type Database = {
           margen_ganancia_defecto?: number | null
           role_permissions?: Json | null
           stock_minimo_defecto?: number | null
+          impresion_tamano_fuente?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -132,6 +134,7 @@ export type Database = {
           margen_ganancia_defecto?: number | null
           role_permissions?: Json | null
           stock_minimo_defecto?: number | null
+          impresion_tamano_fuente?: number | null
           updated_at?: string | null
         }
         Relationships: [

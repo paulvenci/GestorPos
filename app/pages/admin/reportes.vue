@@ -551,8 +551,10 @@
 import { useToast } from 'primevue/usetoast'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import type { Database } from '~/types/database.types'
+import { useConfigStore } from '~/stores/config'
 
 const supabase = useSupabaseClient<Database>()
+const configStore = useConfigStore()
 const toast = useToast()
 const { formatMonto, formatFecha } = useFormatMonto()
 
@@ -1043,23 +1045,30 @@ function imprimirConsolidadoDiario() {
     </div>
   `).join('')
 
+  const baseSize = configStore.configuracion.impresion_tamano_fuente || 11
+  const titleSize = baseSize + 3
+  const mutedSize = Math.max(8, baseSize - 1)
+  const strongSize = baseSize + 2
+  const h3Size = baseSize + 1
+
   printWindow.document.write(`
     <html>
     <head>
       <title>Reporte Consolidado Diario</title>
       <style>
-        @page { size: 80mm auto; margin: 2mm; }
-        body { font-family: "Courier New", monospace; width: 76mm; margin: 0 auto; font-size: 12px; color: #111; }
-        .title { text-align: center; font-weight: 700; font-size: 15px; margin-top: 6px; }
-        h3 { text-align: center; font-size: 13px; margin: 4px 0; font-weight: bold; }
+        @page { size: 58mm auto; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; width: 58mm; max-width: 58mm; margin: 0; padding: 1mm 2mm; font-size: ${baseSize}px; color: #111; background: #fff; line-height: 1.25; -webkit-print-color-adjust: exact; }
+        .title { text-align: center; font-weight: bold; font-size: ${titleSize}px; margin-top: 6px; }
+        h3 { text-align: center; font-size: ${h3Size}px; margin: 4px 0; font-weight: bold; }
         .line { border-top: 1px dashed #555; margin: 6px 0; }
-        .row { display: flex; justify-content: space-between; gap: 6px; margin: 2px 0; }
-        .muted { color: #444; font-size: 11px; text-align: center; }
-        .item { padding: 8px 0; border-bottom: 1px dashed #ccc; }
+        .row { display: flex; justify-content: space-between; gap: 4px; margin: 2px 0; }
+        .muted { color: #000; font-size: ${mutedSize}px; text-align: center; }
+        .item { padding: 8px 0; border-bottom: 1px dashed #000; }
         .item:last-child { border-bottom: none; }
-        .strong { font-weight: 700; }
+        .strong { font-weight: bold; font-size: ${strongSize}px; }
         .grand-total { border-top: 2px solid #111; padding-top: 8px; margin-top: 8px;}
-        .grand-total .row { font-size: 13px; margin: 4px 0;}
+        .grand-total .row { font-size: ${h3Size}px; margin: 4px 0;}
       </style>
     </head>
     <body>

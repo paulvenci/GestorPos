@@ -183,6 +183,14 @@
               <InputNumber v-model="globalConfig.stock_minimo_defecto" :min="0" style="width: 300px" />
             </div>
 
+            <div class="config-item" v-if="globalConfig">
+              <div class="config-item-info">
+                <label>Tamaño Letra Comprobante</label>
+                <p>Ajusta el tamaño base para la impresión de tickets térmicos (por defecto 11px).</p>
+              </div>
+              <InputNumber v-model="globalConfig.impresion_tamano_fuente" :min="4" :max="24" :step="1" suffix=" px" style="width: 300px" />
+            </div>
+
             <div class="flex justify-end mt-2">
               <Button label="Guardar ConfiguraciÃ³n" icon="pi pi-save" :loading="configLoading" @click="guardarConfiguracion" />
             </div>
@@ -370,7 +378,8 @@ async function guardarConfiguracion() {
     await configStore.saveConfig({
       margen_ganancia_defecto: globalConfig.value.margen_ganancia_defecto,
       stock_minimo_defecto: globalConfig.value.stock_minimo_defecto,
-      role_permissions: normalizeRolePermissions(rolePermissionsDraft.value)
+      role_permissions: normalizeRolePermissions(rolePermissionsDraft.value),
+      impresion_tamano_fuente: globalConfig.value.impresion_tamano_fuente
     })
     toast.add({ severity: 'success', summary: 'Guardado', detail: 'ConfiguraciÃ³n actualizada en todos los dispositivos.', life: 3000 })
   } catch (error: any) {
@@ -384,7 +393,8 @@ async function guardarPermisosRoles() {
     await configStore.saveConfig({
       margen_ganancia_defecto: globalConfig.value.margen_ganancia_defecto,
       stock_minimo_defecto: globalConfig.value.stock_minimo_defecto,
-      role_permissions: normalizeRolePermissions(rolePermissionsDraft.value)
+      role_permissions: normalizeRolePermissions(rolePermissionsDraft.value),
+      impresion_tamano_fuente: globalConfig.value.impresion_tamano_fuente
     })
     toast.add({ severity: 'success', summary: 'Permisos actualizados', detail: 'Los permisos por rol se guardaron correctamente.', life: 3000 })
   } catch (error: any) {

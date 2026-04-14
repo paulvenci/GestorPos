@@ -54,11 +54,11 @@ CREATE POLICY "Solo admins pueden actualizar perfiles"
     )
   );
 
--- 5. Insertar categorías iniciales comunes
-INSERT INTO categorias (nombre, descripcion, color) VALUES
-  ('abarrote', 'Productos de abarrote y consumo diario', '#22c55e'),
-  ('bebidas', 'Refrescos, jugos y agua', '#3b82f6'),
-  ('lácteos', 'Leche, queso, yogurt', '#f59e0b'),
-  ('limpieza', 'Productos de limpieza del hogar', '#8b5cf6'),
-  ('snacks', 'Botanas y dulces', '#ef4444')
-ON CONFLICT (nombre) DO NOTHING;
+-- 5. Insertar categorías iniciales comunes (Comentado por cambio de constraint multi-tenant)
+-- INSERT INTO categorias (nombre, descripcion, color) VALUES
+--   ('abarrote', 'Productos de abarrote y consumo diario', '#22c55e'),
+--   ('bebidas', 'Refrescos, jugos y agua', '#3b82f6'),
+--   ('lácteos', 'Leche, queso, yogurt', '#f59e0b'),
+--   ('limpieza', 'Productos de limpieza del hogar', '#8b5cf6'),
+--   ('snacks', 'Botanas y dulces', '#ef4444')
+-- ON CONFLICT DO NOTHING;

@@ -652,6 +652,7 @@ import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 const authStore = useAuthStore()
 const cajaStore = useCajaStore()
 const posStore = usePosStore()
+const configStore = useConfigStore()
 const toast = useToast()
 const { formatMonto } = useFormatMonto()
 const supabase = useSupabaseClient<Database>()
@@ -1781,26 +1782,44 @@ function imprimirComprobante80mm(payload: {
     ? '<div class="status">PENDIENTE DE SINCRONIZACION</div>'
     : ''
 
+  const baseSize = configStore.configuracion.impresion_tamano_fuente || 11
+  const titleSize = baseSize + 3
+  const metaSize = Math.max(8, baseSize - 2)
+  const finalSize = baseSize + 2
+  const statusSize = Math.max(8, baseSize - 1)
+
   const html = `
     <html>
       <head>
         <title>Comprobante ${payload.ventaId}</title>
         <style>
-          @page { margin: 0; }
-          body { font-family: "Courier New", monospace; width: 54mm; margin: 0 auto; color: #111; font-size: 10px; line-height: 1.2; padding-top: 2mm; padding-bottom: 2mm; }
+          @page { size: 58mm auto; margin: 0; }
+          * { box-sizing: border-box; }
+          html, body { 
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; 
+            width: 58mm; 
+            max-width: 58mm; 
+            margin: 0; 
+            padding: 1mm 2mm;
+            color: #000; 
+            background: #fff;
+            font-size: ${baseSize}px; 
+            line-height: 1.25; 
+            -webkit-print-color-adjust: exact;
+          }
           .center { text-align: center; }
-          .title { font-weight: 700; font-size: 13px; margin-top: 4px; }
-          .line { border-top: 1px dashed #555; margin: 4px 0; }
-          .meta { color: #444; font-size: 9px; }
+          .title { font-weight: bold; font-size: ${titleSize}px; margin-top: 4px; }
+          .line { border-top: 1px dashed #000; margin: 5px 0; }
+          .meta { color: #000; font-size: ${metaSize}px; }
           table { width: 100%; border-collapse: collapse; }
           td { vertical-align: top; padding: 2px 0; }
-          td.qty { text-align: center; width: 7mm; }
-          td.money { text-align: right; width: 15mm; white-space: nowrap; }
-          .name { font-weight: 700; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }
+          td.qty { text-align: center; width: 15%; font-weight: bold; }
+          td.money { text-align: right; width: 25%; font-weight: bold; }
+          .name { font-weight: bold; break-inside: avoid; }
           .totals { margin-top: 4px; }
-          .totals .row { display: flex; justify-content: space-between; padding: 1px 0; }
-          .totals .final { font-size: 12px; font-weight: 800; }
-          .status { border: 1px dashed #b45309; color: #92400e; padding: 3px; text-align: center; margin: 4px 0; font-weight: 700; font-size: 9px; }
+          .totals .row { display: flex; justify-content: space-between; padding: 2px 0; }
+          .totals .final { font-size: ${finalSize}px; font-weight: 900; border-top: 2px dashed #000; margin-top: 4px; padding-top: 4px; }
+          .status { border: 1px dashed #000; padding: 4px; text-align: center; margin: 4px 0; font-weight: bold; font-size: ${statusSize}px; text-transform: uppercase; }
         </style>
       </head>
       <body>

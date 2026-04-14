@@ -307,6 +307,7 @@ import type { Database } from '~/types/database.types'
 const supabase = useSupabaseClient<Database>()
 const cajaStore = useCajaStore()
 const authStore = useAuthStore()
+const configStore = useConfigStore()
 const toast = useToast()
 const { formatMonto, formatFecha, formatFechaLarga } = useFormatMonto()
 
@@ -455,20 +456,27 @@ function abrirVentanaImpresion80mm(title: string, bodyHtml: string) {
     return
   }
 
+  const baseSize = configStore.configuracion.impresion_tamano_fuente || 11
+  const titleSize = baseSize + 3
+  const mutedSize = Math.max(8, baseSize - 1)
+  const strongSize = baseSize + 2
+
   printWindow.document.write(`
     <html>
       <head>
         <title>${title}</title>
         <style>
-          @page { size: 80mm auto; margin: 2mm; }
-          body { font-family: "Courier New", monospace; width: 76mm; margin: 0 auto; font-size: 12px; color: #111; }
-          .title { text-align: center; font-weight: 700; font-size: 15px; margin-top: 6px; }
-          .line { border-top: 1px dashed #555; margin: 6px 0; }
-          .row { display: flex; justify-content: space-between; gap: 6px; }
-          .muted { color: #444; font-size: 11px; }
-          .item { padding: 4px 0; border-bottom: 1px dotted #ccc; }
+          @page { size: 58mm auto; margin: 0; }
+          * { box-sizing: border-box; }
+          html, body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; width: 58mm; max-width: 58mm; margin: 0; padding: 1mm 2mm; font-size: ${baseSize}px; color: #000; background: #fff; line-height: 1.25; -webkit-print-color-adjust: exact; }
+          .title { text-align: center; font-weight: bold; font-size: ${titleSize}px; margin-top: 6px; }
+          .line { border-top: 1px dashed #000; margin: 6px 0; }
+          .row { display: flex; justify-content: space-between; gap: 4px; }
+          .muted { color: #000; font-size: ${mutedSize}px; }
+          .item { padding: 4px 0; border-bottom: 1px dotted #000; }
           .item:last-child { border-bottom: 0; }
-          .strong { font-weight: 700; }
+          .strong { font-weight: bold; font-size: ${strongSize}px; }
+          h3 { font-size: ${baseSize + 1}px; }
         </style>
       </head>
       <body>
