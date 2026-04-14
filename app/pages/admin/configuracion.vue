@@ -349,6 +349,7 @@ const seccionesDisponibles: { label: string, value: SectionKey }[] = [
   { label: 'Inventario', value: 'inventario' },
   { label: 'Ajuste Stock', value: 'ajuste_stock' },
   { label: 'CategorÃ­as', value: 'categorias' },
+  { label: 'Clientes', value: 'clientes' },
   { label: 'Reportes', value: 'reportes' },
   { label: 'ConfiguraciÃ³n', value: 'configuracion' }
 ]
