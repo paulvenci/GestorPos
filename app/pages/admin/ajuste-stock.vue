@@ -148,11 +148,13 @@
 <script setup lang="ts">
 import { useToast } from 'primevue/usetoast'
 import { useFormatMonto } from '~/composables/useFormatMonto'
+import { useAuthStore } from '~/stores/auth'
 import type { Database } from '~/types/database.types'
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 
 const supabase = useSupabaseClient<Database>()
+const authStore = useAuthStore()
 const toast = useToast()
 const { formatFecha } = useFormatMonto()
 
@@ -252,6 +254,7 @@ async function fetchProductos() {
     const { data } = await supabase
       .from('productos')
       .select('id, nombre, sku, stock, costo')
+      .eq('empresa_id', authStore.empresaId)
       .eq('activo', true)
       .order('nombre')
     productos.value = data || []
@@ -265,6 +268,7 @@ async function fetchAjustes() {
   try {
     const { data, error } = await (supabase.from('ajustes_stock') as any)
       .select('*')
+      .eq('empresa_id', authStore.empresaId)
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -278,11 +282,13 @@ async function fetchAjustes() {
       const { data: prods } = await supabase
         .from('productos')
         .select('id, nombre')
+        .eq('empresa_id', authStore.empresaId)
         .in('id', prodIds)
 
       const { data: perfiles } = await supabase
         .from('perfiles')
         .select('id, nombre')
+        .eq('empresa_id', authStore.empresaId)
         .in('id', userIds)
 
       const prodMap = new Map((prods || []).map((p: any) => [p.id, p.nombre]))
@@ -434,6 +440,7 @@ async function registrarAjuste() {
 
     // Insertar ajuste
     const { error: ajusteError } = await (supabase.from('ajustes_stock') as any).insert({
+      empresa_id: authStore.empresaId,
       id_producto: form.value.id_producto,
       id_usuario: user?.id,
       tipo: form.value.tipo,
@@ -453,6 +460,7 @@ async function registrarAjuste() {
         ...(typeof form.value.costo === 'number' ? { costo: form.value.costo } : {})
       })
       .eq('id', form.value.id_producto)
+      .eq('empresa_id', authStore.empresaId)
     if (updateError) throw updateError
 
     toast.add({ severity: 'success', summary: 'Ajuste registrado', detail: `Stock actualizado: ${stockAnterior} → ${stockResultante.value}`, life: 3000 })

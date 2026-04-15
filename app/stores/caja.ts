@@ -13,8 +13,11 @@ export interface Turno {
   estado: string
 }
 
+import { useAuthStore } from './auth'
+
 export const useCajaStore = defineStore('caja', () => {
   const supabase = useSupabaseClient<Database>()
+  const authStore = useAuthStore()
   const user = useSupabaseUser()
   const turnoActivo = ref<Turno | null>(null)
   const loading = ref(false)
@@ -29,6 +32,7 @@ export const useCajaStore = defineStore('caja', () => {
         .from('turnos_caja')
         .select('*')
         .eq('id_usuario', currentUser.id)
+        .eq('empresa_id', authStore.empresaId)
         .eq('estado', 'abierto')
         .maybeSingle()
 
@@ -49,6 +53,7 @@ export const useCajaStore = defineStore('caja', () => {
     const { data } = await supabase.from('turnos_caja')
       .select('id, estado')
       .eq('id_usuario', currentUser.id)
+      .eq('empresa_id', authStore.empresaId)
       .gte('fecha_apertura', inicio)
       .lt('fecha_apertura', fin)
       .in('estado', ['cerrado', 'cerrado_pendiente_revision'])
@@ -69,6 +74,7 @@ export const useCajaStore = defineStore('caja', () => {
       const { data, error } = await supabase.from('turnos_caja')
         .insert({
           id_usuario: currentUser.id,
+          empresa_id: authStore.empresaId,
           monto_inicial: montoInicial,
           fecha_apertura: new Date().toISOString(),
           estado: 'abierto'
@@ -96,6 +102,7 @@ export const useCajaStore = defineStore('caja', () => {
           estado: 'cerrado_pendiente_revision'
         })
         .eq('id', turnoActivo.value.id)
+        .eq('empresa_id', authStore.empresaId)
         .select()
         .single()
 

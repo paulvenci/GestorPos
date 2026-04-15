@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { db } from '~/db'
 import type { ProductoLocal, VentaReservadaLocal } from '~/db'
+import { useAuthStore } from './auth'
 import type { Database } from '~/types/database.types'
 
 export interface ItemCarrito {
@@ -23,6 +24,7 @@ export function redondearCLP(value: number): number {
 
 export const usePosStore = defineStore('pos', () => {
   const supabase = useSupabaseClient<Database>()
+  const authStore = useAuthStore()
 
   // ─── Estado ───────────────────────────────────────────
   const carrito = ref<ItemCarrito[]>([])
@@ -52,6 +54,7 @@ export const usePosStore = defineStore('pos', () => {
       const { data, error } = await supabase
         .from('productos')
         .select('id, empresa_id, nombre, sku, precio, costo, categoria, activo, stock, imagen_url, es_pesable, stock_minimo, margen_ganancia, updated_at')
+        .eq('empresa_id', authStore.empresaId)
         .eq('activo', true)
       if (error) return // Puede estar offline, no pasa nada
       if (data) {
@@ -176,6 +179,7 @@ export const usePosStore = defineStore('pos', () => {
         if (esErrorDeRed(error)) {
           // Offline real: guardar en cola Dexie
           await db.ventas_offline.add({
+            empresa_id: authStore.empresaId,
             turno_id: idTurno as string,
             subtotal: subtotal.value,
             total: total.value,
@@ -256,6 +260,7 @@ export const usePosStore = defineStore('pos', () => {
     const { data, error } = await supabase
       .from('ventas')
       .select('id, fecha, total, subtotal, metodo_pago, estado, created_at, detalle_ventas(id_producto, cantidad, precio_unitario, productos(nombre))')
+      .eq('empresa_id', authStore.empresaId)
       .gte('fecha', hoy.toISOString())
       .neq('estado', 'cancelada')
       .order('fecha', { ascending: false })

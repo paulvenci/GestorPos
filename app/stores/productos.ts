@@ -3,8 +3,11 @@ import { db } from '~/db'
 import type { ProductoLocal } from '~/db'
 import type { Database } from '~/types/database.types'
 
+import { useAuthStore } from './auth'
+
 export const useProductosStore = defineStore('productos', () => {
   const supabase = useSupabaseClient<Database>()
+  const authStore = useAuthStore()
   const productos = ref<ProductoLocal[]>([])
   const loading = ref(false)
 
@@ -41,6 +44,7 @@ export const useProductosStore = defineStore('productos', () => {
       const { data, error } = await supabase
         .from('productos')
         .select('*')
+        .eq('empresa_id', authStore.empresaId)
         .order('nombre')
       
       if (error) throw error
@@ -73,6 +77,7 @@ export const useProductosStore = defineStore('productos', () => {
              updated_at: new Date().toISOString()
            })
            .eq('id', prod.id)
+           .eq('empresa_id', authStore.empresaId)
            .select()
            .single()
          if (error) throw error
@@ -81,7 +86,10 @@ export const useProductosStore = defineStore('productos', () => {
          // Insert
          const { data, error } = await supabase
            .from('productos')
-           .insert(payload)
+           .insert({
+             ...payload,
+             empresa_id: authStore.empresaId
+           })
            .select()
            .single()
          if (error) throw error
@@ -101,6 +109,7 @@ export const useProductosStore = defineStore('productos', () => {
         .from('productos')
         .update({ activo })
         .eq('id', id)
+        .eq('empresa_id', authStore.empresaId)
       if (error) throw error
       await fetchProductos()
     } finally {

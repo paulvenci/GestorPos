@@ -68,6 +68,11 @@
 
         <div class="pos-nav-divider" />
 
+        <NuxtLink to="/ayuda" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-question-circle" />
+          <span>Ayuda</span>
+        </NuxtLink>
+
         <NuxtLink v-if="canAccess('configuracion')" to="/admin/configuracion" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-cog" />
           <span>Configuración</span>

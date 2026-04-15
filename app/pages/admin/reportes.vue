@@ -519,7 +519,12 @@
                 <span :class="{'text-indigo-600': p.data.transferencia > 0}">{{ formatMonto(p.data.transferencia) }}</span>
               </template>
             </Column>
-            <Column field="total" header="Total Cajero">
+            <Column field="credito" header="Crédito">
+              <template #body="p">
+                <span :class="{'text-orange-600': p.data.credito > 0}">{{ formatMonto(p.data.credito) }}</span>
+              </template>
+            </Column>
+            <Column field="total" header="Total Recaudado">
               <template #body="p">
                 <span class="font-bold text-slate-800">{{ formatMonto(p.data.total) }}</span>
               </template>
@@ -532,7 +537,8 @@
                   <span class="text-emerald-700" title="Tot. Efec">EF: {{ formatMonto(totalConsolidado.efectivo) }}</span>
                   <span class="text-blue-700" title="Tot. Tarj">TJ: {{ formatMonto(totalConsolidado.tarjeta) }}</span>
                   <span class="text-indigo-700" title="Tot. Tran">TR: {{ formatMonto(totalConsolidado.transferencia) }}</span>
-                  <span class="text-slate-900 border-l border-slate-300 pl-4">TOTAL: {{ formatMonto(totalConsolidado.total) }}</span>
+                  <span class="text-orange-700" title="Tot. Cred">CR: {{ formatMonto(totalConsolidado.credito) }}</span>
+                  <span class="text-slate-900 border-l border-slate-300 pl-4">TOTAL RECAUDADO: {{ formatMonto(totalConsolidado.total) }}</span>
                 </div>
               </div>
             </template>
@@ -552,8 +558,10 @@ import { useToast } from 'primevue/usetoast'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import type { Database } from '~/types/database.types'
 import { useConfigStore } from '~/stores/config'
+import { useAuthStore } from '~/stores/auth'
 
 const supabase = useSupabaseClient<Database>()
+const authStore = useAuthStore()
 const configStore = useConfigStore()
 const toast = useToast()
 const { formatMonto, formatFecha } = useFormatMonto()
@@ -641,7 +649,7 @@ const resumenCajerosConsolidado = computed(() => {
         efectivo: 0,
         tarjeta: 0,
         transferencia: 0,
-        mixto: 0,
+        credito: 0,
         otros: 0,
         total: 0
       })
@@ -650,14 +658,26 @@ const resumenCajerosConsolidado = computed(() => {
     const metodo = String(v.metodo_pago || '').toLowerCase()
     const total = Number(v.total || 0)
     
-    cData.total += total
-    if (metodo === 'efectivo') cData.efectivo += total
-    else if (metodo === 'tarjeta') cData.tarjeta += total
-    else if (metodo === 'transferencia') cData.transferencia += total
-    else if (metodo === 'mixto') {
+    if (metodo === 'efectivo') {
+      cData.efectivo += total
+      cData.total += total
+    } else if (metodo === 'tarjeta') {
+      cData.tarjeta += total
+      cData.total += total
+    } else if (metodo === 'transferencia') {
+      cData.transferencia += total
+      cData.total += total
+    } else if (metodo === 'mixto') {
       cData.efectivo += Number(v.pago_efectivo || 0)
       cData.tarjeta += Number(v.pago_tarjeta || 0)
       cData.transferencia += Number(v.pago_transferencia || 0)
+      cData.total += total
+    } else if (metodo === 'fiado' || metodo === 'credito') {
+      cData.credito += total
+      // No sumamos al total recaudado
+    } else {
+      cData.otros += total
+      cData.total += total
     }
   })
   
@@ -676,9 +696,10 @@ const totalConsolidado = computed(() => {
     acc.efectivo += c.efectivo
     acc.tarjeta += c.tarjeta
     acc.transferencia += c.transferencia
+    acc.credito += c.credito
     acc.total += c.total
     return acc
-  }, { efectivo: 0, tarjeta: 0, transferencia: 0, total: 0 })
+  }, { efectivo: 0, tarjeta: 0, transferencia: 0, credito: 0, total: 0 })
 })
 
 // Tab 2
@@ -736,16 +757,35 @@ const resumenVentasHoy = computed(() => {
     const metodo = String(venta.metodo_pago || '').toLowerCase()
     const total = Number(venta.total || 0)
     acc.total += total
-    if (metodo === 'efectivo') acc.efectivo += total
-    else if (metodo === 'tarjeta') acc.tarjeta += total
-    else if (metodo === 'transferencia') acc.transferencia += total
-    else if (metodo === 'mixto') acc.mixto += total
-    else acc.otros += total
+    
+    if (metodo === 'mixto') {
+      acc.efectivo += Number(venta.pago_efectivo || 0)
+      acc.tarjeta += Number(venta.pago_tarjeta || 0)
+      acc.transferencia += Number(venta.pago_transferencia || 0)
+      acc.total += total
+    } else if (metodo === 'efectivo') {
+      acc.efectivo += total
+      acc.total += total
+    } else if (metodo === 'tarjeta') {
+      acc.tarjeta += total
+      acc.total += total
+    } else if (metodo === 'transferencia') {
+      acc.transferencia += total
+      acc.total += total
+    } else if (metodo === 'fiado' || metodo === 'credito') {
+      acc.credito += total
+      // No sumamos al total recaudado
+    } else {
+      acc.otros += total
+      acc.total += total
+    }
+    
     return acc
   }, {
     efectivo: 0,
     tarjeta: 0,
     transferencia: 0,
+    credito: 0,
     mixto: 0,
     otros: 0,
     total: 0
@@ -758,8 +798,14 @@ async function fetchTurnos() {
   loadingTurnos.value = true
   try {
     const [{ data, error }, { data: perfilesData }] = await Promise.all([
-      supabase.from('turnos_caja').select('*').order('fecha_apertura', { ascending: false }).limit(30),
-      supabase.from('perfiles').select('*')
+      supabase.from('turnos_caja')
+        .select('*')
+        .eq('empresa_id', authStore.empresaId)
+        .order('fecha_apertura', { ascending: false })
+        .limit(30),
+      supabase.from('perfiles')
+        .select('*')
+        .eq('empresa_id', authStore.empresaId)
     ])
 
     if (error) throw error
@@ -793,6 +839,7 @@ async function fetchVentasHoy() {
     const { data, error } = await supabase
       .from('ventas')
       .select('id, fecha, total, subtotal, metodo_pago, estado, pago_efectivo, pago_tarjeta, pago_transferencia, id_turno, id_usuario, turnos_caja(id_usuario), detalle_ventas(cantidad, precio_unitario, subtotal, productos(nombre))')
+      .eq('empresa_id', authStore.empresaId)
       .gte('fecha', inicioDia)
       .lte('fecha', finDia)
       .order('fecha', { ascending: false })
@@ -811,6 +858,7 @@ async function fetchVentasHoy() {
       const { data: perfilesData } = await supabase
         .from('perfiles')
         .select('id, nombre')
+        .eq('empresa_id', authStore.empresaId)
         .in('id', idsFaltantes)
       ;(perfilesData || []).forEach((p: any) => {
         perfiles.value[p.id] = p
@@ -998,9 +1046,9 @@ function imprimirVentasHoy() {
     `<div class="row"><strong>Efectivo</strong><span>${formatMonto(resumenVentasHoy.value.efectivo)}</span></div>`,
     `<div class="row"><strong>Tarjeta</strong><span>${formatMonto(resumenVentasHoy.value.tarjeta)}</span></div>`,
     `<div class="row"><strong>Transferencia</strong><span>${formatMonto(resumenVentasHoy.value.transferencia)}</span></div>`,
-    resumenVentasHoy.value.mixto > 0 ? `<div class="row"><strong>Mixto</strong><span>${formatMonto(resumenVentasHoy.value.mixto)}</span></div>` : '',
+    resumenVentasHoy.value.credito > 0 ? `<div class="row"><strong>Crédito</strong><span>${formatMonto(resumenVentasHoy.value.credito)}</span></div>` : '',
     resumenVentasHoy.value.otros > 0 ? `<div class="row"><strong>Otros</strong><span>${formatMonto(resumenVentasHoy.value.otros)}</span></div>` : '',
-    `<div class="row"><strong>Total</strong><span>${formatMonto(resumenVentasHoy.value.total)}</span></div>`
+    `<div class="row"><strong>Total Recaudado</strong><span>${formatMonto(resumenVentasHoy.value.total)}</span></div>`
   ].filter(Boolean).join('')
 
   const cajeroSeleccionado = opcionesCajeroHoy.value.find((op) => op.value === filtroCajeroHoy.value)?.label || 'Todos los cajeros'
@@ -1041,6 +1089,7 @@ function imprimirConsolidadoDiario() {
       <div class="row"><span>Efectivo:</span><span>${formatMonto(c.efectivo)}</span></div>
       <div class="row"><span>Tarjeta:</span><span>${formatMonto(c.tarjeta)}</span></div>
       <div class="row"><span>Transf.:</span><span>${formatMonto(c.transferencia)}</span></div>
+      ${c.credito > 0 ? `<div class="row"><span>Crédito:</span><span>${formatMonto(c.credito)}</span></div>` : ''}
       <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(c.total)}</span></div>
     </div>
   `).join('')
@@ -1084,7 +1133,8 @@ function imprimirConsolidadoDiario() {
         <div class="row"><span>Total Efectivo:</span><span>${formatMonto(totalConsolidado.value.efectivo)}</span></div>
         <div class="row"><span>Total Tarjeta:</span><span>${formatMonto(totalConsolidado.value.tarjeta)}</span></div>
         <div class="row"><span>Total Transf.:</span><span>${formatMonto(totalConsolidado.value.transferencia)}</span></div>
-        <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL DÍA:</span><span>${formatMonto(totalConsolidado.value.total)}</span></div>
+        ${totalConsolidado.value.credito > 0 ? `<div class="row"><span>Total Crédito:</span><span>${formatMonto(totalConsolidado.value.credito)}</span></div>` : ''}
+        <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL RECAUDADO:</span><span>${formatMonto(totalConsolidado.value.total)}</span></div>
       </div>
       
       <script>

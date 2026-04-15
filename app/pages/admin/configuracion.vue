@@ -410,6 +410,7 @@ async function fetchUsuarios() {
     const { data, error } = await supabase
       .from('perfiles')
       .select('*')
+      .eq('empresa_id', authStore.empresaId)
       .order('created_at', { ascending: true })
     if (error) throw error
     if (data) usuarios.value = data as any as Perfil[]
@@ -473,6 +474,7 @@ async function guardarUsuario() {
           rol: usuarioActual.value.rol
         })
         .eq('id', usuarioActual.value.id)
+        .eq('empresa_id', authStore.empresaId)
       if (error) throw error
       toast.add({ severity: 'success', summary: 'Actualizado', detail: 'El usuario fue actualizado.', life: 3000 })
     }

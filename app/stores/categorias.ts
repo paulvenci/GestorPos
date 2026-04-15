@@ -10,8 +10,11 @@ export interface Categoria {
   created_at?: string
 }
 
+import { useAuthStore } from './auth'
+
 export const useCategoriasStore = defineStore('categorias', () => {
   const supabase = useSupabaseClient<Database>()
+  const authStore = useAuthStore()
   const categorias = ref<Categoria[]>([])
   const loading = ref(false)
 
@@ -20,6 +23,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
     try {
       const { data, error } = await (supabase.from('categorias') as any)
         .select('*')
+        .eq('empresa_id', authStore.empresaId)
         .order('nombre')
       
       if (error) throw error
@@ -43,6 +47,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
             activo: cat.activo
           })
           .eq('id', cat.id)
+          .eq('empresa_id', authStore.empresaId)
         if (error) throw error
       } else {
         const { error } = await (supabase.from('categorias') as any)
@@ -50,7 +55,8 @@ export const useCategoriasStore = defineStore('categorias', () => {
             nombre: cat.nombre,
             descripcion: cat.descripcion,
             color: cat.color,
-            activo: cat.activo ?? true
+            activo: cat.activo ?? true,
+            empresa_id: authStore.empresaId
           })
         if (error) throw error
       }
@@ -66,6 +72,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
       const { error } = await (supabase.from('categorias') as any)
         .delete()
         .eq('id', id)
+        .eq('empresa_id', authStore.empresaId)
       if (error) throw error
       await fetchCategorias()
     } finally {
@@ -79,6 +86,7 @@ export const useCategoriasStore = defineStore('categorias', () => {
       const { error } = await (supabase.from('categorias') as any)
         .update({ activo })
         .eq('id', id)
+        .eq('empresa_id', authStore.empresaId)
       if (error) throw error
       await fetchCategorias()
     } finally {

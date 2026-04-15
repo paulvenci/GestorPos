@@ -106,6 +106,22 @@
         </div>
 
       </div>
+
+      <!-- Barra de última venta (Sticky Bottom) -->
+      <div v-if="ultimaVentaRealizada" class="pos-last-sale-bar">
+        <div class="pos-last-sale-info">
+          <span class="pos-last-sale-badge">ÚLTIMA VENTA</span>
+          <span class="pos-last-sale-ticket">#{{ ultimaVentaRealizada.idCorto }}</span>
+          <div class="pos-last-sale-amounts">
+            <span class="pos-last-sale-total">Total: <strong>{{ formatMonto(ultimaVentaRealizada.total) }}</strong></span>
+            <span v-if="ultimaVentaRealizada.vuelto > 0" class="pos-last-sale-vuelto">Vuelto: <strong>{{ formatMonto(ultimaVentaRealizada.vuelto) }}</strong></span>
+          </div>
+        </div>
+        <div class="pos-last-sale-actions">
+           <Button icon="pi pi-eye" text rounded severity="secondary" size="small" @click="reabrirDetalleUltimaVenta" title="Ver detalles" />
+           <Button icon="pi pi-print" text rounded severity="success" size="small" @click="reimprimirDesdeBarra" title="Reimprimir ticket" />
+        </div>
+      </div>
     </div>
 
     <!-- ═══ PANEL DERECHO: Carrito ═══ -->
@@ -258,9 +274,28 @@
         </span>
       </div>
 
-      <div class="confirm-total">
+      <div class="confirm-total mb-2">
         <span class="confirm-total-label">Total a cobrar</span>
         <span class="confirm-total-monto">{{ formatMonto(totalCobroActual) }}</span>
+      </div>
+
+      <div class="confirm-resumen-pago mb-4">
+        <div class="confirm-resumen-row">
+          <span>Pagado</span>
+          <strong>{{ formatMonto(totalPagado) }}</strong>
+        </div>
+        <div v-if="saldoPendiente > 0" class="confirm-resumen-row confirm-resumen-row--warn">
+          <span>Pendiente</span>
+          <strong>{{ formatMonto(saldoPendiente) }}</strong>
+        </div>
+        <div v-else-if="saldoPendiente === 0" class="confirm-resumen-row confirm-resumen-row--ok">
+          <span>Pago exacto</span>
+          <strong>✓</strong>
+        </div>
+        <div v-else class="confirm-resumen-row confirm-vuelto">
+          <span>VUELTO</span>
+          <strong>{{ formatMonto(Math.abs(saldoPendiente)) }}</strong>
+        </div>
       </div>
 
       <div class="confirm-pagos">
@@ -309,24 +344,7 @@
         </div>
       </div>
 
-      <div class="confirm-resumen-pago">
-        <div class="confirm-resumen-row">
-          <span>Pagado</span>
-          <strong>{{ formatMonto(totalPagado) }}</strong>
-        </div>
-        <div v-if="saldoPendiente > 0" class="confirm-resumen-row confirm-resumen-row--warn">
-          <span>Pendiente</span>
-          <strong>{{ formatMonto(saldoPendiente) }}</strong>
-        </div>
-        <div v-else-if="saldoPendiente === 0" class="confirm-resumen-row confirm-resumen-row--ok">
-          <span>Pago exacto</span>
-          <strong>✓</strong>
-        </div>
-        <div v-else class="confirm-resumen-row confirm-vuelto">
-          <span>VUELTO</span>
-          <strong>{{ formatMonto(Math.abs(saldoPendiente)) }}</strong>
-        </div>
-      </div>
+
     </div>
     <template #footer>
       <Button
@@ -778,13 +796,14 @@ const onDesconectado = () => { isOnline.value = false }
 
 // ─── Cancelar Venta ───────────────────────────────────────
 const mostrarModalCancelar = ref(false)
+const cargandoVentasDia = ref(false)
 const ventasDia = ref<any[]>([])
+const ultimaVentaRealizada = ref<any>(null)
 const ventaSeleccionadaCancelar = ref<any>(null)
 const motivoCancelar = ref('')
 const emailSupervisor = ref('')
 const passwordSupervisor = ref('')
 const cancelandoVenta = ref(false)
-const cargandoVentasDia = ref(false)
 const errorCancelar = ref('')
 
 async function abrirCancelarVenta() {
@@ -1481,6 +1500,42 @@ watch(mostrarScanner, (val) => {
 })
 
 // ─── Lógica Autorización y Creación Rápida ───
+function reabrirDetalleUltimaVenta() {
+  if (!ultimaVentaRealizada.value) return
+  const v = ultimaVentaRealizada.value
+  
+  // Sincronizar estado del modal con la ultima venta
+  totalCobroModal.value = v.total
+  itemsCobroModal.value = [...v.items]
+  ventaActualId.value = v.id
+  ventaActualGuardada.value = true
+  ventaActualEstado.value = v.estado
+  ventaActualFecha.value = v.fecha
+  ventaActualMetodoEtiqueta.value = v.metodoEtiqueta
+  ventaActualCajero.value = v.cajero
+  ventaActualPagado.value = v.pagado
+  ventaActualVuelto.value = v.vuelto
+  ventaActualImpresa.value = false // Permitir reimpresion desde el modal tambi\u00e9n
+  
+  mostrarConfirmacion.value = true
+}
+
+function reimprimirDesdeBarra() {
+  if (!ultimaVentaRealizada.value) return
+  const v = ultimaVentaRealizada.value
+  imprimirComprobante80mm({
+    ventaId: v.idCorto,
+    fecha: v.fecha,
+    cajero: v.cajero,
+    metodoPago: v.metodoEtiqueta,
+    pagado: v.pagado,
+    vuelto: v.vuelto,
+    items: v.items,
+    total: v.total,
+    estado: v.estado
+  })
+}
+
 const mostrarModalAuth = ref(false)
 const authPin = ref('')
 const validandoPin = ref(false)
@@ -1546,6 +1601,7 @@ async function crearProductoRapido() {
        iva: 19,
        stock_minimo: 0,
        categoria: 'Rápidos',
+       empresa_id: authStore.empresaId,
        updated_at: new Date().toISOString()
      }
      
@@ -1658,6 +1714,22 @@ async function confirmarCobro(imprimir = true) {
     ventaActualCajero.value = cajeroNombre
     ventaActualPagado.value = totalPagadoActual
     ventaActualVuelto.value = vueltoActual
+
+    // GUARDAR EN ULTIMA VENTA PARA LA BARRA INFERIOR
+    ultimaVentaRealizada.value = {
+      id: ventaActualId.value,
+      idCorto: ventaActualIdCorto.value,
+      fecha: fechaTicket,
+      total: totalCobrado,
+      pagado: totalPagadoActual,
+      vuelto: vueltoActual,
+      metodo: metodoPagoFinal,
+      metodoEtiqueta: metodoPagoEtiqueta,
+      cajero: cajeroNombre,
+      items: [...itemsCobroModal.value],
+      estado: ventaActualEstado.value
+    }
+
     const label = esFiadoActual
       ? `Fiado registrado — ${clienteFiadoObj.value?.nombre || 'Cliente'}`
       : turnoId ? '¡Venta registrada!' : 'Venta fuera de turno registrada'
@@ -1679,6 +1751,22 @@ async function confirmarCobro(imprimir = true) {
       ventaActualCajero.value = cajeroNombre
       ventaActualPagado.value = totalPagadoActual
       ventaActualVuelto.value = vueltoActual
+
+      // GUARDAR EN ULTIMA VENTA PARA LA BARRA INFERIOR (CASO OFFLINE)
+      ultimaVentaRealizada.value = {
+        id: 'PENDIENTE',
+        idCorto: 'PENDIENTE',
+        fecha: fechaTicket,
+        total: totalCobrado,
+        pagado: totalPagadoActual,
+        vuelto: vueltoActual,
+        metodo: metodoPagoFinal,
+        metodoEtiqueta: metodoPagoEtiqueta,
+        cajero: cajeroNombre,
+        items: [...itemsCobroModal.value],
+        estado: 'pendiente'
+      }
+
       toast.add({
         severity: 'warn',
         summary: 'Venta guardada localmente',
@@ -1863,7 +1951,10 @@ function confirmarVaciar() {
 
 // ─── Sincronización offline ───────────────────────────────
 async function sincronizarColaOffline() {
-  const pendientes = await db.ventas_offline.where({ sync_status: 'pending' }).toArray()
+  const pendientes = await db.ventas_offline
+    .where({ sync_status: 'pending' })
+    .and(v => v.empresa_id === authStore.empresaId)
+    .toArray()
   if (pendientes.length === 0) return
 
   const supabase = useSupabaseClient<Database>()
@@ -2176,6 +2267,73 @@ function tiempoDesde(isoDate: string): string {
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* ─── Barra Última Venta ─── */
+.pos-last-sale-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-sidebar);
+  border-radius: 0.75rem;
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -4px 12px -4px rgba(0,0,0,0.1);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.pos-last-sale-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.pos-last-sale-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.2rem 0.4rem;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.pos-last-sale-ticket {
+  font-weight: 700;
+  color: var(--text-app);
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.pos-last-sale-amounts {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-app);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-last-sale-vuelto {
+  color: #f59e0b;
+}
+
+.pos-last-sale-actions {
+  display: flex;
+  gap: 0.25rem;
 }
 
 /* ─── Resultados ─── */

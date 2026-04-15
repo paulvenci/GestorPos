@@ -141,11 +141,13 @@ import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { db, type ProductoLocal } from '~/db'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import { usePosStore } from '~/stores/pos'
+import { useAuthStore } from '~/stores/auth'
 
 const visible = useState<boolean>('consulta-precio-open', () => false)
 const toast = useToast()
 const route = useRoute()
 const posStore = usePosStore()
+const authStore = useAuthStore()
 const { formatMonto } = useFormatMonto()
 
 const busqueda = ref('')
@@ -196,8 +198,9 @@ async function buscarProductos(query: string) {
   try {
     const matches = await db.productos
       .filter((producto) =>
-        producto.nombre.toLowerCase().includes(normalized) ||
-        producto.sku?.toLowerCase().includes(normalized),
+        producto.empresa_id === authStore.empresaId &&
+        (producto.nombre.toLowerCase().includes(normalized) ||
+         producto.sku?.toLowerCase().includes(normalized))
       )
       .limit(20)
       .toArray()
@@ -362,7 +365,10 @@ async function procesarCodigoEscaneado(raw: string) {
   busqueda.value = raw
   await buscarProductos(raw)
 
-  const producto = await db.productos.where('sku').equals(raw).first()
+  const producto = await db.productos
+    .where('sku').equals(raw)
+    .and(p => p.empresa_id === authStore.empresaId)
+    .first()
   if (producto) {
     productoSeleccionado.value = producto
     toast.add({

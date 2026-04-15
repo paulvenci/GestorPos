@@ -522,7 +522,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
   // 1. Obtener las ventas DENTRO del turno
   const { data: ventasTurno, error } = await supabase
     .from('ventas')
-    .select('id, fecha, total, metodo_pago')
+    .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
     .eq('id_turno', turnoId)
 
   if (error) {
@@ -545,7 +545,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
   // Buscar ventas sin turno del mismo cajero en todo el día
   let queryFuera = supabase
     .from('ventas')
-    .select('id, fecha, total, metodo_pago, id_usuario')
+    .select('id, fecha, total, metodo_pago, id_usuario, pago_efectivo, pago_tarjeta, pago_transferencia')
     .is('id_turno', null)
     .gte('fecha', inicioDia)
     .lte('fecha', finDiaStr)
@@ -561,14 +561,31 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
     return (ventas || []).reduce((acc: Record<string, number>, venta: any) => {
       const metodo = String(venta.metodo_pago || '').toLowerCase()
       const total = Number(venta.total || 0)
-      acc.total += total
-      if (metodo === 'efectivo') acc.efectivo += total
-      else if (metodo === 'tarjeta') acc.tarjeta += total
-      else if (metodo === 'transferencia') acc.transferencia += total
-      else if (metodo === 'mixto') acc.mixto += total
-      else acc.otros += total
+      
+      if (metodo === 'mixto') {
+        acc.efectivo += Number(venta.pago_efectivo || 0)
+        acc.tarjeta += Number(venta.pago_tarjeta || 0)
+        acc.transferencia += Number(venta.pago_transferencia || 0)
+        acc.total += total // El mixto ya es dinero real repartido
+      } else if (metodo === 'efectivo') {
+        acc.efectivo += total
+        acc.total += total
+      } else if (metodo === 'tarjeta') {
+        acc.tarjeta += total
+        acc.total += total
+      } else if (metodo === 'transferencia') {
+        acc.transferencia += total
+        acc.total += total
+      } else if (metodo === 'fiado' || metodo === 'credito') {
+        acc.credito += total
+        // NO sumamos al total recaudado
+      } else {
+        acc.otros += total
+        acc.total += total
+      }
+      
       return acc
-    }, { efectivo: 0, tarjeta: 0, transferencia: 0, mixto: 0, otros: 0, total: 0 })
+    }, { efectivo: 0, tarjeta: 0, transferencia: 0, mixto: 0, credito: 0, otros: 0, total: 0 })
   }
 
   const resumenAdentro = calcResumen(ventasTurno || [])
@@ -581,7 +598,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenAdentro.efectivo)}</span></div>
       <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenAdentro.tarjeta)}</span></div>
       <div class="row"><span>Transf.:</span><span>${formatMonto(resumenAdentro.transferencia)}</span></div>
-      ${resumenAdentro.mixto > 0 ? `<div class="row"><span>Mixto:</span><span>${formatMonto(resumenAdentro.mixto)}</span></div>` : ''}
+      ${resumenAdentro.credito > 0 ? `<div class="row"><span>Crédito:</span><span>${formatMonto(resumenAdentro.credito)}</span></div>` : ''}
       ${resumenAdentro.otros > 0 ? `<div class="row"><span>Otros:</span><span>${formatMonto(resumenAdentro.otros)}</span></div>` : ''}
       <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenAdentro.total)}</span></div>
     </div>
@@ -593,7 +610,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenAfuera.efectivo)}</span></div>
       <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenAfuera.tarjeta)}</span></div>
       <div class="row"><span>Transf.:</span><span>${formatMonto(resumenAfuera.transferencia)}</span></div>
-      ${resumenAfuera.mixto > 0 ? `<div class="row"><span>Mixto:</span><span>${formatMonto(resumenAfuera.mixto)}</span></div>` : ''}
+      ${resumenAfuera.credito > 0 ? `<div class="row"><span>Crédito:</span><span>${formatMonto(resumenAfuera.credito)}</span></div>` : ''}
       ${resumenAfuera.otros > 0 ? `<div class="row"><span>Otros:</span><span>${formatMonto(resumenAfuera.otros)}</span></div>` : ''}
       <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenAfuera.total)}</span></div>
     </div>
@@ -616,7 +633,8 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       <div class="row"><span>Total Efectivo:</span><span>${formatMonto(resumenAdentro.efectivo + resumenAfuera.efectivo)}</span></div>
       <div class="row"><span>Total Tarjeta:</span><span>${formatMonto(resumenAdentro.tarjeta + resumenAfuera.tarjeta)}</span></div>
       <div class="row"><span>Total Transf.:</span><span>${formatMonto(resumenAdentro.transferencia + resumenAfuera.transferencia)}</span></div>
-      <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL DÍA:</span><span>${formatMonto(totalGeneral)}</span></div>
+      ${(resumenAdentro.credito + resumenAfuera.credito) > 0 ? `<div class="row"><span>Total Crédito:</span><span>${formatMonto(resumenAdentro.credito + resumenAfuera.credito)}</span></div>` : ''}
+      <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL RECAUDADO:</span><span>${formatMonto(totalGeneral)}</span></div>
     </div>
   `
 

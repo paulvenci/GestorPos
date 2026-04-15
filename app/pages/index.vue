@@ -111,7 +111,10 @@ import { useFormatMonto } from '~/composables/useFormatMonto'
 import { useCajaStore } from '~/stores/caja'
 import type { Database } from '~/types/database.types'
 
+import { useAuthStore } from '~/stores/auth'
+
 const supabase = useSupabaseClient<Database>()
+const authStore = useAuthStore()
 const cajaStore = useCajaStore()
 const { formatMonto, formatFecha } = useFormatMonto()
 
@@ -148,6 +151,7 @@ async function fetchKPIs() {
     const { data: ventasHoy } = await supabase
       .from('ventas')
       .select('total')
+      .eq('empresa_id', authStore.empresaId)
       .gte('created_at', inicioHoy)
     kpi.value.cantVentasHoy = ventasHoy?.length ?? 0
     kpi.value.ventasHoy = ventasHoy?.reduce((s, v) => s + (v.total || 0), 0) ?? 0
@@ -156,15 +160,21 @@ async function fetchKPIs() {
     const { data: ventasMes } = await supabase
       .from('ventas')
       .select('total')
+      .eq('empresa_id', authStore.empresaId)
       .gte('created_at', inicioMes)
     kpi.value.cantVentasMes = ventasMes?.length ?? 0
     kpi.value.ventasMes = ventasMes?.reduce((s, v) => s + (v.total || 0), 0) ?? 0
 
     // Productos
-    const { count: totalProds } = await supabase.from('productos').select('*', { count: 'exact', head: true })
+    const { count: totalProds } = await supabase.from('productos')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', authStore.empresaId)
     kpi.value.totalProductos = totalProds ?? 0
 
-    const { count: lowStock } = await supabase.from('productos').select('*', { count: 'exact', head: true }).lte('stock', 5)
+    const { count: lowStock } = await supabase.from('productos')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', authStore.empresaId)
+      .lte('stock', 5)
     kpi.value.productosLowStock = lowStock ?? 0
 
     // Turno activo
@@ -183,6 +193,7 @@ async function fetchUltimasVentas() {
     const { data } = await supabase
       .from('ventas')
       .select('*')
+      .eq('empresa_id', authStore.empresaId)
       .order('created_at', { ascending: false })
       .limit(5)
     ultimasVentas.value = data || []

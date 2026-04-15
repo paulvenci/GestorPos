@@ -83,6 +83,7 @@ export const useClientesStore = defineStore('clientes', () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', cliente.id)
+        .eq('empresa_id', empresaId)
         .select()
         .single()
       if (error) throw error
@@ -115,6 +116,7 @@ export const useClientesStore = defineStore('clientes', () => {
     const { error } = await (supabase.from('clientes') as any)
       .update({ activo, updated_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('empresa_id', authStore.empresaId)
     if (error) throw error
     await fetchClientes()
   }
@@ -137,6 +139,7 @@ export const useClientesStore = defineStore('clientes', () => {
     const { data, error } = await (supabase.from('ventas_credito') as any)
       .select('*, ventas(id, fecha, total, metodo_pago)')
       .eq('id_cliente', clienteId)
+      .eq('empresa_id', authStore.empresaId)
       .order('created_at', { ascending: false })
     if (error) throw error
     return data || []
@@ -147,6 +150,7 @@ export const useClientesStore = defineStore('clientes', () => {
     const { data, error } = await (supabase.from('abonos_credito') as any)
       .select('*')
       .eq('id_venta_credito', ventaCreditoId)
+      .eq('empresa_id', authStore.empresaId)
       .order('fecha', { ascending: false })
     if (error) throw error
     return data || []
@@ -182,6 +186,7 @@ export const useClientesStore = defineStore('clientes', () => {
     // Insertar ventas_credito
     const { error: errCredito } = await (supabase.from('ventas_credito') as any)
       .insert({
+        empresa_id: authStore.empresaId,
         id_venta: idVenta,
         id_cliente: idCliente,
         monto_total: montoTotal,
@@ -206,6 +211,7 @@ export const useClientesStore = defineStore('clientes', () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', idCliente)
+        .eq('empresa_id', authStore.empresaId)
     }
 
     await fetchClientes()

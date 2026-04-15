@@ -31,6 +31,7 @@ export const useConfigStore = defineStore('config', () => {
       const { data, error } = await supabase
         .from('configuracion')
         .select('*')
+        .eq('empresa_id', authStore.empresaId)
         .single()
 
       if (error && error.code !== 'PGRST116') {
