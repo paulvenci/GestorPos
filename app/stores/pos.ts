@@ -100,19 +100,29 @@ export const usePosStore = defineStore('pos', () => {
               productosStore.actualizarProductoLocal({ id: producto.id, activo: false })
             }
 
-            // Añadir a notificaciones persistentes
-            notificacionesRealtime.value.unshift({
-              id: producto.id,
-              nombre: producto.nombre,
-              stock: producto.stock,
-              precio: producto.precio,
-              tipo: eventType,
-              timestamp: new Date().toISOString(),
-              leido: false
-            })
-            // Limitar a los últimos 20 para no saturar el storage
-            if (notificacionesRealtime.value.length > 20) {
-              notificacionesRealtime.value = notificacionesRealtime.value.slice(0, 20)
+            // Evitar duplicados idénticos en menos de 2 segundos (Supabase puede enviar ráfagas)
+            const ultimaNotif = notificacionesRealtime.value[0]
+            const esDuplicado = ultimaNotif && 
+                               ultimaNotif.id === producto.id && 
+                               ultimaNotif.stock === producto.stock && 
+                               ultimaNotif.precio === producto.precio &&
+                               (Date.now() - new Date(ultimaNotif.timestamp).getTime() < 2000)
+
+            if (!esDuplicado) {
+              // Añadir a notificaciones persistentes
+              notificacionesRealtime.value.unshift({
+                id: producto.id,
+                nombre: producto.nombre,
+                stock: producto.stock,
+                precio: producto.precio,
+                tipo: eventType,
+                timestamp: new Date().toISOString(),
+                leido: false
+              })
+              // Limitar a los últimos 20 para no saturar el storage
+              if (notificacionesRealtime.value.length > 20) {
+                notificacionesRealtime.value = notificacionesRealtime.value.slice(0, 20)
+              }
             }
           } else if (eventType === 'DELETE') {
             if (oldRec?.id) {

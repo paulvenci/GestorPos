@@ -743,14 +743,6 @@ watch(esFiado, (val) => {
 
 // Reactividad a cambios externos en tiempo real
 watch(() => posStore.triggerRealtime, () => {
-  // Notificar al cajero
-  toast.add({ 
-    severity: 'info', 
-    summary: 'Sincronización', 
-    detail: 'Actualización de inventario recibida en tiempo real', 
-    life: 3000 
-  })
-
   // Refrescar resultados si hay una búsqueda activa
   if (posStore.busqueda.trim()) {
     onBusqueda()

@@ -249,11 +249,13 @@
       </div>
       <ConsultaPrecioGlobal v-model="mostrarConsultaPrecio" />
       <EgresoRapidoModal v-model="mostrarEgresoRapido" />
+      <Toast />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '~/stores/auth'
 import { useCajaStore } from '~/stores/caja'
 import { useProductosStore } from '~/stores/productos'
@@ -261,6 +263,8 @@ import { usePosStore } from '~/stores/pos'
 import { useDarkMode } from '~/composables/useDarkMode'
 import { useConfigStore } from '~/stores/config'
 import { canAccessSection, normalizeRolePermissions, type SectionKey } from '~/composables/useRolePermissions'
+
+const toast = useToast()
 
 const authStore = useAuthStore()
 const cajaStore = useCajaStore()
@@ -384,6 +388,20 @@ function onKeydownLayout(event: KeyboardEvent) {
 function closeMobile() {
   sidebarOpen.value = false
 }
+
+// Notificación global de actualizaciones en tiempo real
+const ultimoToastSincro = ref(0)
+watch(() => posStore.triggerRealtime, () => {
+  const ahora = Date.now()
+  if (ahora - ultimoToastSincro.value < 2000) return
+  ultimoToastSincro.value = ahora
+  toast.add({ 
+    severity: 'info', 
+    summary: 'Sincronización', 
+    detail: 'Inventario actualizado en tiempo real', 
+    life: 3000 
+  })
+})
 
 // Asegurar que si el ID de empresa llega, se inicie el Realtime globalmente
 watch(() => authStore.empresaId, (newId) => {
