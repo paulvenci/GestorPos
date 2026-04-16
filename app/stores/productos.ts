@@ -138,12 +138,24 @@ export const useProductosStore = defineStore('productos', () => {
     return urlData.publicUrl
   }
 
+  function actualizarProductoLocal(prod: any) {
+    const item = productos.value.find(p => p.id === prod.id)
+    if (item) {
+      // Actualizar solo las propiedades que vienen en el payload
+      Object.assign(item, prod)
+    } else if (prod.activo !== false) {
+      // Si no existe y es nuevo/activo, podríamos añadirlo (opcional, pero ayuda a la consistencia)
+      productos.value.push(prod as ProductoLocal)
+    }
+  }
+
   return { 
     productos, 
     loading, 
     fetchProductos, 
     saveProducto, 
     toggleActivo,
-    uploadImagen
+    uploadImagen,
+    actualizarProductoLocal
   }
 })

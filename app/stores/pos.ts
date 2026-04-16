@@ -36,6 +36,9 @@ export const usePosStore = defineStore('pos', () => {
   const ventasReservadas = ref<VentaReservadaLocal[]>([])
   const ultimoModificadoId = ref<string | null>(null)
   const ultimaVentaRealizada = useLocalStorage<any | null>('gestorpos_ultima_venta', null)
+  const notificacionesRealtime = useLocalStorage<any[]>('gestorpos_notificaciones_rt', [])
+  const triggerRealtime = ref(0)
+  let canalRealtime: any = null
 
   function esErrorDeRed(error: any) {
     if (import.meta.client && !navigator.onLine) return true
@@ -64,7 +67,76 @@ export const usePosStore = defineStore('pos', () => {
         await db.productos.clear()
         await db.productos.bulkPut(data as unknown as ProductoLocal[])
       }
+
+      // Iniciar sincronización en tiempo real después de la carga inicial
+      setupRealtime()
     } catch (_) { /* Offline: se usa la caché local */ }
+  }
+
+  function setupRealtime() {
+    if (canalRealtime || !authStore.empresaId) return
+
+    canalRealtime = supabase
+      .channel('pos-productos-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'productos',
+          filter: `empresa_id=eq.${authStore.empresaId}`
+        },
+        async (payload: any) => {
+          const { eventType, new: newRec, old: oldRec } = payload
+          const productosStore = useProductosStore()
+          
+          if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            const producto = newRec as ProductoLocal
+            if (producto.activo) {
+              await db.productos.put(producto)
+              productosStore.actualizarProductoLocal(producto)
+            } else {
+              await db.productos.delete(producto.id)
+              productosStore.actualizarProductoLocal({ id: producto.id, activo: false })
+            }
+
+            // Añadir a notificaciones persistentes
+            notificacionesRealtime.value.unshift({
+              id: producto.id,
+              nombre: producto.nombre,
+              stock: producto.stock,
+              precio: producto.precio,
+              tipo: eventType,
+              timestamp: new Date().toISOString(),
+              leido: false
+            })
+            // Limitar a los últimos 20 para no saturar el storage
+            if (notificacionesRealtime.value.length > 20) {
+              notificacionesRealtime.value = notificacionesRealtime.value.slice(0, 20)
+            }
+          } else if (eventType === 'DELETE') {
+            if (oldRec?.id) {
+              await db.productos.delete(oldRec.id)
+              productosStore.actualizarProductoLocal({ id: oldRec.id, deleted: true })
+            }
+          }
+
+          // Disparar trigger de reactividad para componentes
+          triggerRealtime.value++
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Sincronización en tiempo real activa para productos')
+        }
+      })
+  }
+
+  function cleanupRealtime() {
+    if (canalRealtime) {
+      supabase.removeChannel(canalRealtime)
+      canalRealtime = null
+    }
   }
 
   async function buscarProductos(query: string) {
@@ -290,7 +362,10 @@ export const usePosStore = defineStore('pos', () => {
     registrarVenta,
     cargarReservas, reservarVenta, retomarVenta, eliminarReserva,
     fetchVentasDia, cancelarVenta,
-    redondearCLP
+    redondearCLP,
+    setupRealtime, cleanupRealtime,
+    notificacionesRealtime, triggerRealtime,
+    limpiarNotificacionesRealtime: () => { notificacionesRealtime.value = [] }
   }
 })
 

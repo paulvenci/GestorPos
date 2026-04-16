@@ -71,6 +71,7 @@ export const useClientesStore = defineStore('clientes', () => {
   async function saveCliente(cliente: Partial<Cliente>): Promise<Cliente> {
     if (cliente.id) {
       // Update
+      const empresaId = getEmpresaId()
       const { data, error } = await (supabase.from('clientes') as any)
         .update({
           nombre: cliente.nombre,

@@ -741,6 +741,25 @@ watch(esFiado, (val) => {
   }
 })
 
+// Reactividad a cambios externos en tiempo real
+watch(() => posStore.triggerRealtime, () => {
+  // Notificar al cajero
+  toast.add({ 
+    severity: 'info', 
+    summary: 'Sincronización', 
+    detail: 'Actualización de inventario recibida en tiempo real', 
+    life: 3000 
+  })
+
+  // Refrescar resultados si hay una búsqueda activa
+  if (posStore.busqueda.trim()) {
+    onBusqueda()
+  }
+  
+  // Refrescar top vendidos (por si cambió stock o precio ahí)
+  cargarTopVendidos()
+})
+
 async function crearClienteRapido() {
   if (!clienteRapidoNombre.value.trim()) return
   try {
@@ -1139,6 +1158,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('online', onConectado)
   window.removeEventListener('offline', onDesconectado)
+  posStore.cleanupRealtime()
 })
 
 async function cargarTopVendidos() {

@@ -154,43 +154,93 @@
 
           <!-- Notificaciones Stock Minimo -->
           <div ref="notificacionesRef" class="relative">
-             <button class="pos-bell-btn" type="button" @click="toggleNotificaciones" :aria-expanded="mostrarNotificaciones ? 'true' : 'false'" aria-label="Ver notificaciones de stock">
+             <button class="pos-bell-btn" type="button" @click="toggleNotificaciones" :aria-expanded="mostrarNotificaciones ? 'true' : 'false'" aria-label="Ver notificaciones">
                <i class="pi pi-bell text-xl" />
              </button>
-             <span v-if="productosBajoStock.length > 0" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] min-w-[20px] h-[20px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white dark:border-slate-800 shadow-sm">
-               {{ productosBajoStock.length }}
+             <span v-if="totalNotificaciones > 0" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] min-w-[20px] h-[20px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white dark:border-slate-800 shadow-sm">
+               {{ totalNotificaciones }}
              </span>
              
              <!-- Panel de notificaciones -->
              <div v-if="mostrarNotificaciones" class="pos-notif-panel absolute right-0 top-10 w-80 z-50 overflow-hidden">
-                <div class="p-3 border-b font-bold flex justify-between items-center text-sm">
-                  <span>Stock Crítico</span>
-                  <Tag severity="danger" :value="productosBajoStock.length.toString()" />
-                </div>
-                <div class="max-h-60 overflow-y-auto hidden-scrollbar">
-                  <div v-if="productosBajoStock.length === 0" class="p-4 text-center text-sm pos-notif-empty">
-                    Todo en orden. No hay alertas.
-                  </div>
-                  <button
-                    v-for="prod in productosBajoStock"
-                    :key="prod.id"
-                    class="pos-notif-item p-3 border-b transition-colors flex justify-between items-center w-full text-left"
-                    type="button"
-                    @click="irAInventario(prod.id)"
+                <div class="flex border-b">
+                  <button 
+                    class="flex-1 p-3 text-xs font-bold transition-colors" 
+                    :class="tabNotif === 'stock' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-b-2 border-indigo-500' : 'text-slate-500'"
+                    @click="tabNotif = 'stock'"
                   >
-                    <div>
-                      <p class="font-medium text-sm truncate w-40">{{ prod.nombre }}</p>
-                      <p class="text-xs pos-notif-min mt-1">Mínimo: {{ prod.stock_minimo || 5 }}</p>
-                    </div>
-                    <span class="pos-notif-stock font-bold text-sm px-2 py-1 rounded">Stock: {{ prod.stock }}</span>
+                    Alertas ({{ productosBajoStock.length }})
+                  </button>
+                  <button 
+                    class="flex-1 p-3 text-xs font-bold transition-colors" 
+                    :class="tabNotif === 'sync' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-b-2 border-indigo-500' : 'text-slate-500'"
+                    @click="tabNotif = 'sync'"
+                  >
+                    Sincro ({{ posStore.notificacionesRealtime.length }})
                   </button>
                 </div>
-                <div class="p-2 text-center pos-notif-footer">
-                  <NuxtLink to="/admin/productos" class="text-xs hover:underline font-medium" @click="mostrarNotificaciones = false">
-                    Ir al Inventario
-                  </NuxtLink>
+
+                <div class="max-h-80 overflow-y-auto hidden-scrollbar">
+                  <!-- Pestaña STOCK -->
+                  <template v-if="tabNotif === 'stock'">
+                    <div v-if="productosBajoStock.length === 0" class="p-8 text-center text-sm pos-notif-empty">
+                      <i class="pi pi-check-circle text-3xl mb-2 text-green-500/50 block" />
+                      Todo en orden.<br>No hay alertas de stock.
+                    </div>
+                    <button
+                      v-for="prod in productosBajoStock"
+                      :key="prod.id"
+                      class="pos-notif-item p-3 border-b transition-colors flex justify-between items-center w-full text-left"
+                      type="button"
+                      @click="irAInventario(prod.id)"
+                    >
+                      <div>
+                        <p class="font-medium text-sm truncate w-40">{{ prod.nombre }}</p>
+                        <p class="text-xs pos-notif-min mt-1">Mínimo: {{ prod.stock_minimo || 5 }}</p>
+                      </div>
+                      <span class="pos-notif-stock font-bold text-sm px-2 py-1 rounded">Stock: {{ prod.stock }}</span>
+                    </button>
+                  </template>
+
+                  <!-- Pestaña SINCRO -->
+                  <template v-else>
+                    <div v-if="posStore.notificacionesRealtime.length === 0" class="p-8 text-center text-sm pos-notif-empty">
+                      <i class="pi pi-sync text-3xl mb-2 text-indigo-500/30 block" />
+                      Sin actividad reciente.<br>Los cambios se verán aquí.
+                    </div>
+                    <div
+                      v-for="(n, i) in posStore.notificacionesRealtime"
+                      :key="i"
+                      class="pos-notif-item p-3 border-b flex flex-col gap-1"
+                    >
+                      <div class="flex justify-between items-start">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{{ n.tipo === 'UPDATE' ? 'Actualización' : 'Nuevo' }}</span>
+                        <span class="text-[9px] text-slate-400">{{ tiempoAtras(n.timestamp) }}</span>
+                      </div>
+                      <p class="font-bold text-xs truncate">{{ n.nombre }}</p>
+                      <div class="flex gap-3 text-[11px] mt-1">
+                        <span class="flex items-center gap-1"><i class="pi pi-box scale-75" /> {{ n.stock }}</span>
+                        <span class="flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400">{{ formatMonto(n.precio) }}</span>
+                      </div>
+                    </div>
+                  </template>
                 </div>
-             </div>
+
+                <div class="p-2 flex justify-between items-center pos-notif-footer border-t">
+                  <NuxtLink to="/admin/productos" class="text-[10px] hover:underline px-2" @click="mostrarNotificaciones = false">
+                    Ver Inventario
+                  </NuxtLink>
+                  <Button 
+                    v-if="tabNotif === 'sync' && posStore.notificacionesRealtime.length > 0"
+                    label="Limpiar todo" 
+                    icon="pi pi-trash" 
+                    text 
+                    size="small" 
+                    class="!text-[10px] py-1"
+                    @click="posStore.limpiarNotificacionesRealtime()"
+                  />
+                </div>
+              </div>
           </div>
         </div>
       </div>
@@ -207,6 +257,7 @@
 import { useAuthStore } from '~/stores/auth'
 import { useCajaStore } from '~/stores/caja'
 import { useProductosStore } from '~/stores/productos'
+import { usePosStore } from '~/stores/pos'
 import { useDarkMode } from '~/composables/useDarkMode'
 import { useConfigStore } from '~/stores/config'
 import { canAccessSection, normalizeRolePermissions, type SectionKey } from '~/composables/useRolePermissions'
@@ -214,6 +265,7 @@ import { canAccessSection, normalizeRolePermissions, type SectionKey } from '~/c
 const authStore = useAuthStore()
 const cajaStore = useCajaStore()
 const productosStore = useProductosStore()
+const posStore = usePosStore()
 const configStore = useConfigStore()
 const { isDark, toggleDark, initDark } = useDarkMode()
 const sidebarOpen = ref(false)
@@ -248,9 +300,27 @@ function canAccess(section: SectionKey) {
 }
 // Notificaciones
 const mostrarNotificaciones = ref(false)
+const tabNotif = ref<'stock' | 'sync'>('stock')
 const productosBajoStock = computed(() => {
   return productosStore.productos.filter(p => p.stock <= (p.stock_minimo || 5))
 })
+const totalNotificaciones = computed(() => {
+  return productosBajoStock.value.length + posStore.notificacionesRealtime.length
+})
+
+function formatMonto(v: number) {
+  return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(v)
+}
+
+function tiempoAtras(date: string) {
+  const diff = Date.now() - new Date(date).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'hace un momento'
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h`
+  return new Date(date).toLocaleDateString()
+}
 
 function toggleNotificaciones() {
   mostrarNotificaciones.value = !mostrarNotificaciones.value
@@ -315,12 +385,20 @@ function closeMobile() {
   sidebarOpen.value = false
 }
 
-onMounted(() => {
+// Asegurar que si el ID de empresa llega, se inicie el Realtime globalmente
+watch(() => authStore.empresaId, (newId) => {
+  if (newId) {
+    posStore.setupRealtime()
+  }
+}, { immediate: true })
+
+onMounted(async () => {
   initDark()
-  authStore.fetchUser()
+  await authStore.fetchUser()
   cajaStore.fetchTurnoActivo()
   productosStore.fetchProductos()
   configStore.fetchConfig()
+  
   window.addEventListener('online', onConectado)
   window.addEventListener('offline', onDesconectado)
   window.addEventListener('beforeinstallprompt', handleInstallPrompt)
