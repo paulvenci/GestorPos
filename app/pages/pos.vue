@@ -3,252 +3,270 @@
 
     <!-- ═══ PANEL IZQUIERDO: Búsqueda y productos ═══ -->
     <div class="pos-panel-left">
-
-      <!-- Barra de búsqueda (auto-focus para scanner) -->
-      <div class="pos-search-bar">
-        <div class="pos-search-input-wrap">
-          <div class="p-inputgroup flex-1">
-            <InputText
-              ref="searchInputRef"
-              id="pos-busqueda-principal"
-              v-model="posStore.busqueda"
-              placeholder="Escanear código o buscar por nombre..."
-              class="pos-search-input"
-              autocomplete="off"
-              @input="onBusqueda"
-              @keydown.enter="onEnterBusqueda"
-              @keydown.escape="limpiarBusqueda"
-            />
-            <Button icon="pi pi-camera" class="pos-scan-btn" severity="secondary" text @click="abrirScanner" title="Escanear código de barras" />
+      <!-- 1. Parte Superior Fija: Búsqueda y Estado -->
+      <div class="pos-panel-left-top">
+        <div class="pos-search-bar">
+          <div class="pos-search-input-wrap">
+            <div class="p-inputgroup flex-1">
+              <InputText
+                ref="searchInputRef"
+                id="pos-busqueda-principal"
+                v-model="posStore.busqueda"
+                placeholder="Escanear código o buscar por nombre..."
+                class="pos-search-input"
+                autocomplete="off"
+                @input="onBusqueda"
+                @keydown.enter="onEnterBusqueda"
+                @keydown.escape="limpiarBusqueda"
+              />
+              <Button icon="pi pi-camera" class="pos-scan-btn" severity="secondary" text @click="abrirScanner" title="Escanear código de barras" />
+            </div>
+            <span v-if="posStore.buscando" class="pos-search-spinner">
+              <i class="pi pi-spin pi-spinner" />
+            </span>
           </div>
-          <span v-if="posStore.buscando" class="pos-search-spinner">
-            <i class="pi pi-spin pi-spinner" />
-          </span>
+          <Button
+            icon="pi pi-tag"
+            label="Consultar (F3)"
+            class="pos-consulta-btn"
+            severity="secondary"
+            @click="abrirConsultaGlobal"
+          />
         </div>
-        <Button
-          icon="pi pi-tag"
-          label="Consultar (F3)"
-          class="pos-consulta-btn"
-          severity="secondary"
-          @click="abrirConsultaGlobal"
-        />
-      </div>
 
-        <!-- Badge offline -->
         <div v-if="!isOnline" class="pos-offline-badge">
           <i class="pi pi-wifi-off" />
           Modo Offline
         </div>
+      </div>
 
-      <div class="pos-resultados-area">
-        <div v-if="!posStore.busqueda && topVendidos.length > 0" class="pos-catalogo pos-catalogo--top">
-          <h3 class="pos-catalogo-title">Top 10 más vendidos</h3>
-          <div class="pos-catalogo-grid">
-            <button
-              v-for="item in topVendidos"
-              :key="item.id"
-              class="pos-catalogo-item"
-              :disabled="!item.es_pesable && item.stock === 0"
-              @click="seleccionarProducto(item)"
-            >
-              <img v-if="item.imagen_url" :src="item.imagen_url" class="pos-catalogo-img" alt="" />
-              <div v-else class="pos-catalogo-img pos-catalogo-img--empty">
-                <i class="pi pi-box" />
-              </div>
-              <span class="pos-catalogo-nombre">{{ item.nombre }}</span>
-              <span class="pos-catalogo-precio">{{ formatMonto(item.precio) }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Resultados de búsqueda -->
-        <Transition name="slide-down">
-          <div v-if="posStore.resultados.length > 0" class="pos-resultados">
-            <div
-              v-for="(prod, idx) in posStore.resultados"
-              :key="prod.id"
-              class="pos-resultado-item"
-              :class="{ 'pos-resultado-item--first': idx === 0 }"
-              tabindex="0"
-              @click="seleccionarProducto(prod)"
-              @keydown.enter="seleccionarProducto(prod)"
-            >
-              <img v-if="prod.imagen_url" :src="prod.imagen_url" class="pos-resultado-thumb" alt="" />
-              <div v-else class="pos-resultado-thumb pos-resultado-thumb--empty">
-                <i class="pi pi-box" />
-              </div>
-              <div class="pos-resultado-info">
-                <span class="pos-resultado-nombre">{{ prod.nombre }}</span>
-                <span class="pos-resultado-sku">{{ prod.sku }}</span>
-              </div>
-              <div class="pos-resultado-derecha">
-                <span class="pos-resultado-precio">{{ formatMonto(prod.precio) }}</span>
-                <Tag
-                  v-if="prod.es_pesable"
-                  value="A granel"
-                  severity="info"
-                  class="pos-resultado-stock"
-                />
-                <Tag
-                  v-else
-                  :value="`Stock: ${prod.stock}`"
-                  :severity="prod.stock > 0 ? 'success' : 'danger'"
-                  class="pos-resultado-stock"
-                />
-              </div>
+      <!-- 2. Área Central Scrollable: Catálogo y Resultados -->
+      <div class="pos-panel-left-content">
+        <div class="pos-resultados-area">
+          <div v-if="!posStore.busqueda && topVendidos.length > 0" class="pos-catalogo pos-catalogo--top">
+            <h3 class="pos-catalogo-title">Top 20 más vendidos</h3>
+            <div class="pos-catalogo-grid">
+              <button
+                v-for="item in topVendidos"
+                :key="item.id"
+                class="pos-catalogo-item"
+                @click="seleccionarProducto(item)"
+              >
+                <img v-if="item.imagen_url" :src="item.imagen_url" class="pos-catalogo-img" alt="" />
+                <div v-else class="pos-catalogo-img pos-catalogo-img--empty">
+                  <i class="pi pi-box" />
+                </div>
+                <span class="pos-catalogo-nombre">{{ item.nombre }}</span>
+                <span class="pos-catalogo-precio">{{ formatMonto(item.precio) }}</span>
+              </button>
             </div>
           </div>
-        </Transition>
 
-        <div v-if="posStore.busqueda && !posStore.buscando && posStore.resultados.length === 0" class="pos-vacio">
-          <i class="pi pi-search-minus" style="font-size: 2rem; color: #64748b;" />
-          <p>No se encontraron productos para tu búsqueda</p>
-        </div>
+          <!-- Resultados de búsqueda -->
+          <Transition name="slide-down">
+            <div v-if="posStore.resultados.length > 0" class="pos-resultados">
+              <div
+                v-for="(prod, idx) in posStore.resultados"
+                :key="prod.id"
+                class="pos-resultado-item"
+                :class="{ 'pos-resultado-item--first': idx === 0 }"
+                tabindex="0"
+                @click="seleccionarProducto(prod)"
+                @keydown.enter="seleccionarProducto(prod)"
+              >
+                <img v-if="prod.imagen_url" :src="prod.imagen_url" class="pos-resultado-thumb" alt="" />
+                <div v-else class="pos-resultado-thumb pos-resultado-thumb--empty">
+                  <i class="pi pi-box" />
+                </div>
+                <div class="pos-resultado-info">
+                  <span class="pos-resultado-nombre">{{ prod.nombre }}</span>
+                  <span class="pos-resultado-sku">{{ prod.sku }}</span>
+                </div>
+                <div class="pos-resultado-derecha">
+                  <span class="pos-resultado-precio">{{ formatMonto(prod.precio) }}</span>
+                  <Tag
+                    v-if="prod.es_pesable"
+                    value="A granel"
+                    severity="info"
+                    class="pos-resultado-stock"
+                  />
+                  <Tag
+                    v-else
+                    :value="`Stock: ${prod.stock}`"
+                    :severity="prod.stock > 5 ? 'success' : prod.stock > 0 ? 'warning' : 'danger'"
+                    class="pos-resultado-stock"
+                  />
+                </div>
+              </div>
+            </div>
+          </Transition>
 
-      </div>
-
-      <!-- Barra de última venta (Sticky Bottom) -->
-      <div v-if="ultimaVentaRealizada" class="pos-last-sale-bar">
-        <div class="pos-last-sale-info">
-          <span class="pos-last-sale-badge">ÚLTIMA VENTA</span>
-          <span class="pos-last-sale-ticket">#{{ ultimaVentaRealizada.idCorto }}</span>
-          <div class="pos-last-sale-amounts">
-            <span class="pos-last-sale-total">Total: <strong>{{ formatMonto(ultimaVentaRealizada.total) }}</strong></span>
-            <span v-if="ultimaVentaRealizada.vuelto > 0" class="pos-last-sale-vuelto">Vuelto: <strong>{{ formatMonto(ultimaVentaRealizada.vuelto) }}</strong></span>
+          <div v-if="posStore.busqueda && !posStore.buscando && posStore.resultados.length === 0" class="pos-vacio">
+            <i class="pi pi-search-minus" style="font-size: 2rem; color: #64748b;" />
+            <p>No se encontraron productos para tu búsqueda</p>
           </div>
         </div>
-        <div class="pos-last-sale-actions">
-           <Button icon="pi pi-eye" text rounded severity="secondary" size="small" @click="reabrirDetalleUltimaVenta" title="Ver detalles" />
-           <Button icon="pi pi-print" text rounded severity="success" size="small" @click="reimprimirDesdeBarra" title="Reimprimir ticket" />
-        </div>
+      </div>
+
+      <!-- 3. Barra Inferior Fija: Última Venta (Siempre visible para mantener el layout) -->
+      <div class="pos-last-sale-bar">
+        <!-- Estado: Hay Venta -->
+        <template v-if="posStore.ultimaVentaRealizada?.id">
+          <div class="pos-last-sale-info">
+            <span class="pos-last-sale-badge">ÚLTIMA VENTA</span>
+            <span class="pos-last-sale-ticket">#{{ posStore.ultimaVentaRealizada.idCorto }}</span>
+            <div class="pos-last-sale-amounts">
+              <span class="pos-last-sale-total">Total: <strong>{{ formatMonto(posStore.ultimaVentaRealizada.total) }}</strong></span>
+              <span v-if="posStore.ultimaVentaRealizada.vuelto > 0" class="pos-last-sale-vuelto">Vuelto: <strong>{{ formatMonto(posStore.ultimaVentaRealizada.vuelto) }}</strong></span>
+            </div>
+          </div>
+          <div class="pos-last-sale-actions">
+             <Button label="Detalles" icon="pi pi-eye" text rounded severity="secondary" size="small" @click="reabrirDetalleUltimaVenta"  />
+             <Button label="Reimprimir" icon="pi pi-print" text rounded severity="success" size="small" @click="reimprimirDesdeBarra" />
+          </div>
+        </template>
+
+        <!-- Estado: Vacío (Solo para mostrar el espacio) -->
+        <template v-else>
+          <div class="pos-last-sale-info pos-last-sale-info--empty">
+            <span class="pos-last-sale-badge pos-last-sale-badge--idle">SISTEMA LISTO</span>
+            <span class="pos-last-sale-msg">Esperando primera venta...</span>
+          </div>
+          <div class="pos-last-sale-actions">
+             <i class="pi pi-check-circle text-green-500 opacity-50" />
+          </div>
+        </template>
       </div>
     </div>
-
     <!-- ═══ PANEL DERECHO: Carrito ═══ -->
     <div class="pos-panel-right">
-
-      <!-- Header del carrito -->
-      <div class="pos-carrito-header">
-        <h2 class="pos-carrito-title">
-          <i class="pi pi-shopping-cart" />
-          Carrito
-          <span v-if="posStore.carrito.length > 0" class="pos-carrito-badge">
-            {{ posStore.carrito.length }}
-          </span>
-        </h2>
-        <div class="pos-carrito-acciones">
-          <Button
-            v-if="posStore.carrito.length > 0"
-            icon="pi pi-pause"
-            text
-            severity="warn"
-            size="small"
-            title="Reservar venta (F4)"
-            @click="reservarVentaActual"
-          />
+      <!-- 1. Parte Superior Fija: Acciones y Título -->
+      <div class="pos-panel-right-top">
+        <div class="pos-carrito-toolbar">
           <Button
             v-if="posStore.ventasReservadas.length > 0"
-            :label="String(posStore.ventasReservadas.length)"
+            label="Reservadas"
             icon="pi pi-bookmark"
             text
             severity="info"
             size="small"
-            :badge="String(posStore.ventasReservadas.length)"
-            badgeSeverity="warn"
-            title="Ver ventas reservadas"
             class="pos-reservas-btn"
             @click="mostrarReservas = true"
+            v-tooltip.bottom="'Ver reservas'"
+          />
+          <Button
+            v-if="posStore.carrito.length > 0"
+            label="Reservar (F4)"
+            icon="pi pi-pause"
+            text
+            severity="warn"
+            size="small"
+            @click="reservarVentaActual"
           />
           <Button
             icon="pi pi-ban"
+            label="Anular"
             text
             severity="danger"
             size="small"
-            title="Cancelar una venta del día"
             @click="abrirCancelarVenta"
           />
           <Button
             v-if="posStore.carrito.length > 0"
+            label="Vaciar (F8)"
             icon="pi pi-trash"
             text
             severity="danger"
             size="small"
-            title="Vaciar carrito (Esc)"
-            @click="confirmarVaciar"
+            @click="confirmarVaciar()"
           />
         </div>
+
+        <div class="pos-carrito-header">
+          <h2 class="pos-carrito-title">
+            <i class="pi pi-shopping-cart" />
+            Carrito
+            <span v-if="posStore.carrito.length > 0" class="pos-carrito-badge">
+              {{ posStore.carrito.length }}
+            </span>
+          </h2>
+        </div>
       </div>
 
-      <!-- Ítems del carrito -->
-      <div class="pos-carrito-items">
-        <TransitionGroup name="cart-item" tag="div">
-          <div
-            v-for="item in posStore.carrito"
-            :key="item.id_producto"
-            class="pos-item"
-          >
-            <div class="pos-item-info">
-              <span class="pos-item-nombre">{{ item.nombre }}</span>
-              <span class="pos-item-sku">{{ item.sku }}</span>
-            </div>
+      <!-- 2. Área Central Scrollable: Ítems del carrito -->
+      <div class="pos-panel-right-content">
+        <div class="pos-carrito-items">
+          <TransitionGroup name="cart-item" tag="div">
+            <div
+              v-for="item in posStore.carrito"
+              :key="item.id_producto"
+              class="pos-item"
+            >
+              <div class="pos-item-info">
+                <span class="pos-item-nombre">{{ item.nombre }}</span>
+                <span class="pos-item-sku">{{ item.sku }}</span>
+              </div>
 
-            <div class="pos-item-controles">
-              <button v-if="!item.es_pesable" class="pos-item-btn" @click="posStore.setCantidad(item.id_producto, item.cantidad - 1)">
-                <i class="pi pi-minus" />
-              </button>
-              <span class="pos-item-cantidad">{{ item.es_pesable ? item.cantidad.toFixed(3) + ' kg' : item.cantidad }}</span>
-              <button v-if="!item.es_pesable" class="pos-item-btn" @click="posStore.setCantidad(item.id_producto, item.cantidad + 1)">
-                <i class="pi pi-plus" />
-              </button>
-            </div>
+              <div class="pos-item-controles">
+                <button v-if="!item.es_pesable" class="pos-item-btn" @click="posStore.setCantidad(item.id_producto, item.cantidad - 1)">
+                  <i class="pi pi-minus" />
+                </button>
+                <span class="pos-item-cantidad">{{ item.es_pesable ? item.cantidad.toFixed(3) + ' kg' : item.cantidad }}</span>
+                <button v-if="!item.es_pesable" class="pos-item-btn" @click="posStore.setCantidad(item.id_producto, item.cantidad + 1)">
+                  <i class="pi pi-plus" />
+                </button>
+              </div>
 
-            <div class="pos-item-precio-col">
-              <span class="pos-item-precio">{{ formatMonto(redondearCLP(item.precio * item.cantidad * (1 - item.descuento / 100))) }}</span>
-              <button class="pos-item-eliminar" @click="posStore.quitarItem(item.id_producto)">
-                <i class="pi pi-times" />
-              </button>
+              <div class="pos-item-precio-col">
+                <span class="pos-item-precio">{{ formatMonto(redondearCLP(item.precio * item.cantidad * (1 - item.descuento / 100))) }}</span>
+                <button class="pos-item-eliminar" @click="posStore.quitarItem(item.id_producto)">
+                  <i class="pi pi-times" />
+                </button>
+              </div>
             </div>
+          </TransitionGroup>
+
+          <!-- Carrito vacío -->
+          <div v-if="posStore.carrito.length === 0" class="pos-carrito-vacio">
+            <i class="pi pi-shopping-bag" />
+            <p>El carrito está vacío</p>
           </div>
-        </TransitionGroup>
-
-        <!-- Carrito vacío -->
-        <div v-if="posStore.carrito.length === 0" class="pos-carrito-vacio">
-          <i class="pi pi-shopping-bag" />
-          <p>El carrito está vacío</p>
         </div>
       </div>
 
-      <!-- Footer: Total y cobro -->
-      <div class="pos-carrito-footer">
-        <div class="pos-total-row">
-          <span class="pos-total-label">Total</span>
-          <span class="pos-total-monto">{{ formatMonto(posStore.total) }}</span>
-        </div>
+      <!-- 3. Parte Inferior Fija: Total y Cobro -->
+      <div class="pos-panel-right-bottom">
+        <div class="pos-carrito-footer">
+          <div class="pos-total-row">
+            <span class="pos-total-label">Total</span>
+            <span class="pos-total-monto">{{ formatMonto(posStore.total) }}</span>
+          </div>
 
-        <!-- Método de pago -->
-        <div class="pos-metodo-pago">
-          <button
-            v-for="metodo in metodosPago"
-            :key="metodo.value"
-            class="pos-metodo-btn"
-            :class="{ 'pos-metodo-btn--activo': metodoPago === metodo.value }"
-            @click="metodoPago = metodo.value"
-          >
-            <i :class="metodo.icon" />
-            {{ metodo.label }}
-          </button>
-        </div>
+          <!-- Método de pago -->
+          <div class="pos-metodo-pago">
+            <button
+              v-for="metodo in metodosPago"
+              :key="metodo.value"
+              class="pos-metodo-btn"
+              :class="{ 'pos-metodo-btn--activo': metodoPago === metodo.value }"
+              @click="metodoPago = metodo.value"
+            >
+              <i :class="metodo.icon" />
+              {{ metodo.label }}
+            </button>
+          </div>
 
-        <Button
-          label="Cobrar (F10/F11/F12)"
-          icon="pi pi-check-circle"
-          size="large"
-          class="pos-cobrar-btn"
-          :loading="posStore.procesando"
-          :disabled="posStore.carrito.length === 0"
-          @click="() => cobrar()"
-        />
+          <Button
+            label="Cobrar (F10 - F12)"
+            icon="pi pi-check-circle"
+            size="large"
+            class="pos-cobrar-btn"
+            :loading="posStore.procesando"
+            :disabled="posStore.carrito.length === 0"
+            @click="() => cobrar()"
+          />
       </div>
+    </div>
     </div>
   </div>
 
@@ -301,11 +319,11 @@
       <div class="confirm-pagos">
         <div class="confirm-pago-row">
           <label>Efectivo</label>
-          <InputNumber ref="pagoEfectivoRef" inputId="pos-pago-efectivo" v-model="pagoEfectivo" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" @focus="seleccionarTextoPago" />
+          <InputNumber ref="pagoEfectivoRef" inputId="pos-pago-efectivo" v-model="pagoEfectivo" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" :disabled="esFiado" @focus="seleccionarTextoPago" />
         </div>
         <div class="confirm-pago-row">
           <label>Tarjeta</label>
-          <InputNumber ref="pagoTarjetaRef" inputId="pos-pago-tarjeta" v-model="pagoTarjeta" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" @focus="seleccionarTextoPago" />
+          <InputNumber ref="pagoTarjetaRef" inputId="pos-pago-tarjeta" v-model="pagoTarjeta" mode="currency" currency="CLP" locale="es-CL" :maxFractionDigits="0" :min="0" class="w-full" :disabled="esFiado" @focus="seleccionarTextoPago" />
         </div>
         <div class="confirm-pago-row">
           <label>Transferencia</label>
@@ -653,6 +671,11 @@
     </template>
   </Dialog>
 
+  <DetalleVentaModal 
+    v-model="mostrarDetalleVenta" 
+    :venta="posStore.ultimaVentaRealizada" 
+    @reimprimir="imprimirVentaActualGuardada" 
+  />
 </template>
 
 <script setup lang="ts">
@@ -675,6 +698,7 @@ const toast = useToast()
 const { formatMonto } = useFormatMonto()
 const supabase = useSupabaseClient<Database>()
 const consultaPrecioVisible = useState<boolean>('consulta-precio-open', () => false)
+const mostrarDetalleVenta = ref(false)
 const ultimosToasts = new Map<string, number>()
 
 // ─── Fiado / Crédito ───
@@ -798,7 +822,6 @@ const onDesconectado = () => { isOnline.value = false }
 const mostrarModalCancelar = ref(false)
 const cargandoVentasDia = ref(false)
 const ventasDia = ref<any[]>([])
-const ultimaVentaRealizada = ref<any>(null)
 const ventaSeleccionadaCancelar = ref<any>(null)
 const motivoCancelar = ref('')
 const emailSupervisor = ref('')
@@ -1132,7 +1155,6 @@ async function cargarTopVendidos() {
     topVendidos.value = idsTop
       .map((id) => byId.get(id))
       .filter((p): p is ProductoLocal => !!p)
-      .slice(0, 10)
   } catch {
     topVendidos.value = []
   }
@@ -1260,11 +1282,6 @@ function seleccionarProducto(prod: ProductoLocal) {
     cantidadPesoCalculada.value = 1
     precioPesadoCalculado.value = redondearClp(prod.precio * cantidadPesoCalculada.value)
     mostrarModalPeso.value = true
-    return
-  }
-
-  if (prod.stock === 0) {
-    toast.add({ severity: 'warn', summary: 'Sin stock', detail: `"${prod.nombre}" no tiene stock disponible`, life: 3000 })
     return
   }
 
@@ -1501,10 +1518,10 @@ watch(mostrarScanner, (val) => {
 
 // ─── Lógica Autorización y Creación Rápida ───
 function reabrirDetalleUltimaVenta() {
-  if (!ultimaVentaRealizada.value) return
-  const v = ultimaVentaRealizada.value
+  if (!posStore.ultimaVentaRealizada) return
+  const v = posStore.ultimaVentaRealizada
   
-  // Sincronizar estado del modal con la ultima venta
+  // Sincronizar estado global para que las funciones de impresi\u00f3n tengan data
   totalCobroModal.value = v.total
   itemsCobroModal.value = [...v.items]
   ventaActualId.value = v.id
@@ -1515,14 +1532,14 @@ function reabrirDetalleUltimaVenta() {
   ventaActualCajero.value = v.cajero
   ventaActualPagado.value = v.pagado
   ventaActualVuelto.value = v.vuelto
-  ventaActualImpresa.value = false // Permitir reimpresion desde el modal tambi\u00e9n
+  ventaActualImpresa.value = false
   
-  mostrarConfirmacion.value = true
+  mostrarDetalleVenta.value = true
 }
 
 function reimprimirDesdeBarra() {
-  if (!ultimaVentaRealizada.value) return
-  const v = ultimaVentaRealizada.value
+  if (!posStore.ultimaVentaRealizada) return
+  const v = posStore.ultimaVentaRealizada
   imprimirComprobante80mm({
     ventaId: v.idCorto,
     fecha: v.fecha,
@@ -1716,7 +1733,7 @@ async function confirmarCobro(imprimir = true) {
     ventaActualVuelto.value = vueltoActual
 
     // GUARDAR EN ULTIMA VENTA PARA LA BARRA INFERIOR
-    ultimaVentaRealizada.value = {
+    posStore.ultimaVentaRealizada = {
       id: ventaActualId.value,
       idCorto: ventaActualIdCorto.value,
       fecha: fechaTicket,
@@ -1727,7 +1744,9 @@ async function confirmarCobro(imprimir = true) {
       metodoEtiqueta: metodoPagoEtiqueta,
       cajero: cajeroNombre,
       items: [...itemsCobroModal.value],
-      estado: ventaActualEstado.value
+      estado: ventaActualEstado.value,
+      esFiado: esFiadoActual,
+      clienteNombre: esFiadoActual ? (clienteFiadoObj.value?.nombre || 'Cliente') : null
     }
 
     const label = esFiadoActual
@@ -1753,7 +1772,7 @@ async function confirmarCobro(imprimir = true) {
       ventaActualVuelto.value = vueltoActual
 
       // GUARDAR EN ULTIMA VENTA PARA LA BARRA INFERIOR (CASO OFFLINE)
-      ultimaVentaRealizada.value = {
+      posStore.ultimaVentaRealizada = {
         id: 'PENDIENTE',
         idCorto: 'PENDIENTE',
         fecha: fechaTicket,
@@ -1764,7 +1783,9 @@ async function confirmarCobro(imprimir = true) {
         metodoEtiqueta: metodoPagoEtiqueta,
         cajero: cajeroNombre,
         items: [...itemsCobroModal.value],
-        estado: 'pendiente'
+        estado: 'pendiente',
+        esFiado: esFiadoActual,
+        clienteNombre: esFiadoActual ? (clienteFiadoObj.value?.nombre || 'Cliente') : null
       }
 
       toast.add({
@@ -2070,6 +2091,12 @@ function onKeydown(e: KeyboardEvent) {
     return
   }
 
+  if (e.key === 'F8') {
+    e.preventDefault()
+    confirmarVaciar()
+    return
+  }
+
   if (e.key === 'Escape') {
     const algunModalAbierto = mostrarConfirmacion.value || 
                               mostrarModalPeso.value || 
@@ -2136,6 +2163,7 @@ function tiempoDesde(isoDate: string): string {
 /* ─── Layout principal ─── */
 .pos-layout {
   display: flex;
+  flex: 1;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -2149,20 +2177,29 @@ function tiempoDesde(isoDate: string): string {
   flex-direction: column;
   padding: 1rem;
   border-right: 1px solid var(--border-subtle);
+  overflow: hidden; /* IMPORTANTE: No scroll aquí, el scroll está en -content */
+  min-height: 0;
+}
+
+.pos-panel-left-top {
+  flex-shrink: 0;
+}
+
+.pos-panel-left-content {
+  flex: 1;
   overflow-y: auto;
   min-height: 0;
+  margin-top: 0.5rem;
+  padding-right: 0.25rem;
 }
 
 .pos-search-bar {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
-  position: sticky;
-  top: 0;
-  z-index: 8;
+  margin-bottom: 0.5rem;
   background: var(--bg-app);
-  padding-bottom: 0.6rem;
+  padding-bottom: 0.2rem;
 }
 
 .pos-search-input-wrap {
@@ -2271,18 +2308,15 @@ function tiempoDesde(isoDate: string): string {
 
 /* ─── Barra Última Venta ─── */
 .pos-last-sale-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 0.85rem;
+  padding: 0.75rem 1rem;
   background: var(--bg-surface);
-  border: 1px solid var(--border-sidebar);
-  border-radius: 0.75rem;
-  margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  box-shadow: 0 -4px 12px -4px rgba(0,0,0,0.1);
+  border-top: 1px solid var(--border-subtle);
+  /* Eliminamos el margen y el radio para que se sienta anclada al fondo */
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
   animation: slideUp 0.3s ease-out;
 }
 
@@ -2308,6 +2342,17 @@ function tiempoDesde(isoDate: string): string {
   border-radius: 4px;
   letter-spacing: 0.05em;
   white-space: nowrap;
+}
+
+.pos-last-sale-badge--idle {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.pos-last-sale-msg {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .pos-last-sale-ticket {
@@ -2517,6 +2562,20 @@ function tiempoDesde(isoDate: string): string {
   min-height: 0;
 }
 
+.pos-panel-right-top {
+  flex-shrink: 0;
+}
+
+.pos-panel-right-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pos-panel-right-bottom {
+  flex-shrink: 0;
+}
+
 .pos-carrito-header {
   display: flex;
   align-items: center;
@@ -2524,6 +2583,17 @@ function tiempoDesde(isoDate: string): string {
   padding: 0.34rem 0.72rem;
   min-height: 0;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.pos-carrito-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .pos-carrito-title {
@@ -2547,13 +2617,10 @@ function tiempoDesde(isoDate: string): string {
 }
 
 .pos-carrito-items {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  min-height: 0;
+  gap: 0.1rem;
+  padding: 0.5rem;
 }
 
 .pos-item {
@@ -2810,7 +2877,7 @@ function tiempoDesde(isoDate: string): string {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.5rem;
 }
 
 .confirm-estado-text {
@@ -2823,11 +2890,11 @@ function tiempoDesde(isoDate: string): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 1.5rem;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
   background: var(--bg-app);
   border-radius: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .confirm-total-label {
@@ -2838,7 +2905,7 @@ function tiempoDesde(isoDate: string): string {
 }
 
 .confirm-total-monto {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 800;
   color: #4ade80;
   letter-spacing: -0.04em;
@@ -2847,14 +2914,14 @@ function tiempoDesde(isoDate: string): string {
 .confirm-pagos {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
 
 .confirm-pago-row {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 100px 1fr;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .confirm-pago-row label {
@@ -2864,8 +2931,8 @@ function tiempoDesde(isoDate: string): string {
 }
 
 .confirm-resumen-pago {
-  margin-top: 0.9rem;
-  padding: 0.7rem 0.75rem;
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.75rem;
   border: 1px solid var(--border-subtle);
   border-radius: 0.7rem;
   background: var(--bg-app);

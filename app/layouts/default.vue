@@ -77,6 +77,14 @@
           <i class="pi pi-cog" />
           <span>Configuración</span>
         </NuxtLink>
+
+        <div class="pos-nav-divider" />
+
+        <!-- Botón de Egreso Rápido (Accesible para todos) -->
+        <button class="pos-nav-item pos-nav-item--egreso" @click="mostrarEgresoRapido = true">
+          <i class="pi pi-sign-out" />
+          <span>Egreso Rápido</span>
+        </button>
       </nav>
       <div class="pos-sidebar-version">Version v{{ appVersion }}</div>
 
@@ -149,7 +157,7 @@
              <button class="pos-bell-btn" type="button" @click="toggleNotificaciones" :aria-expanded="mostrarNotificaciones ? 'true' : 'false'" aria-label="Ver notificaciones de stock">
                <i class="pi pi-bell text-xl" />
              </button>
-             <span v-if="productosBajoStock.length > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
+             <span v-if="productosBajoStock.length > 0" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] min-w-[20px] h-[20px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white dark:border-slate-800 shadow-sm">
                {{ productosBajoStock.length }}
              </span>
              
@@ -186,10 +194,11 @@
           </div>
         </div>
       </div>
-      <div class="pos-content-scroll">
+      <div class="pos-content-scroll" :class="{ 'pos-content-scroll--pos-route': route.path.startsWith('/pos') }">
         <slot />
       </div>
-      <ConsultaPrecioGlobal />
+      <ConsultaPrecioGlobal v-model="mostrarConsultaPrecio" />
+      <EgresoRapidoModal v-model="mostrarEgresoRapido" />
     </main>
   </div>
 </template>
@@ -213,7 +222,8 @@ const notificacionesRef = ref<HTMLElement | null>(null)
 const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
 const appVersion = computed(() => String(runtimeConfig.public.appVersion || 'dev'))
-const consultaPrecioVisible = useState<boolean>('consulta-precio-open', () => false)
+const mostrarConsultaPrecio = useState<boolean>('consulta-precio-open', () => false)
+const mostrarEgresoRapido = ref(false)
 const seccionActual = computed(() => {
   if (route.path.startsWith('/superadmin/empresas')) return 'Negocios'
   if (route.path === '/') return 'Dashboard'
@@ -274,7 +284,7 @@ function onClickFueraNotificaciones(event: MouseEvent) {
 function onKeydownLayout(event: KeyboardEvent) {
   if (event.key === 'F3') {
     event.preventDefault()
-    consultaPrecioVisible.value = !consultaPrecioVisible.value
+    mostrarConsultaPrecio.value = !mostrarConsultaPrecio.value
     return
   }
 
@@ -470,6 +480,24 @@ async function instalarApp() {
   opacity: 1;
 }
 
+.pos-nav-item:hover .pos-nav-item--active i {
+  color: #6366f1;
+}
+
+.pos-nav-item--egreso {
+  color: #ef4444;
+  border-left: 3px solid transparent;
+}
+
+.pos-nav-item--egreso:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+}
+
+.pos-nav-item--egreso i {
+  color: #ef4444;
+}
+
 .pos-nav-divider {
   height: 1px;
   background: var(--border-sidebar);
@@ -586,6 +614,12 @@ async function instalarApp() {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+.pos-content-scroll--pos-route {
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
 }
 
 .pos-topbar-info {

@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
+import { useLocalStorage } from '@vueuse/core'
 import { db } from '~/db'
 import type { ProductoLocal, VentaReservadaLocal } from '~/db'
-import { useAuthStore } from './auth'
+import { useAuthStore } from '~/stores/auth'
 import type { Database } from '~/types/database.types'
 
 export interface ItemCarrito {
@@ -34,6 +35,7 @@ export const usePosStore = defineStore('pos', () => {
   const procesando = ref(false)
   const ventasReservadas = ref<VentaReservadaLocal[]>([])
   const ultimoModificadoId = ref<string | null>(null)
+  const ultimaVentaRealizada = useLocalStorage<any | null>('gestorpos_ultima_venta', null)
 
   function esErrorDeRed(error: any) {
     if (import.meta.client && !navigator.onLine) return true
@@ -282,6 +284,7 @@ export const usePosStore = defineStore('pos', () => {
     subtotal, total,
     ventasReservadas,
     ultimoModificadoId,
+    ultimaVentaRealizada,
     sincronizarCatalogo, buscarProductos,
     agregarItem, quitarItem, setCantidad, setDescuento, vaciarCarrito,
     registrarVenta,

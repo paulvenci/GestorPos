@@ -143,7 +143,22 @@ import { useFormatMonto } from '~/composables/useFormatMonto'
 import { usePosStore } from '~/stores/pos'
 import { useAuthStore } from '~/stores/auth'
 
-const visible = useState<boolean>('consulta-precio-open', () => false)
+const props = defineProps<{
+  modelValue?: boolean
+}>()
+
+const emit = defineEmits(['update:modelValue'])
+
+const visibleState = useState<boolean>('consulta-precio-open', () => false)
+
+const visible = computed({
+  get: () => props.modelValue !== undefined ? props.modelValue : visibleState.value,
+  set: (val) => {
+    visibleState.value = val
+    emit('update:modelValue', val)
+  }
+})
+
 const toast = useToast()
 const route = useRoute()
 const posStore = usePosStore()

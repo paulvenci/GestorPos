@@ -49,15 +49,18 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
   }
 
+  const authStore = useAuthStore()
+  
+  // Aseguramos que el estado del store esté sincronizado con Supabase
+  if (!authStore.perfil || authStore.user?.id !== currentUser.id) {
+    await authStore.fetchUser()
+  }
+
   const permissions = normalizeRolePermissions(
     configStore.configuracion.role_permissions || getDefaultRolePermissions()
   )
 
-  const { data: perfil } = await supabase
-    .from('perfiles')
-    .select('rol, activo, empresa_id')
-    .eq('id', currentUser.id)
-    .single()
+  const perfil = authStore.perfil
 
   if (!perfil || perfil.activo === false || !perfil.empresa_id) {
     return navigateTo('/login')

@@ -28,6 +28,11 @@ export const useConfigStore = defineStore('config', () => {
   const fetchConfig = async () => {
     loading.value = true
     try {
+      if (!authStore.empresaId) {
+        loading.value = false
+        return
+      }
+
       const { data, error } = await supabase
         .from('configuracion')
         .select('*')

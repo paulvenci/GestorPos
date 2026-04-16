@@ -286,6 +286,7 @@
 import { useToast } from 'primevue/usetoast'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import { useConfigStore } from '~/stores/config'
+import { useAuthStore } from '~/stores/auth'
 import type { Database } from '~/types/database.types'
 import {
   getDefaultRolePermissions,
@@ -314,6 +315,7 @@ const supabase = useSupabaseClient<Database>()
 const toast = useToast()
 const { formatFecha } = useFormatMonto()
 const configStore = useConfigStore()
+const authStore = useAuthStore()
 const { configuracion: globalConfig, loading: configLoading } = storeToRefs(configStore)
 
 const usuarios = ref<Perfil[]>([])
@@ -348,10 +350,10 @@ const seccionesDisponibles: { label: string, value: SectionKey }[] = [
   { label: 'Caja', value: 'caja' },
   { label: 'Inventario', value: 'inventario' },
   { label: 'Ajuste Stock', value: 'ajuste_stock' },
-  { label: 'CategorÃ­as', value: 'categorias' },
+  { label: 'Categorías', value: 'categorias' },
   { label: 'Clientes', value: 'clientes' },
   { label: 'Reportes', value: 'reportes' },
-  { label: 'ConfiguraciÃ³n', value: 'configuracion' }
+  { label: 'Configuración', value: 'configuracion' }
 ]
 
 const rolePermissionsDraft = ref<Record<RoleKey, SectionKey[]>>(getDefaultRolePermissions())
@@ -370,6 +372,17 @@ watch(
       rolePermissionsDraft.value = normalizeRolePermissions(value)
     }
   }
+)
+
+// Cargar usuarios cuando el ID de empresa esté disponible
+watch(
+  () => authStore.empresaId,
+  (newId) => {
+    if (newId) {
+      fetchUsuarios()
+    }
+  },
+  { immediate: true }
 )
 
 // FunciÃ³n para guardar globales
@@ -405,6 +418,8 @@ async function guardarPermisosRoles() {
 
 
 async function fetchUsuarios() {
+  if (!authStore.empresaId) return
+  
   loading.value = true
   try {
     const { data, error } = await supabase

@@ -97,51 +97,121 @@
       </div>
     </Dialog>
 
-    <!-- Tabla de historial de ajustes -->
-    <DataTable
-      :value="ajustes"
-      :loading="loading"
-      class="p-datatable-sm"
-      paginator
-      :rows="15"
-      responsiveLayout="scroll"
-      sortField="created_at"
-      :sortOrder="-1"
-    >
-      <Column header="Fecha" sortable field="created_at">
-        <template #body="slotProps">
-          <span class="text-sm" style="color: var(--text-muted)">{{ formatFecha(slotProps.data.created_at) }}</span>
-        </template>
-      </Column>
-      <Column header="Producto">
-        <template #body="slotProps">
-          <span class="font-semibold">{{ slotProps.data.producto_nombre || '-' }}</span>
-        </template>
-      </Column>
-      <Column header="Tipo" sortable field="tipo">
-        <template #body="slotProps">
-          <Tag
-            :value="slotProps.data.tipo === 'ingreso' ? '⬆ Ingreso' : '⬇ Egreso'"
-            :severity="slotProps.data.tipo === 'ingreso' ? 'success' : 'danger'"
-          />
-        </template>
-      </Column>
-      <Column field="cantidad" header="Cant." sortable />
-      <Column header="Stock">
-        <template #body="slotProps">
-          <span style="color: var(--text-muted)">{{ slotProps.data.stock_anterior }} → <strong>{{ slotProps.data.stock_nuevo }}</strong></span>
-        </template>
-      </Column>
-      <Column field="motivo" header="Motivo" />
-      <Column header="Usuario">
-        <template #body="slotProps">
-          <span class="text-sm">{{ slotProps.data.usuario_nombre || '-' }}</span>
-        </template>
-      </Column>
-      <template #empty>
-        <div class="p-4 text-center" style="color: var(--text-muted)">No hay ajustes de stock registrados.</div>
-      </template>
-    </DataTable>
+    <!-- Sistema de Auditoría (Tabs) -->
+    <Tabs value="historial" class="stock-tabs">
+      <TabList>
+        <Tab value="historial">Historial Completo</Tab>
+        <Tab v-if="authStore.rolUsuario === 'admin'" value="pendientes">
+          Pendientes de Revisión
+          <Badge v-if="ajustesPendientes.length > 0" :value="ajustesPendientes.length" severity="danger" />
+        </Tab>
+      </TabList>
+
+      <TabPanels>
+        <!-- Pestaña 1: Historial Completo -->
+        <TabPanel value="historial">
+          <DataTable
+            :value="ajustes"
+            :loading="loading"
+            class="p-datatable-sm"
+            paginator
+            :rows="15"
+            responsiveLayout="scroll"
+            sortField="created_at"
+            :sortOrder="-1"
+          >
+            <Column header="Fecha" sortable field="created_at">
+              <template #body="slotProps">
+                <span class="text-xs lg:text-sm" style="color: var(--text-muted)">{{ formatFecha(slotProps.data.created_at) }}</span>
+              </template>
+            </Column>
+            <Column header="Producto">
+              <template #body="slotProps">
+                <span class="font-semibold text-xs lg:text-sm">{{ slotProps.data.producto_nombre || '-' }}</span>
+              </template>
+            </Column>
+            <Column header="Tipo" sortable field="tipo">
+              <template #body="slotProps">
+                <Tag
+                  :value="slotProps.data.tipo === 'ingreso' ? '⬆ Ingreso' : '⬇ Egreso'"
+                  :severity="slotProps.data.tipo === 'ingreso' ? 'success' : 'danger'"
+                  class="text-[10px] uppercase"
+                />
+              </template>
+            </Column>
+            <Column field="cantidad" header="Cant." sortable />
+            <Column field="motivo" header="Motivo" />
+            <Column header="Usuario">
+              <template #body="slotProps">
+                <span class="text-xs">{{ slotProps.data.usuario_nombre || '-' }}</span>
+              </template>
+            </Column>
+            <Column header="Revisión">
+              <template #body="slotProps">
+                <Tag
+                  v-if="slotProps.data.tipo === 'egreso'"
+                  :value="slotProps.data.revisado_por_admin ? 'Revisado' : 'Pendiente'"
+                  :severity="slotProps.data.revisado_por_admin ? 'success' : 'warn'"
+                  rounded
+                />
+              </template>
+            </Column>
+            <template #empty>
+              <div class="p-4 text-center" style="color: var(--text-muted)">No hay historial para mostrar.</div>
+            </template>
+          </DataTable>
+        </TabPanel>
+
+        <!-- Pestaña 2: Pendientes (Solo Admin) -->
+        <TabPanel value="pendientes">
+          <DataTable
+            :value="ajustesPendientes"
+            :loading="loading"
+            class="p-datatable-sm"
+            responsiveLayout="scroll"
+          >
+            <Column header="Fecha" field="created_at">
+              <template #body="slotProps">
+                <span class="text-xs text-slate-500">{{ formatFecha(slotProps.data.created_at) }}</span>
+              </template>
+            </Column>
+            <Column header="Producto">
+              <template #body="slotProps">
+                <span class="font-bold">{{ slotProps.data.producto_nombre }}</span>
+              </template>
+            </Column>
+            <Column header="Responsable">
+              <template #body="slotProps">
+                <div class="flex items-center gap-2">
+                  <Avatar icon="pi pi-user" size="small" shape="circle" />
+                  <span class="text-sm font-medium">{{ slotProps.data.usuario_nombre }}</span>
+                </div>
+              </template>
+            </Column>
+            <Column header="Merma" field="cantidad" class="font-mono text-red-500 font-bold" />
+            <Column field="motivo" header="Motivo" />
+            <Column header="Acciones">
+              <template #body="slotProps">
+                <Button
+                  label="Visto Bueno"
+                  icon="pi pi-check"
+                  size="small"
+                  severity="success"
+                  outlined
+                  @click="marcarComoRevisado(slotProps.data.id)"
+                />
+              </template>
+            </Column>
+            <template #empty>
+              <div class="p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                <i class="pi pi-verified text-4xl text-emerald-400 mb-2" />
+                <p class="text-slate-500 font-medium">¡Todo al día! No hay egresos pendientes de revisión.</p>
+              </div>
+            </template>
+          </DataTable>
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
   </div>
 </template>
 
@@ -164,6 +234,9 @@ const loadingProductos = ref(false)
 const mostrarDialogo = ref(false)
 
 const ajustes = ref<any[]>([])
+const ajustesPendientes = computed(() =>
+  ajustes.value.filter(a => a.tipo === 'egreso' && !a.revisado_por_admin)
+)
 const productos = ref<any[]>([])
 
 const tiposAjuste = [
@@ -472,6 +545,26 @@ async function registrarAjuste() {
     saving.value = false
   }
 }
+
+async function marcarComoRevisado(id: string) {
+  try {
+    const { error } = await supabase
+      .from('ajustes_stock')
+      .update({
+        revisado_por_admin: true,
+        revisado_at: new Date().toISOString(),
+        revisado_por: authStore.user?.id
+      } as any)
+      .eq('id', id)
+
+    if (error) throw error
+
+    toast.add({ severity: 'success', summary: 'Revisado', detail: 'Egreso marcado con visto bueno.', life: 3000 })
+    await fetchAjustes()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Error', detail: e.message, life: 5000 })
+  }
+}
 </script>
 
 <style scoped>
@@ -497,16 +590,38 @@ async function registrarAjuste() {
   padding: 0.5rem 0;
 }
 
-.ajuste-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
 .ajuste-field label {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.stock-tabs {
+  margin-top: 1rem;
+}
+
+:deep(.p-tablist-tab-list) {
+  border-bottom: 2px solid var(--border-subtle) !important;
+  background: transparent !important;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+:deep(.p-tab) {
+  background: transparent !important;
+  border: none !important;
+  padding: 1rem 0.5rem !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  transition: all 0.2s;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+:deep(.p-tab-active) {
+  color: var(--text-app) !important;
+  box-shadow: 0 2px 0 0 var(--text-app) !important;
 }
 
 .ajuste-field-row {
