@@ -38,7 +38,9 @@ export const usePosStore = defineStore('pos', () => {
   const ultimaVentaRealizada = useLocalStorage<any | null>('gestorpos_ultima_venta', null)
   const notificacionesRealtime = useLocalStorage<any[]>('gestorpos_notificaciones_rt', [])
   const triggerRealtime = ref(0)
+  const triggerNotificacion = ref(0)
   let canalRealtime: any = null
+  let canalAjustes: any = null
 
   function esErrorDeRed(error: any) {
     if (import.meta.client && !navigator.onLine) return true
@@ -109,19 +111,34 @@ export const usePosStore = defineStore('pos', () => {
                                (Date.now() - new Date(ultimaNotif.timestamp).getTime() < 2000)
 
             if (!esDuplicado) {
-              // Añadir a notificaciones persistentes
-              notificacionesRealtime.value.unshift({
-                id: producto.id,
-                nombre: producto.nombre,
-                stock: producto.stock,
-                precio: producto.precio,
-                tipo: eventType,
-                timestamp: new Date().toISOString(),
-                leido: false
-              })
-              // Limitar a los últimos 20 para no saturar el storage
-              if (notificacionesRealtime.value.length > 20) {
-                notificacionesRealtime.value = notificacionesRealtime.value.slice(0, 20)
+              // Determinar si es un cambio "ruidoso" (solo stock) o relevante (edición/creación)
+              const esEdicionRelevante = eventType === 'INSERT' || (
+                oldRec && (
+                  newRec.nombre !== oldRec.nombre ||
+                  newRec.precio !== oldRec.precio ||
+                  newRec.costo !== oldRec.costo ||
+                  newRec.activo !== oldRec.activo ||
+                  newRec.categoria !== oldRec.categoria
+                )
+              )
+
+              if (esEdicionRelevante) {
+                // Añadir a notificaciones persistentes (campanita)
+                notificacionesRealtime.value.unshift({
+                  id: producto.id,
+                  nombre: producto.nombre,
+                  stock: producto.stock,
+                  precio: producto.precio,
+                  tipo: eventType,
+                  timestamp: new Date().toISOString(),
+                  leido: false
+                })
+                // Limitar a los últimos 20
+                if (notificacionesRealtime.value.length > 20) {
+                  notificacionesRealtime.value = notificacionesRealtime.value.slice(0, 20)
+                }
+                // Disparar trigger de aviso (toast)
+                triggerNotificacion.value++
               }
             }
           } else if (eventType === 'DELETE') {
@@ -140,12 +157,40 @@ export const usePosStore = defineStore('pos', () => {
           console.log('Sincronización en tiempo real activa para productos')
         }
       })
+
+    // Nueva suscripción a ajustes de stock para capturar cambios manuales
+    setupRealtimeAjustes()
+  }
+
+  function setupRealtimeAjustes() {
+    if (canalAjustes || !authStore.empresaId) return
+
+    canalAjustes = supabase
+      .channel('pos-ajustes-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ajustes_stock',
+          filter: `empresa_id=eq.${authStore.empresaId}`
+        },
+        async (payload: any) => {
+          // Si hay un ajuste de stock, es un evento relevante que merece notificación
+          triggerNotificacion.value++
+        }
+      )
+      .subscribe()
   }
 
   function cleanupRealtime() {
     if (canalRealtime) {
       supabase.removeChannel(canalRealtime)
       canalRealtime = null
+    }
+    if (canalAjustes) {
+      supabase.removeChannel(canalAjustes)
+      canalAjustes = null
     }
   }
 
@@ -374,7 +419,7 @@ export const usePosStore = defineStore('pos', () => {
     fetchVentasDia, cancelarVenta,
     redondearCLP,
     setupRealtime, cleanupRealtime,
-    notificacionesRealtime, triggerRealtime,
+    notificacionesRealtime, triggerRealtime, triggerNotificacion,
     limpiarNotificacionesRealtime: () => { notificacionesRealtime.value = [] }
   }
 })

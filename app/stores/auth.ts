@@ -44,6 +44,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = data.user
     if (data.user) {
       await fetchPerfil(data.user.id)
+      
+      // Auto-iniciar turno si es cajero
+      if (perfil.value?.rol === 'cajero') {
+        const cajaStore = useCajaStore()
+        await cajaStore.asegurarTurnoActivo()
+      }
     }
   }
 

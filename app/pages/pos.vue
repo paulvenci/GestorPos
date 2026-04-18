@@ -1696,6 +1696,19 @@ async function confirmarCobro(imprimir = true) {
     return
   }
   if (!pagoValido.value) return
+
+  // Validar que haya un turno activo antes de cobrar (Solo para CAJEROS - Opción A)
+  const esCajero = authStore.rolUsuario === 'cajero'
+  if (esCajero && !cajaStore.hayTurnoActivo) {
+    toast.add({ 
+      severity: 'error', 
+      summary: 'Turno cerrado', 
+      detail: 'Debes tener un turno abierto para poder registrar ventas.', 
+      life: 5000 
+    })
+    return
+  }
+
   confirmandoCobro.value = true
 
   const totalCobrado = totalCobroModal.value
@@ -1808,12 +1821,8 @@ async function confirmarCobro(imprimir = true) {
       })
       if (imprimir) imprimirVentaActualGuardada()
     } else if (msg.includes('productos_stock_check') || msg.toLowerCase().includes('stock insuficiente')) {
-      toast.add({
-        severity: 'warn',
-        summary: 'Stock de producto por peso',
-        detail: 'Reabre el producto en Inventario y guarda nuevamente para actualizar stock virtual de pesables.',
-        life: 6000
-      })
+      // Silenciamos el toast de aviso de stock para pesables según requerimiento de usuario (reducir ruido)
+      console.warn('Aviso de stock para pesables silenciado:', msg)
     } else {
       toast.add({ severity: 'error', summary: 'Error', detail: err.message, life: 5000 })
     }

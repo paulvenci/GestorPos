@@ -94,7 +94,10 @@
       >
         <Column header="Usuario" sortable field="usuario_nombre">
           <template #body="slotProps">
-            <span>{{ slotProps.data.usuario_nombre || slotProps.data.id_usuario?.substring(0, 8) || '-' }}</span>
+            <div class="flex flex-col">
+              <span class="font-bold">{{ slotProps.data.usuario_nombre || '-' }}</span>
+              <span v-if="slotProps.data.es_virtual" class="text-[0.65rem] text-indigo-500 uppercase font-black">Venta Fuera de Turno</span>
+            </div>
           </template>
         </Column>
         <Column header="Apertura" sortable field="apertura_at">
@@ -380,43 +383,73 @@ async function fetchHistorial() {
         .gte('fecha', minFecha)
         
       const mapInternas = new Map()
-      const ventasExternas: any[] = []
-      
       if (ventasRango) {
         ventasRango.forEach(v => {
           if (v.id_turno) {
             mapInternas.set(v.id_turno, (mapInternas.get(v.id_turno) || 0) + Number(v.total))
-          } else {
-            ventasExternas.push(v)
           }
         })
       }
 
-      turnosHistorial.value = data.map((t: any) => {
-        const adentor = mapInternas.get(t.id) || 0
-        
-        const fApertura = new Date(t.fecha_apertura).getTime()
-        const fCierre = t.fecha_cierre ? new Date(t.fecha_cierre).getTime() : new Date().getTime()
-        
-        const afuera = ventasExternas.reduce((acc, v) => {
-          const tVenta = new Date(v.fecha).getTime()
-          if (tVenta >= fApertura && tVenta <= fCierre) {
-            return acc + Number(v.total || 0)
+      // 1. Obtener VENTAS FUERA DE TURNO para este rango
+      const { data: ventasAfuera } = await supabase
+        .from('ventas')
+        .select('id, id_usuario, total, fecha, metodo_pago, pago_efectivo')
+        .is('id_turno', null)
+        .gte('fecha', minFecha)
+      
+      const turnosVirtuales: any[] = []
+      if (ventasAfuera && ventasAfuera.length > 0) {
+        const grupos: Record<string, any> = {}
+        ventasAfuera.forEach(v => {
+          // Si el usuario no es admin/super, solo ve sus propias ventas fuera de turno
+          if (authStore.rolUsuario !== 'admin' && authStore.rolUsuario !== 'supervisor') {
+            if (v.id_usuario !== authStore.user?.id) return
           }
-          return acc
-        }, 0)
 
+          const dia = new Date(v.fecha).toISOString().split('T')[0]
+          const key = `${v.id_usuario}_${dia}`
+          if (!grupos[key]) {
+            grupos[key] = {
+              id: `v-${key}`,
+              id_usuario: v.id_usuario,
+              fecha_apertura: `${dia}T09:00:00`,
+              fecha_cierre: `${dia}T23:59:59`,
+              monto_inicial: 0,
+              monto_declarado: null,
+              ventas_registradas: 0,
+              total_general_ventas: 0,
+              es_virtual: true,
+              usuario_nombre: perfilMap.get(v.id_usuario) || 'Administración'
+            }
+          }
+          grupos[key].ventas_registradas++
+          grupos[key].total_general_ventas += Number(v.total || 0)
+        })
+        Object.values(grupos).forEach(tv => turnosVirtuales.push({
+          ...tv,
+          apertura_at: tv.fecha_apertura,
+          cierre_at: tv.fecha_cierre,
+          etiqueta_impresion: `[Fuera de Turno] ${tv.usuario_nombre}`
+        }))
+      }
+
+      const turnosReales = data.map((t: any) => {
+        const adentor = mapInternas.get(t.id) || 0
         return {
           ...t,
           apertura_at: t.fecha_apertura,
           cierre_at: t.fecha_cierre,
-          // En la tabla se muestra como "Monto Cierre": corresponde al monto declarado al cerrar la caja.
           monto_cierre: typeof t.monto_declarado === 'number' ? t.monto_declarado : null,
           usuario_nombre: perfilMap.get(t.id_usuario) || null,
           etiqueta_impresion: `${formatFechaLarga(t.fecha_apertura)} - ${perfilMap.get(t.id_usuario) || t.id_usuario?.substring(0, 8) || 'N/A'}`,
-          total_general_ventas: adentor + afuera
+          total_general_ventas: adentor
         }
       })
+
+      turnosHistorial.value = [...turnosReales, ...turnosVirtuales].sort((a, b) => 
+        new Date(b.apertura_at).getTime() - new Date(a.apertura_at).getTime()
+      )
     } else {
       turnosHistorial.value = []
     }
@@ -519,122 +552,114 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
   const turno = turnosHistorial.value.find((t) => t.id === turnoId)
   if (!turno) return
 
-  // 1. Obtener las ventas DENTRO del turno
-  const { data: ventasTurno, error } = await supabase
-    .from('ventas')
-    .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
-    .eq('id_turno', turnoId)
+  // 1. Obtener las ventas principales
+  let ventasTurno: any[] = []
+  const fetchVentas = async (query: any) => {
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  }
 
-  if (error) {
-    toast.add({ severity: 'error', summary: 'Error', detail: error.message, life: 4000 })
+  try {
+    if (turnoId.startsWith('v-')) {
+      // TURNO VIRTUAL: Capturar TODO el día para evitar problemas de horas/TZ
+      const baseDate = new Date(turno.apertura_at)
+      const inicioDia = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 0, 0, 0).toISOString()
+      const finDia = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 23, 59, 59).toISOString()
+      
+      ventasTurno = await fetchVentas(supabase
+        .from('ventas')
+        .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+        .is('id_turno', null)
+        .eq('id_usuario', turno.id_usuario)
+        .gte('fecha', inicioDia)
+        .lte('fecha', finDia))
+    } else {
+      // TURNO REAL: Ventas asociadas al UUID
+      ventasTurno = await fetchVentas(supabase
+        .from('ventas')
+        .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+        .eq('id_turno', turnoId))
+    }
+  } catch (err: any) {
+    toast.add({ severity: 'error', summary: 'Error de Datos', detail: err.message, life: 5000 })
     return
   }
 
-  // 2. Obtener las ventas FUERA del turno del MISMO CAJERO en el MISMO DÍA
-  const fechaApertura = turno.fecha_apertura || turno.apertura_at
-  const fechaCierre = turno.fecha_cierre || turno.cierre_at || new Date().toISOString()
-  
-  // Calcular inicio y fin del día de la apertura
-  const diaApertura = new Date(fechaApertura)
-  diaApertura.setHours(0, 0, 0, 0)
-  const inicioDia = diaApertura.toISOString()
-  const finDia = new Date(diaApertura)
-  finDia.setHours(23, 59, 59, 999)
-  const finDiaStr = finDia.toISOString()
-  
-  // Buscar ventas sin turno del mismo cajero en todo el día
-  let queryFuera = supabase
-    .from('ventas')
-    .select('id, fecha, total, metodo_pago, id_usuario, pago_efectivo, pago_tarjeta, pago_transferencia')
-    .is('id_turno', null)
-    .gte('fecha', inicioDia)
-    .lte('fecha', finDiaStr)
-  
-  // Filtrar por el mismo usuario si el turno tiene id_usuario
-  if (turno.id_usuario) {
-    queryFuera = queryFuera.eq('id_usuario', turno.id_usuario)
+  // 2. Obtener ventas "Fuera de Turno" adicionales (solo si es un turno REAL)
+  let ventasComplementarias: any[] = []
+  if (!turnoId.startsWith('v-')) {
+    const fApertura = new Date(turno.fecha_apertura)
+    const inicioDiaComp = new Date(fApertura.getFullYear(), fApertura.getMonth(), fApertura.getDate(), 0, 0, 0).toISOString()
+    const finDiaComp = new Date(fApertura.getFullYear(), fApertura.getMonth(), fApertura.getDate(), 23, 59, 59).toISOString()
+    
+    const { data } = await supabase
+      .from('ventas')
+      .select('id, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+      .is('id_turno', null)
+      .eq('id_usuario', turno.id_usuario)
+      .gte('fecha', inicioDiaComp)
+      .lte('fecha', finDiaComp)
+    ventasComplementarias = data || []
   }
-  
-  const { data: ventasFueraTurno } = await queryFuera
 
   const calcResumen = (ventas: any[]) => {
-    return (ventas || []).reduce((acc: Record<string, number>, venta: any) => {
+    return ventas.reduce((acc, venta) => {
       const metodo = String(venta.metodo_pago || '').toLowerCase()
       const total = Number(venta.total || 0)
-      
       if (metodo === 'mixto') {
         acc.efectivo += Number(venta.pago_efectivo || 0)
         acc.tarjeta += Number(venta.pago_tarjeta || 0)
         acc.transferencia += Number(venta.pago_transferencia || 0)
-        acc.total += total // El mixto ya es dinero real repartido
-      } else if (metodo === 'efectivo') {
-        acc.efectivo += total
         acc.total += total
-      } else if (metodo === 'tarjeta') {
-        acc.tarjeta += total
-        acc.total += total
-      } else if (metodo === 'transferencia') {
-        acc.transferencia += total
-        acc.total += total
-      } else if (metodo === 'fiado' || metodo === 'credito') {
-        acc.credito += total
-        // NO sumamos al total recaudado
-      } else {
-        acc.otros += total
-        acc.total += total
-      }
-      
+      } else if (metodo === 'efectivo') { acc.efectivo += total; acc.total += total }
+      else if (metodo === 'tarjeta') { acc.tarjeta += total; acc.total += total }
+      else if (metodo === 'transferencia') { acc.transferencia += total; acc.total += total }
+      else if (metodo === 'fiado' || metodo === 'credito') { acc.credito += total }
+      else { acc.otros += total; acc.total += total }
       return acc
-    }, { efectivo: 0, tarjeta: 0, transferencia: 0, mixto: 0, credito: 0, otros: 0, total: 0 })
+    }, { efectivo: 0, tarjeta: 0, transferencia: 0, credito: 0, otros: 0, total: 0 })
   }
 
-  const resumenAdentro = calcResumen(ventasTurno || [])
-  const resumenAfuera = calcResumen(ventasFueraTurno || [])
-  const totalGeneral = resumenAdentro.total + resumenAfuera.total
+  const resumenPrincipal = calcResumen(ventasTurno)
+  const resumenComp = calcResumen(ventasComplementarias)
+  const totalGeneral = resumenPrincipal.total + resumenComp.total
 
-  const htmlAdentro = `
+  const labelPrincipal = turno.es_virtual ? 'VENTAS ADMINISTRATIVAS' : 'VENTAS EN TURNO'
+  
+  const htmlPrincipal = `
     <div class="item">
-      <div class="strong">${(turno.usuario_nombre || 'USUARIO').toUpperCase()} (EN TURNO)</div>
-      <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenAdentro.efectivo)}</span></div>
-      <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenAdentro.tarjeta)}</span></div>
-      <div class="row"><span>Transf.:</span><span>${formatMonto(resumenAdentro.transferencia)}</span></div>
-      ${resumenAdentro.credito > 0 ? `<div class="row"><span>Crédito:</span><span>${formatMonto(resumenAdentro.credito)}</span></div>` : ''}
-      ${resumenAdentro.otros > 0 ? `<div class="row"><span>Otros:</span><span>${formatMonto(resumenAdentro.otros)}</span></div>` : ''}
-      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenAdentro.total)}</span></div>
+      <div class="strong">${(turno.usuario_nombre || 'USUARIO').toUpperCase()} (${labelPrincipal})</div>
+      <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenPrincipal.efectivo)}</span></div>
+      <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenPrincipal.tarjeta)}</span></div>
+      <div class="row"><span>Transf.:</span><span>${formatMonto(resumenPrincipal.transferencia)}</span></div>
+      ${resumenPrincipal.credito > 0 ? `<div class="row"><span>Crédito:</span><span>${formatMonto(resumenPrincipal.credito)}</span></div>` : ''}
+      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenPrincipal.total)}</span></div>
     </div>
   `
 
-  const htmlAfuera = resumenAfuera.total > 0 ? `
+  const htmlComp = resumenComp.total > 0 ? `
     <div class="item">
-      <div class="strong">${(turno.usuario_nombre || 'USUARIO').toUpperCase()} (FUERA DE TURNO)</div>
-      <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenAfuera.efectivo)}</span></div>
-      <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenAfuera.tarjeta)}</span></div>
-      <div class="row"><span>Transf.:</span><span>${formatMonto(resumenAfuera.transferencia)}</span></div>
-      ${resumenAfuera.credito > 0 ? `<div class="row"><span>Crédito:</span><span>${formatMonto(resumenAfuera.credito)}</span></div>` : ''}
-      ${resumenAfuera.otros > 0 ? `<div class="row"><span>Otros:</span><span>${formatMonto(resumenAfuera.otros)}</span></div>` : ''}
-      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenAfuera.total)}</span></div>
+      <div class="strong">${(turno.usuario_nombre || 'USUARIO').toUpperCase()} (VENTAS EXTRAS DÍA)</div>
+      <div class="row"><span>Efectivo:</span><span>${formatMonto(resumenComp.efectivo)}</span></div>
+      <div class="row"><span>Tarjeta:</span><span>${formatMonto(resumenComp.tarjeta)}</span></div>
+      <div class="row"><span>Transf.:</span><span>${formatMonto(resumenComp.transferencia)}</span></div>
+      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(resumenComp.total)}</span></div>
     </div>
   ` : ''
 
   const body = `
-    <div class="title">CIERRE DE CAJA</div>
-    <div class="muted">Apertura: ${formatFechaLarga(fechaApertura)}</div>
-    <div class="muted">Cierre: ${turno.cierre_at || turno.fecha_cierre ? formatFechaLarga(fechaCierre) : 'Activo'}</div>
+    <div class="title">REPORTE DE VENTAS</div>
+    <div class="muted">Fecha: ${formatFechaLarga(turno.apertura_at)}</div>
+    ${!turno.es_virtual ? `<div class="muted">Tipo: Turno Formal de Caja</div>` : '<div class="muted">Tipo: Ventas Fuera de Turno</div>'}
     <div class="line"></div>
-    <div class="row"><span>Fondo Inicial:</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div>
-    <div class="line"></div>
+    ${!turno.es_virtual ? `<div class="row"><span>Fondo Inicial:</span><span>${formatMonto(turno.monto_inicial || 0)}</span></div><div class="line"></div>` : ''}
     
-    <h3 style="text-align:center; font-size:13px; margin:4px 0; font-weight:bold;">DETALLE DEL CAJERO</h3>
-    ${htmlAdentro}
-    ${htmlAfuera}
+    ${htmlPrincipal}
+    ${htmlComp}
 
     <div class="grand-total" style="border-top: 2px solid #111; padding-top: 8px; margin-top: 8px;">
-      <h3 style="margin-bottom:8px; text-align:center; font-size:13px; font-weight:bold;">TOTALES GENERALES</h3>
-      <div class="row"><span>Total Efectivo:</span><span>${formatMonto(resumenAdentro.efectivo + resumenAfuera.efectivo)}</span></div>
-      <div class="row"><span>Total Tarjeta:</span><span>${formatMonto(resumenAdentro.tarjeta + resumenAfuera.tarjeta)}</span></div>
-      <div class="row"><span>Total Transf.:</span><span>${formatMonto(resumenAdentro.transferencia + resumenAfuera.transferencia)}</span></div>
-      ${(resumenAdentro.credito + resumenAfuera.credito) > 0 ? `<div class="row"><span>Total Crédito:</span><span>${formatMonto(resumenAdentro.credito + resumenAfuera.credito)}</span></div>` : ''}
-      <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL RECAUDADO:</span><span>${formatMonto(totalGeneral)}</span></div>
+      <div class="row strong" style="font-size:15px;"><span>TOTAL RECAUDADO:</span><span>${formatMonto(totalGeneral)}</span></div>
     </div>
   `
 
@@ -679,7 +704,6 @@ async function confirmarCierre() {
     toast.add({ severity: 'success', summary: 'Turno cerrado', detail: 'La caja fue cerrada con éxito', life: 3000 })
     await fetchHistorial()
     
-    // Imprimir comprobante de cierre automáticamente
     if (turnoIdParaImprimir) {
       await imprimirDetalleTurno80mm(turnoIdParaImprimir)
     }

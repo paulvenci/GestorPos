@@ -31,7 +31,10 @@
             <div class="flex items-center gap-3">
               <Avatar :label="getInitials(slotProps.data.cajero_nombre)" shape="circle" style="background: rgba(99, 102, 241, 0.15); color: var(--color-brand-primary)" />
               <div>
-                <div class="font-bold text-[0.9rem]">{{ slotProps.data.cajero_nombre }}</div>
+                <div class="font-bold text-[0.9rem]">
+                  {{ slotProps.data.cajero_nombre }}
+                  <span v-if="slotProps.data.es_virtual" class="ml-2 text-[0.65rem] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase">Fuera de Turno</span>
+                </div>
                 <div class="text-xs text-slate-500 font-mono">{{ slotProps.data.id.substring(0, 8) }}</div>
               </div>
             </div>
@@ -223,8 +226,6 @@ async function cargarTurnos() {
     const mapPerfiles = new Map((perfiles || []).map(p => [p.id, p.nombre || 'Desconocido']))
 
     // 3. Obtener todas las ventas pagadas en efectivo de esos turnos para calcular real
-    // En Produccion se suele agregar un campo "ventas_efectivo" a la bd por consistencia.
-    // Aquí validamos recalculando:
     const turnoIds = turnosData.map(t => t.id)
     const { data: ventas, error: errVentas } = await supabase
       .from('ventas')
@@ -247,8 +248,57 @@ async function cargarTurnos() {
       })
     }
 
-    // 4. Mapear final
-    turnos.value = turnosData.map(t => {
+    // 4. Obtener VENTAS FUERA DE TURNO (Admin/Super) para completar la auditoría
+    const { data: ventasHuérfanas } = await supabase
+      .from('ventas')
+      .select('id, id_usuario, metodo_pago, total, pago_efectivo, fecha')
+      .is('id_turno', null)
+      .limit(500)
+
+    const turnosVirtuales = []
+    if (ventasHuérfanas && ventasHuérfanas.length > 0) {
+      // Agrupar ventas huérfanas por Usuario y Día
+      const grupos = {}
+      ventasHuérfanas.forEach(v => {
+        const dia = new Date(v.fecha).toISOString().split('T')[0]
+        const key = `${v.id_usuario}_${dia}`
+        if (!grupos[key]) {
+          grupos[key] = {
+            id: `v-${key}`,
+            id_usuario: v.id_usuario,
+            fecha_apertura: `${dia}T09:00:00`, // Fecha ficticia para orden
+            fecha_cierre: `${dia}T23:59:59`,
+            monto_inicial: 0,
+            monto_declarado: 0,
+            estado: 'cerrado_aprobado',
+            es_virtual: true,
+            ventas_efectivo: 0,
+            total_ventas: 0
+          }
+        }
+        
+        let montoEf = 0
+        const mPago = String(v.metodo_pago).toLowerCase()
+        if (mPago === 'efectivo') montoEf = Number(v.total)
+        else if (mPago === 'mixto') montoEf = Number(v.pago_efectivo || 0)
+        
+        grupos[key].ventas_efectivo += montoEf
+        grupos[key].total_ventas += Number(v.total)
+        grupos[key].monto_declarado += Number(v.total) // Se asume cuadrando al no haber apertura/cierre
+      })
+
+      Object.values(grupos).forEach(tv => {
+        turnosVirtuales.push({
+          ...tv,
+          cajero_nombre: mapPerfiles.get(tv.id_usuario) || 'Administración',
+          monto_esperado: tv.ventas_efectivo,
+          diferencia_real: 0
+        })
+      })
+    }
+
+    // 5. Mapear final y combinar
+    const turnosReales = turnosData.map(t => {
       const v_efectivo = mapEfectivo.get(t.id) || 0
       const esperado = Number(t.monto_inicial) + v_efectivo
       const declarado = Number(t.monto_declarado || 0)
@@ -262,6 +312,10 @@ async function cargarTurnos() {
         diferencia_real: dif
       }
     })
+
+    turnos.value = [...turnosReales, ...turnosVirtuales].sort((a, b) => 
+      new Date(b.fecha_apertura).getTime() - new Date(a.fecha_apertura).getTime()
+    )
 
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Error', detail: err.message, life: 5000 })

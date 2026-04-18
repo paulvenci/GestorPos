@@ -116,6 +116,38 @@ export const useCajaStore = defineStore('caja', () => {
 
   const hayTurnoActivo = computed(() => !!turnoActivo.value)
 
+  async function asegurarTurnoActivo() {
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser) return
+
+    // 1. Obtener turno activo (si existe)
+    await fetchTurnoActivo()
+
+    if (turnoActivo.value) {
+      // 2. Verificar si es de un día distinto al actual
+      const fechaApertura = new Date(turnoActivo.value.fecha_apertura)
+      const hoy = new Date()
+
+      const esMismoDia = fechaApertura.getFullYear() === hoy.getFullYear() &&
+                        fechaApertura.getMonth() === hoy.getMonth() &&
+                        fechaApertura.getDate() === hoy.getDate()
+
+      if (!esMismoDia) {
+        // Cierre automático de turno antiguo
+        await cerrarTurno(0, 'Cierre automático por inicio de sesión en nuevo día (turno pendiente del ' + fechaApertura.toLocaleDateString() + ')')
+      } else {
+        // Turno ya activo hoy, no hace falta hacer nada
+        return
+      }
+    }
+
+    // 3. Abrir nuevo turno si no hay uno (o si cerramos el antiguo)
+    const puedeAbrir = await checkPuedeAbrirTurno()
+    if (puedeAbrir) {
+      await abrirTurno(0)
+    }
+  }
+
   return {
     turnoActivo,
     loading,
@@ -123,6 +155,7 @@ export const useCajaStore = defineStore('caja', () => {
     fetchTurnoActivo,
     checkPuedeAbrirTurno,
     abrirTurno,
-    cerrarTurno
+    cerrarTurno,
+    asegurarTurnoActivo
   }
 })

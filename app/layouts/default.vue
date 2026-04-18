@@ -249,7 +249,6 @@
       </div>
       <ConsultaPrecioGlobal v-model="mostrarConsultaPrecio" />
       <EgresoRapidoModal v-model="mostrarEgresoRapido" />
-      <Toast />
     </main>
   </div>
 </template>
@@ -391,7 +390,7 @@ function closeMobile() {
 
 // Notificación global de actualizaciones en tiempo real
 const ultimoToastSincro = ref(0)
-watch(() => posStore.triggerRealtime, () => {
+watch(() => posStore.triggerNotificacion, () => {
   const ahora = Date.now()
   if (ahora - ultimoToastSincro.value < 2000) return
   ultimoToastSincro.value = ahora
@@ -413,7 +412,13 @@ watch(() => authStore.empresaId, (newId) => {
 onMounted(async () => {
   initDark()
   await authStore.fetchUser()
-  cajaStore.fetchTurnoActivo()
+  
+  if (authStore.rolUsuario === 'cajero') {
+    await cajaStore.asegurarTurnoActivo()
+  } else {
+    cajaStore.fetchTurnoActivo()
+  }
+  
   productosStore.fetchProductos()
   configStore.fetchConfig()
   
