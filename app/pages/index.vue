@@ -315,6 +315,7 @@ async function fetchVentasPorCategoria() {
       .eq('ventas.empresa_id', authStore.empresaId)
       .eq('ventas.estado', 'completada')
       .gte('ventas.created_at', inicio.toISOString())
+      .limit(5000)
 
     if (error) throw error
 
@@ -348,12 +349,16 @@ async function fetchVentasPorDia() {
   loadingChartDia.value = true
   try {
     const ahora = new Date()
-    let inicio = new Date()
+    // Normalizamos el fin del rango a hoy a las 23:59:59
+    const finRango = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59)
     
+    let inicio = new Date()
     if (filtroDiario.value === '7d') {
-      inicio.setDate(ahora.getDate() - 7)
+      // Últimos 7 días (incluyendo hoy)
+      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 6, 0, 0, 0)
     } else {
-      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+      // Mes actual completo
+      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0)
     }
 
     const { data, error } = await supabase
@@ -362,19 +367,45 @@ async function fetchVentasPorDia() {
       .eq('empresa_id', authStore.empresaId)
       .eq('estado', 'completada')
       .gte('created_at', inicio.toISOString())
+      .lte('created_at', finRango.toISOString())
+      .limit(10000) 
       .order('created_at', { ascending: true })
 
     if (error) throw error
 
-    // Agrupar por día
+    // 1. Generar el mapa de fechas vacío para asegurar continuidad (usando fecha local)
     const agrupado: Record<string, number> = {}
+    const etiquetas: string[] = []
+    
+    let iterador = new Date(inicio)
+    while (iterador <= finRango) {
+      // Key local robusta: "YYYY-MM-DD"
+      const y = iterador.getFullYear()
+      const m = String(iterador.getMonth() + 1).padStart(2, '0')
+      const d = String(iterador.getDate()).padStart(2, '0')
+      const key = `${y}-${m}-${d}`
+      
+      const label = iterador.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }).replace('.', '')
+      agrupado[key] = 0
+      etiquetas.push(label)
+      iterador.setDate(iterador.getDate() + 1)
+    }
+
+    // 2. Llenar con datos reales
     data?.forEach(v => {
-      const d = new Date(v.created_at).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
-      agrupado[d] = (agrupado[d] || 0) + (v.total || 0)
+      const d = new Date(v.created_at)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const key = `${y}-${m}-${day}`
+      
+      if (agrupado[key] !== undefined) {
+        agrupado[key] += Number(v.total || 0)
+      }
     })
 
     chartDataDiario.value = {
-      labels: Object.keys(agrupado),
+      labels: etiquetas,
       datasets: [{
         label: 'Ventas',
         data: Object.values(agrupado),
