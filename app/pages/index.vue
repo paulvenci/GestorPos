@@ -43,8 +43,35 @@
       </div>
     </div>
 
+    <!-- Gráficos de Análisis -->
+    <div class="dashboard-charts">
+      <div class="chart-container chart-container--pie">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-pie" /> Ventas por Categoría</h2>
+          <SelectButton v-model="filtroCategoria" :options="opcionesFiltro" optionLabel="label" optionValue="value" size="small" @change="fetchVentasPorCategoria" />
+        </div>
+        <div class="chart-content">
+          <Chart type="pie" :data="chartDataCategoria" :options="chartOptionsPie" class="h-[300px]" />
+          <div v-if="loadingChartCat" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartCat && (!chartDataCategoria.labels || chartDataCategoria.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+
+      <div class="chart-container chart-container--bar">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-bar" /> Rendimiento Diario</h2>
+          <SelectButton v-model="filtroDiario" :options="opcionesFiltroDiario" optionLabel="label" optionValue="value" size="small" @change="fetchVentasPorDia" />
+        </div>
+        <div class="chart-content">
+          <Chart type="bar" :data="chartDataDiario" :options="chartOptionsBar" class="h-[300px]" />
+          <div v-if="loadingChartDia" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartDia && (!chartDataDiario.labels || chartDataDiario.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Últimas ventas -->
-    <div class="dashboard-section">
+    <div class="dashboard-section mt-4">
       <h2><i class="pi pi-history" /> Últimas ventas</h2>
       <DataTable :value="ultimasVentas" :loading="loadingVentas" class="p-datatable-sm" :rows="5" responsiveLayout="scroll">
         <Column header="Fecha">
@@ -132,13 +159,90 @@ const kpi = ref({
   turnoHora: ''
 })
 
+// Gráficos
+const loadingChartCat = ref(false)
+const loadingChartDia = ref(false)
+const filtroCategoria = ref('30d')
+const filtroDiario = ref('7d')
+
+const opcionesFiltro = [
+  { label: '30 Días', value: '30d' },
+  { label: 'Mes Actual', value: 'mes' }
+]
+
+const opcionesFiltroDiario = [
+  { label: '7 Días', value: '7d' },
+  { label: 'Este Mes', value: 'mes' }
+]
+
+const chartDataCategoria = ref<any>({ labels: [], datasets: [] })
+const chartDataDiario = ref<any>({ labels: [], datasets: [] })
+
+const vibrantPalette = [
+  '#6366f1', '#10b981', '#f59e0b', '#ef4444', 
+  '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4',
+  '#f97316', '#14b8a6', '#4f46e5', '#d946ef'
+]
+
+const chartOptionsPie = ref({
+  plugins: {
+    legend: {
+      position: 'right',
+      labels: {
+        usePointStyle: true,
+        font: { size: 11 },
+        color: '#64748b'
+      }
+    },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` ${context.label}: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
+
+const chartOptionsBar = ref({
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(0,0,0,0.05)' },
+      ticks: {
+        font: { size: 10 },
+        callback: (value: any) => formatMonto(value).substring(0, 10)
+      }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 10 } }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
+
 const fechaHoy = computed(() =>
   new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 )
 
 onMounted(async () => {
   await cajaStore.fetchTurnoActivo()
-  await Promise.all([fetchKPIs(), fetchUltimasVentas()])
+  await Promise.all([
+    fetchKPIs(), 
+    fetchUltimasVentas(),
+    fetchVentasPorCategoria(),
+    fetchVentasPorDia()
+  ])
 })
 
 async function fetchKPIs() {
@@ -152,6 +256,7 @@ async function fetchKPIs() {
       .from('ventas')
       .select('total')
       .eq('empresa_id', authStore.empresaId)
+      .eq('estado', 'completada')
       .gte('created_at', inicioHoy)
     kpi.value.cantVentasHoy = ventasHoy?.length ?? 0
     kpi.value.ventasHoy = ventasHoy?.reduce((s, v) => s + (v.total || 0), 0) ?? 0
@@ -161,6 +266,7 @@ async function fetchKPIs() {
       .from('ventas')
       .select('total')
       .eq('empresa_id', authStore.empresaId)
+      .eq('estado', 'completada')
       .gte('created_at', inicioMes)
     kpi.value.cantVentasMes = ventasMes?.length ?? 0
     kpi.value.ventasMes = ventasMes?.reduce((s, v) => s + (v.total || 0), 0) ?? 0
@@ -184,6 +290,105 @@ async function fetchKPIs() {
     }
   } catch (e) {
     console.error('Error KPIs:', e)
+  }
+}
+
+async function fetchVentasPorCategoria() {
+  loadingChartCat.value = true
+  try {
+    const ahora = new Date()
+    let inicio = new Date(ahora.setDate(ahora.getDate() - 30))
+    if (filtroCategoria.value === 'mes') {
+      const hoy = new Date()
+      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    }
+
+    const { data, error } = await supabase
+      .from('detalle_ventas')
+      .select(`
+        subtotal,
+        productos:id_producto (
+          categoria
+        ),
+        ventas:id_venta (created_at, estado, empresa_id)
+      `)
+      .eq('ventas.empresa_id', authStore.empresaId)
+      .eq('ventas.estado', 'completada')
+      .gte('ventas.created_at', inicio.toISOString())
+
+    if (error) throw error
+
+    const agrupado: Record<string, number> = {}
+    data?.forEach((dv: any) => {
+      // Acceso correcto tras la corrección de la query
+      const catNombre = dv.productos?.categoria || 'Sin Categoría'
+      agrupado[catNombre] = (agrupado[catNombre] || 0) + (dv.subtotal || 0)
+    })
+
+    const labels = Object.keys(agrupado)
+    const values = Object.values(agrupado)
+
+    chartDataCategoria.value = {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: vibrantPalette,
+        hoverOffset: 12,
+        borderRadius: 4
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Cat:', e)
+  } finally {
+    loadingChartCat.value = false
+  }
+}
+
+async function fetchVentasPorDia() {
+  loadingChartDia.value = true
+  try {
+    const ahora = new Date()
+    let inicio = new Date()
+    
+    if (filtroDiario.value === '7d') {
+      inicio.setDate(ahora.getDate() - 7)
+    } else {
+      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+    }
+
+    const { data, error } = await supabase
+      .from('ventas')
+      .select('created_at, total')
+      .eq('empresa_id', authStore.empresaId)
+      .eq('estado', 'completada')
+      .gte('created_at', inicio.toISOString())
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+
+    // Agrupar por día
+    const agrupado: Record<string, number> = {}
+    data?.forEach(v => {
+      const d = new Date(v.created_at).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
+      agrupado[d] = (agrupado[d] || 0) + (v.total || 0)
+    })
+
+    chartDataDiario.value = {
+      labels: Object.keys(agrupado),
+      datasets: [{
+        label: 'Ventas',
+        data: Object.values(agrupado),
+        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+        borderRadius: 6,
+        barPercentage: 0.6
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Dia:', e)
+  } finally {
+    loadingChartDia.value = false
   }
 }
 
@@ -466,5 +671,79 @@ async function fetchUltimasVentas() {
     font-size: 0.7rem;
     line-height: 1.15;
   }
+}
+
+/* ─── Dashboard Charts ─── */
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.chart-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.chart-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chart-content {
+  position: relative;
+  flex: 1;
+  min-height: 300px;
+}
+
+.chart-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--bg-app-rgb), 0.5);
+  backdrop-filter: blur(2px);
+  border-radius: 1rem;
+  z-index: 10;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-container {
+    padding: 1rem;
+  }
+  .chart-header h2 {
+    font-size: 0.9rem;
+  }
+  .chart-content {
+    min-height: 250px;
+  }
+}
+
+:deep(.p-selectbutton .p-button) {
+  font-size: 0.7rem;
+  padding: 0.4rem 0.6rem;
 }
 </style>

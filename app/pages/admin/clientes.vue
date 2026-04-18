@@ -73,19 +73,19 @@
           <Tag :value="data.activo ? 'Activo' : 'Inactivo'" :severity="data.activo ? 'success' : 'secondary'" />
         </template>
       </Column>
-      <Column header="Acciones" style="width: 10rem">
+      <Column header="Acciones" style="width: 18rem">
         <template #body="{ data }">
-          <div class="flex gap-1">
-            <Button icon="pi pi-wallet" text severity="info" size="small" title="Ver cuenta" @click="abrirDeudas(data)" />
-            <Button v-if="esAdminOSupervisor" icon="pi pi-pencil" text severity="secondary" size="small" title="Editar" @click="abrirEditarCliente(data)" />
+          <div class="flex gap-2">
+            <Button icon="pi pi-wallet" label="Cuenta" text severity="info" size="small" @click="abrirDeudas(data)" />
+            <Button v-if="esAdminOSupervisor" icon="pi pi-pencil" label="Editar" text severity="secondary" size="small" @click="abrirEditarCliente(data)" />
             <Button 
               v-if="esAdminOSupervisor"
               :icon="data.activo ? 'pi pi-ban' : 'pi pi-check-circle'" 
+              :label="data.activo ? 'Desactivar' : 'Activar'"
               text 
               :severity="data.activo ? 'danger' : 'success'" 
               size="small" 
-              :title="data.activo ? 'Desactivar' : 'Activar'" 
-              @click="toggleActivo(data)" 
+              @click="toggleActivo($event, data)" 
             />
           </div>
         </template>
@@ -248,15 +248,19 @@
         <Button label="Confirmar Pago" icon="pi pi-check" severity="success" :loading="guardandoAbono" :disabled="!abonoForm.monto || abonoForm.monto <= 0" @click="confirmarAbono" />
       </template>
     </Dialog>
+
+    <ConfirmPopup />
   </div>
 </template>
 
 <script setup lang="ts">
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import { useClientesStore, type Cliente, type VentaCredito } from '~/stores/clientes'
 
 const toast = useToast()
+const confirm = useConfirm()
 const { formatMonto, formatFecha } = useFormatMonto()
 const clientesStore = useClientesStore()
 const authStore = useAuthStore()
@@ -316,12 +320,34 @@ async function guardarCliente() {
   }
 }
 
-async function toggleActivo(cliente: Cliente) {
-  try {
-    await clientesStore.toggleActivo(cliente.id, !cliente.activo)
-    toast.add({ severity: 'info', summary: cliente.activo ? 'Desactivado' : 'Activado', detail: `Cliente ${cliente.nombre}`, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: e.message, life: 5000 })
+async function toggleActivo(event: any, cliente: Cliente) {
+  if (cliente.activo) {
+    // Si se va a desactivar, pedimos confirmación
+    confirm.require({
+      target: event.currentTarget,
+      message: `¿Estás seguro de que deseas desactivar a ${cliente.nombre}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, desactivar',
+      rejectLabel: 'Cancelar',
+      acceptProps: { severity: 'danger', size: 'small' },
+      rejectProps: { severity: 'secondary', size: 'small', text: true },
+      accept: async () => {
+        try {
+          await clientesStore.toggleActivo(cliente.id, false)
+          toast.add({ severity: 'info', summary: 'Desactivado', detail: `Cliente ${cliente.nombre}`, life: 3000 })
+        } catch (e: any) {
+          toast.add({ severity: 'error', summary: 'Error', detail: e.message, life: 5000 })
+        }
+      }
+    })
+  } else {
+    // Si se va a activar, lo hacemos directo
+    try {
+      await clientesStore.toggleActivo(cliente.id, true)
+      toast.add({ severity: 'success', summary: 'Activado', detail: `Cliente ${cliente.nombre}`, life: 3000 })
+    } catch (e: any) {
+      toast.add({ severity: 'error', summary: 'Error', detail: e.message, life: 5000 })
+    }
   }
 }
 

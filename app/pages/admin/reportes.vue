@@ -10,83 +10,18 @@
     <!-- Navegación por Pestañas -->
     <Tabs value="0">
       <TabList>
-        <Tab value="0"><i class="pi pi-clock text-indigo-500 mr-2"></i>Turnos de Caja</Tab>
-        <Tab value="1"><i class="pi pi-receipt text-emerald-500 mr-2"></i>Ventas del Día</Tab>
-        <Tab value="2"><i class="pi pi-chart-bar text-amber-500 mr-2"></i>Rotación y Top 10</Tab>
-        <Tab value="3"><i class="pi pi-dollar text-primary mr-2"></i>Rentabilidad</Tab>
-        <Tab value="4"><i class="pi pi-calendar text-cyan-500 mr-2"></i>Historial de Ventas</Tab>
-        <Tab value="5"><i class="pi pi-users text-purple-500 mr-2"></i>Reporte Consolidado</Tab>
+        <Tab value="0"><i class="pi pi-receipt text-emerald-500 mr-2"></i>Ventas del Día</Tab>
+        <Tab value="1"><i class="pi pi-chart-bar text-amber-500 mr-2"></i>Rotación y Top 10</Tab>
+        <Tab value="2"><i class="pi pi-dollar text-primary mr-2"></i>Rentabilidad</Tab>
+        <Tab value="3"><i class="pi pi-calendar text-cyan-500 mr-2"></i>Historial de Ventas</Tab>
+        <Tab value="4"><i class="pi pi-users text-purple-500 mr-2"></i>Reporte Consolidado</Tab>
       </TabList>
 
       <TabPanels class="pt-6 px-0 pb-0">
         <!-- =======================
-             TAB 0: TURNOS
+             TAB 0: VENTAS DE HOY
         ======================== -->
         <TabPanel value="0">
-          <div class="flex justify-end gap-2 mb-4">
-            <Button icon="pi pi-print" label="Imprimir" @click="imprimirTurnos" size="small" variant="outlined" severity="secondary" />
-            <Button icon="pi pi-refresh" label="Actualizar" @click="fetchTurnos" :loading="loadingTurnos" size="small" variant="outlined" />
-          </div>
-          <DataTable
-            :value="turnos"
-            :loading="loadingTurnos"
-            paginator
-            :rows="10"
-            responsiveLayout="scroll"
-            class="p-datatable-sm modern-table"
-            sortField="fecha_apertura"
-            :sortOrder="-1"
-          >
-            <Column field="fecha_apertura" header="Apertura" sortable>
-              <template #body="slotProps">
-                {{ formatDate(slotProps.data.fecha_apertura) }}
-              </template>
-            </Column>
-            <Column field="fecha_cierre" header="Cierre" sortable>
-              <template #body="slotProps">
-                {{ formatDate(slotProps.data.fecha_cierre) }}
-              </template>
-            </Column>
-            <Column field="usuario" header="Cajero">
-              <template #body="slotProps">
-                <span class="text-sm font-medium">
-                  {{ perfiles[slotProps.data.id_usuario]?.nombre || 'Usuario ID: ' + slotProps.data.id_usuario?.substring(0,6) }}
-                </span>
-              </template>
-            </Column>
-            <Column field="monto_inicial" header="Fondo Inicial">
-              <template #body="slotProps">
-                <span style="color: var(--text-muted)">{{ formatMonto(slotProps.data.monto_inicial) }}</span>
-              </template>
-            </Column>
-            <Column field="monto_declarado" header="Monto Declarado">
-              <template #body="slotProps">
-                <span v-if="slotProps.data.monto_declarado !== null" class="font-bold text-emerald-500">{{ formatMonto(slotProps.data.monto_declarado) }}</span>
-                <span v-else class="text-slate-400">—</span>
-              </template>
-            </Column>
-            <Column field="diferencia" header="Diferencia">
-              <template #body="slotProps">
-                <span :class="getDiferenciaColor(slotProps.data.monto_declarado, 0, slotProps.data.monto_inicial)">
-                  {{ formatDiferencia(slotProps.data.monto_declarado, 0, slotProps.data.monto_inicial) }}
-                </span>
-              </template>
-            </Column>
-            <Column field="estado" header="Estado" sortable>
-              <template #body="slotProps">
-                <Tag :value="slotProps.data.estado.toUpperCase()" :severity="slotProps.data.estado === 'abierto' ? 'success' : 'secondary'" />
-              </template>
-            </Column>
-            <template #empty>
-              <div class="empty-state">No hay turnos registrados en el sistema.</div>
-            </template>
-          </DataTable>
-        </TabPanel>
-
-        <!-- =======================
-             TAB 1: VENTAS DE HOY
-        ======================== -->
-        <TabPanel value="1">
           <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
             <div class="flex flex-wrap items-end gap-3">
               <div>
@@ -305,9 +240,9 @@
         </TabPanel>
 
         <!-- =======================
-             TAB 2: ROTACIÓN Y TOP 10
+             TAB 1: ROTACIÓN Y TOP 10
         ======================== -->
-        <TabPanel value="2">
+        <TabPanel value="1">
           <div class="flex justify-end gap-2 mb-4">
              <Button icon="pi pi-print" label="Imprimir" @click="imprimirRotacion" size="small" variant="outlined" severity="secondary" />
              <Button icon="pi pi-refresh" label="Actualizar" @click="fetchRotacion" :loading="loadingRotacion" size="small" variant="outlined" />
@@ -370,9 +305,9 @@
         </TabPanel>
 
         <!-- =======================
-             TAB 3: RENTABILIDAD
+             TAB 2: RENTABILIDAD
         ======================== -->
-        <TabPanel value="3">
+        <TabPanel value="2">
           <div class="flex justify-between items-center mb-6">
             <div>
               <h2 class="text-lg font-bold">Resumen de Rentabilidad</h2>
@@ -419,9 +354,9 @@
         </TabPanel>
 
         <!-- =======================
-             TAB 4: HISTORIAL DE VENTAS
+             TAB 3: HISTORIAL DE VENTAS
         ======================== -->
-        <TabPanel value="4">
+        <TabPanel value="3">
           <div class="flex flex-wrap justify-between items-end gap-3 mb-4">
             <div class="flex flex-wrap gap-2 items-end">
               <div>
@@ -471,9 +406,9 @@
         </TabPanel>
 
         <!-- =======================
-             TAB 5: REPORTE CONSOLIDADO
+             TAB 4: REPORTE CONSOLIDADO
         ======================== -->
-        <TabPanel value="5">
+        <TabPanel value="4">
           <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
             <div class="flex flex-wrap items-end gap-3">
               <div>
