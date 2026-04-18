@@ -189,8 +189,10 @@
                 optionValue="value"
                 placeholder="Seleccionar"
                 :loading="categoriasStore.loading"
-                showClear
+                :class="{'p-invalid': submitted && !productoActual.categoria}"
+                required
               />
+              <small v-if="submitted && !productoActual.categoria" class="p-error">La categoría es requerida.</small>
             </div>
           </div>
 
@@ -616,7 +618,7 @@ function eliminarFoto() {
 
 async function guardarProducto() {
   submitted.value = true
-  if (!productoActual.value.nombre?.trim()) return
+  if (!productoActual.value.nombre?.trim() || !productoActual.value.categoria) return
 
   try {
     const isNew = !productoActual.value.id

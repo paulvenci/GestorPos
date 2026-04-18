@@ -172,6 +172,7 @@
 <script setup>
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
   layout: 'admin',
@@ -179,6 +180,7 @@ definePageMeta({
 })
 
 const supabase = useSupabaseClient()
+const authStore = useAuthStore()
 const toast = useToast()
 const { formatMonto, formatFechaLarga } = useFormatMonto()
 
@@ -207,6 +209,7 @@ async function cargarTurnos() {
     const { data: turnosData, error } = await supabase
       .from('turnos_caja')
       .select(`*`)
+      .eq('empresa_id', authStore.empresaId)
       .order('fecha_apertura', { ascending: false })
       .limit(100)
 
@@ -221,6 +224,7 @@ async function cargarTurnos() {
     const { data: perfiles } = await supabase
       .from('perfiles')
       .select('id, nombre')
+      .eq('empresa_id', authStore.empresaId)
       .in('id', userIds)
     
     const mapPerfiles = new Map((perfiles || []).map(p => [p.id, p.nombre || 'Desconocido']))
@@ -230,6 +234,7 @@ async function cargarTurnos() {
     const { data: ventas, error: errVentas } = await supabase
       .from('ventas')
       .select('id_turno, metodo_pago, total, pago_efectivo')
+      .eq('empresa_id', authStore.empresaId)
       .in('id_turno', turnoIds)
 
     const mapEfectivo = new Map()
@@ -252,6 +257,7 @@ async function cargarTurnos() {
     const { data: ventasHuérfanas } = await supabase
       .from('ventas')
       .select('id, id_usuario, metodo_pago, total, pago_efectivo, fecha')
+      .eq('empresa_id', authStore.empresaId)
       .is('id_turno', null)
       .limit(500)
 
@@ -342,6 +348,7 @@ async function ejecutarAprobacion(turno) {
       .from('turnos_caja')
       .update({ estado: nuevoEstado })
       .eq('id', turno.id)
+      .eq('empresa_id', authStore.empresaId)
 
     if (error) throw error
 

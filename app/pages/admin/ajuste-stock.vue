@@ -34,11 +34,14 @@
         <div class="ajuste-field-row">
           <div class="ajuste-field">
             <label>Tipo</label>
-            <SelectButton v-model="form.tipo" :options="tiposAjuste" optionLabel="label" optionValue="value" />
+            <div class="flex gap-2 w-full">
+              <Button class="flex-1" label="Ingreso" size="small" :severity="form.tipo === 'ingreso' ? 'success' : 'secondary'" :text="form.tipo !== 'ingreso'" @click="form.tipo = 'ingreso'" />
+              <Button class="flex-1" label="Egreso" size="small" :severity="form.tipo === 'egreso' ? 'danger' : 'secondary'" :text="form.tipo !== 'egreso'" @click="form.tipo = 'egreso'" />
+            </div>
           </div>
           <div class="ajuste-field">
             <label>Cantidad</label>
-            <InputNumber v-model="form.cantidad" :min="1" />
+            <InputNumber v-model="form.cantidad" :min="1" class="w-full" input-class="w-full" />
           </div>
         </div>
 
@@ -51,6 +54,8 @@
             currency="CLP"
             locale="es-CL"
             placeholder="Opcional"
+            class="w-full"
+            input-class="w-full"
           />
         </div>
 
@@ -65,12 +70,13 @@
             v-model="form.motivo"
             :options="motivosAjuste"
             placeholder="Seleccionar motivo"
+            class="w-full"
           />
         </div>
 
         <div class="ajuste-field">
           <label>Observaciones (opcional)</label>
-          <Textarea v-model="form.observaciones" rows="2" placeholder="Detalles adicionales..." />
+          <Textarea v-model="form.observaciones" rows="2" placeholder="Detalles adicionales..." class="w-full" />
         </div>
       </div>
 
@@ -588,6 +594,12 @@ async function marcarComoRevisado(id: string) {
   flex-direction: column;
   gap: 1.25rem;
   padding: 0.5rem 0;
+}
+
+.ajuste-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .ajuste-field label {

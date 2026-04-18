@@ -551,6 +551,7 @@ async function guardarEdicionVenta() {
       .from('ventas')
       .update(updateData)
       .eq('id', ventaEditando.value.id)
+      .eq('empresa_id', authStore.empresaId)
 
     if (error) throw error
 

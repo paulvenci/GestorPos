@@ -48,7 +48,10 @@
       <div class="chart-container chart-container--pie">
         <div class="chart-header">
           <h2><i class="pi pi-chart-pie" /> Ventas por Categoría</h2>
-          <SelectButton v-model="filtroCategoria" :options="opcionesFiltro" optionLabel="label" optionValue="value" size="small" @change="fetchVentasPorCategoria" />
+          <div class="flex gap-2">
+            <Button size="small" label="30 Días" :severity="filtroCategoria === '30d' ? 'primary' : 'secondary'" :text="filtroCategoria !== '30d'" @click="filtroCategoria = '30d'; fetchVentasPorCategoria()" />
+            <Button size="small" label="Mes Actual" :severity="filtroCategoria === 'mes' ? 'primary' : 'secondary'" :text="filtroCategoria !== 'mes'" @click="filtroCategoria = 'mes'; fetchVentasPorCategoria()" />
+          </div>
         </div>
         <div class="chart-content">
           <Chart type="pie" :data="chartDataCategoria" :options="chartOptionsPie" class="h-[300px]" />
@@ -60,7 +63,10 @@
       <div class="chart-container chart-container--bar">
         <div class="chart-header">
           <h2><i class="pi pi-chart-bar" /> Rendimiento Diario</h2>
-          <SelectButton v-model="filtroDiario" :options="opcionesFiltroDiario" optionLabel="label" optionValue="value" size="small" @change="fetchVentasPorDia" />
+          <div class="flex gap-2">
+            <Button size="small" label="7 Días" :severity="filtroDiario === '7d' ? 'primary' : 'secondary'" :text="filtroDiario !== '7d'" @click="filtroDiario = '7d'; fetchVentasPorDia()" />
+            <Button size="small" label="Este Mes" :severity="filtroDiario === 'mes' ? 'primary' : 'secondary'" :text="filtroDiario !== 'mes'" @click="filtroDiario = 'mes'; fetchVentasPorDia()" />
+          </div>
         </div>
         <div class="chart-content">
           <Chart type="bar" :data="chartDataDiario" :options="chartOptionsBar" class="h-[300px]" />
@@ -251,25 +257,37 @@ async function fetchKPIs() {
     const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString()
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
 
+    // Helper para paginar consultas de ventas
+    async function fetchAllVentas(desde: string) {
+      const PAGE_SIZE = 1000
+      let all: { total: number }[] = []
+      let from = 0
+      let hasMore = true
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('ventas')
+          .select('total')
+          .eq('empresa_id', authStore.empresaId)
+          .or('estado.is.null,estado.neq.cancelada')
+          .gte('created_at', desde)
+          .range(from, from + PAGE_SIZE - 1)
+        if (error) throw error
+        all = all.concat(data || [])
+        hasMore = (data?.length ?? 0) === PAGE_SIZE
+        from += PAGE_SIZE
+      }
+      return all
+    }
+
     // Ventas de hoy
-    const { data: ventasHoy } = await supabase
-      .from('ventas')
-      .select('total')
-      .eq('empresa_id', authStore.empresaId)
-      .eq('estado', 'completada')
-      .gte('created_at', inicioHoy)
-    kpi.value.cantVentasHoy = ventasHoy?.length ?? 0
-    kpi.value.ventasHoy = ventasHoy?.reduce((s, v) => s + (v.total || 0), 0) ?? 0
+    const ventasHoy = await fetchAllVentas(inicioHoy)
+    kpi.value.cantVentasHoy = ventasHoy.length
+    kpi.value.ventasHoy = ventasHoy.reduce((s, v) => s + (v.total || 0), 0)
 
     // Ventas del mes
-    const { data: ventasMes } = await supabase
-      .from('ventas')
-      .select('total')
-      .eq('empresa_id', authStore.empresaId)
-      .eq('estado', 'completada')
-      .gte('created_at', inicioMes)
-    kpi.value.cantVentasMes = ventasMes?.length ?? 0
-    kpi.value.ventasMes = ventasMes?.reduce((s, v) => s + (v.total || 0), 0) ?? 0
+    const ventasMes = await fetchAllVentas(inicioMes)
+    kpi.value.cantVentasMes = ventasMes.length
+    kpi.value.ventasMes = ventasMes.reduce((s, v) => s + (v.total || 0), 0)
 
     // Productos
     const { count: totalProds } = await supabase.from('productos')
@@ -303,31 +321,49 @@ async function fetchVentasPorCategoria() {
       inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
     }
 
-    const { data, error } = await supabase
-      .from('detalle_ventas')
-      .select(`
-        subtotal,
-        productos:id_producto (
-          categoria
-        ),
-        ventas:id_venta (created_at, estado, empresa_id)
-      `)
-      .eq('ventas.empresa_id', authStore.empresaId)
-      .eq('ventas.estado', 'completada')
-      .gte('ventas.created_at', inicio.toISOString())
-      .limit(5000)
+    const PAGE_SIZE = 1000
+    let allData: any[] = []
+    let from = 0
+    let hasMore = true
 
-    if (error) throw error
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('detalle_ventas')
+        .select(`
+          subtotal,
+          productos:id_producto (categoria),
+          ventas!inner (created_at, estado)
+        `)
+        .eq('empresa_id', authStore.empresaId)
+        .gte('ventas.created_at', inicio.toISOString())
+        .order('id', { ascending: true }) // Using id for stable pagination
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
 
     const agrupado: Record<string, number> = {}
-    data?.forEach((dv: any) => {
-      // Acceso correcto tras la corrección de la query
-      const catNombre = dv.productos?.categoria || 'Sin Categoría'
+    allData.forEach((dv: any) => {
+      // Filtrar ventas canceladas aquí para asegurar soporte de NULLs en DB
+      if (dv.ventas?.estado === 'cancelada') return
+
+      // Formatear categoría capitalizada para evitar duplicados como "bebidas" y "Bebidas"
+      let catNombre = dv.productos?.categoria?.trim() || 'Sin Categoría'
+      if (catNombre !== 'Sin Categoría') {
+        catNombre = catNombre.charAt(0).toUpperCase() + catNombre.slice(1).toLowerCase()
+      }
+
       agrupado[catNombre] = (agrupado[catNombre] || 0) + (dv.subtotal || 0)
     })
 
-    const labels = Object.keys(agrupado)
-    const values = Object.values(agrupado)
+    // Ordenar de mayor a menor subtotal (para que el gráfico se vea consistente)
+    const sortedEntries = Object.entries(agrupado).sort((a, b) => b[1] - a[1])
+    const labels = sortedEntries.map(e => e[0])
+    const values = sortedEntries.map(e => e[1])
 
     chartDataCategoria.value = {
       labels,
@@ -361,17 +397,29 @@ async function fetchVentasPorDia() {
       inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0)
     }
 
-    const { data, error } = await supabase
-      .from('ventas')
-      .select('created_at, total')
-      .eq('empresa_id', authStore.empresaId)
-      .eq('estado', 'completada')
-      .gte('created_at', inicio.toISOString())
-      .lte('created_at', finRango.toISOString())
-      .limit(10000) 
-      .order('created_at', { ascending: true })
+    // Paginar para superar el límite de 1000 filas del servidor
+    const PAGE_SIZE = 1000
+    let allData: { created_at: string | null; total: number }[] = []
+    let from = 0
+    let hasMore = true
 
-    if (error) throw error
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('created_at, total')
+        .eq('empresa_id', authStore.empresaId)
+        .or('estado.is.null,estado.neq.cancelada')
+        .gte('created_at', inicio.toISOString())
+        .lte('created_at', finRango.toISOString())
+        .order('created_at', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
 
     // 1. Generar el mapa de fechas vacío para asegurar continuidad (usando fecha local)
     const agrupado: Record<string, number> = {}
@@ -392,8 +440,8 @@ async function fetchVentasPorDia() {
     }
 
     // 2. Llenar con datos reales
-    data?.forEach(v => {
-      const d = new Date(v.created_at)
+    allData.forEach(v => {
+      const d = new Date(v.created_at!)
       const y = d.getFullYear()
       const m = String(d.getMonth() + 1).padStart(2, '0')
       const day = String(d.getDate()).padStart(2, '0')

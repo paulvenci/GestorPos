@@ -343,6 +343,7 @@ async function fetchHistorial() {
     let query = supabase
       .from('turnos_caja')
       .select('*')
+      .eq('empresa_id', authStore.empresaId)
       .order('fecha_apertura', { ascending: false })
       .limit(50)
 
@@ -369,6 +370,7 @@ async function fetchHistorial() {
       const { data: perfiles } = await supabase
         .from('perfiles')
         .select('id, nombre')
+        .eq('empresa_id', authStore.empresaId)
         .in('id', userIds)
 
       const perfilMap = new Map((perfiles || []).map((p: any) => [p.id, p.nombre]))
@@ -380,6 +382,7 @@ async function fetchHistorial() {
       const { data: ventasRango } = await supabase
         .from('ventas')
         .select('id_turno, total, fecha')
+        .eq('empresa_id', authStore.empresaId)
         .gte('fecha', minFecha)
         
       const mapInternas = new Map()
@@ -395,6 +398,7 @@ async function fetchHistorial() {
       const { data: ventasAfuera } = await supabase
         .from('ventas')
         .select('id, id_usuario, total, fecha, metodo_pago, pago_efectivo')
+        .eq('empresa_id', authStore.empresaId)
         .is('id_turno', null)
         .gte('fecha', minFecha)
       
@@ -570,6 +574,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       ventasTurno = await fetchVentas(supabase
         .from('ventas')
         .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+        .eq('empresa_id', authStore.empresaId)
         .is('id_turno', null)
         .eq('id_usuario', turno.id_usuario)
         .gte('fecha', inicioDia)
@@ -579,6 +584,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       ventasTurno = await fetchVentas(supabase
         .from('ventas')
         .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+        .eq('empresa_id', authStore.empresaId)
         .eq('id_turno', turnoId))
     }
   } catch (err: any) {
@@ -596,6 +602,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
     const { data } = await supabase
       .from('ventas')
       .select('id, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+      .eq('empresa_id', authStore.empresaId)
       .is('id_turno', null)
       .eq('id_usuario', turno.id_usuario)
       .gte('fecha', inicioDiaComp)
