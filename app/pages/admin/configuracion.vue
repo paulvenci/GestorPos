@@ -339,7 +339,7 @@ const monedas = [
 ]
 
 const configGeneral = ref({
-  nombreNegocio: 'Mi Negocio',
+  nombreNegocio: authStore.nombreEmpresa || '',
   moneda: 'CLP',
   iva: 19
 })
@@ -353,6 +353,7 @@ const seccionesDisponibles: { label: string, value: SectionKey }[] = [
   { label: 'Categorías', value: 'categorias' },
   { label: 'Clientes', value: 'clientes' },
   { label: 'Reportes', value: 'reportes' },
+  { label: 'Compras', value: 'compras' },
   { label: 'Configuración', value: 'configuracion' }
 ]
 
@@ -362,6 +363,10 @@ onMounted(() => {
   fetchUsuarios()
   configStore.fetchConfig().then(() => {
     rolePermissionsDraft.value = normalizeRolePermissions(globalConfig.value?.role_permissions)
+    // Sincronizar IVA si existe en globalConfig
+    if (globalConfig.value?.iva) {
+      configGeneral.value.iva = globalConfig.value.iva
+    }
   })
 })
 
@@ -387,17 +392,37 @@ watch(
 
 // FunciÃ³n para guardar globales
 async function guardarConfiguracion() {
-  if (!globalConfig.value) return
+  if (!globalConfig.value || !authStore.empresaId) return
+  configLoading.value = true
   try {
+    // 1. Actualizar nombre de la empresa en la tabla 'empresas'
+    const { error: errEmpresa } = await supabase
+      .from('empresas')
+      .update({ nombre: configGeneral.value.nombreNegocio })
+      .eq('id', authStore.empresaId)
+    
+    if (errEmpresa) throw errEmpresa
+
+    // 2. Actualizar configuración técnica e IVA
     await configStore.saveConfig({
       margen_ganancia_defecto: globalConfig.value.margen_ganancia_defecto,
       stock_minimo_defecto: globalConfig.value.stock_minimo_defecto,
       role_permissions: normalizeRolePermissions(rolePermissionsDraft.value),
-      impresion_tamano_fuente: globalConfig.value.impresion_tamano_fuente
+      impresion_tamano_fuente: globalConfig.value.impresion_tamano_fuente,
+      iva: configGeneral.value.iva
     })
-    toast.add({ severity: 'success', summary: 'Guardado', detail: 'ConfiguraciÃ³n actualizada en todos los dispositivos.', life: 3000 })
+
+    // 3. Actualizar nombre en el authStore local para que cambie en la UI inmediatamente
+    if (authStore.perfil?.empresa) {
+      authStore.perfil.empresa.nombre = configGeneral.value.nombreNegocio
+    }
+
+    toast.add({ severity: 'success', summary: 'Guardado', detail: 'Configuración y nombre del negocio actualizados.', life: 3000 })
   } catch (error: any) {
-    toast.add({ severity: 'error', summary: 'Error interno', detail: 'No tienes permiso o error validando', life: 4000 })
+    console.error('Error al guardar:', error)
+    toast.add({ severity: 'error', summary: 'Error', detail: error.message || 'No se pudo guardar la configuración.', life: 4000 })
+  } finally {
+    configLoading.value = false
   }
 }
 

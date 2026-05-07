@@ -1,5 +1,5 @@
 <template>
-  <div class="pos-layout-wrapper">
+  <div class="pos-layout-wrapper" :class="{ 'pos-layout--collapsed': sidebarCollapsed }">
     <!-- Backdrop overlay (mobile) -->
     <div 
       v-if="sidebarOpen" 
@@ -8,11 +8,11 @@
     />
 
     <!-- Sidebar de Navegacion -->
-    <aside class="pos-sidebar" :class="{ 'pos-sidebar--open': sidebarOpen }">
+    <aside class="pos-sidebar" :class="{ 'pos-sidebar--open': sidebarOpen, 'pos-sidebar--collapsed': sidebarCollapsed }">
       <div class="pos-sidebar-logo">
         <div class="pos-sidebar-logo-inner">
           <span class="pos-logo-icon">&#9889;</span>
-          <span class="pos-logo-text">GestorPOS</span>
+          <span class="pos-logo-text sidebar-label">GestorPOS</span>
         </div>
         <Button 
           :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'" 
@@ -52,6 +52,23 @@
           <i class="pi pi-sync" />
           <span>Ajuste Stock</span>
         </NuxtLink>
+        <NuxtLink v-if="canAccess('ajuste_stock')" to="/admin/recepcion-mercaderia" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-camera" />
+          <span>Recepción IA</span>
+        </NuxtLink>
+        
+        <div class="pos-nav-divider" />
+        
+        <NuxtLink v-if="canAccess('compras')" to="/admin/compras" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-shopping-bag" />
+          <span>Órdenes de Compra</span>
+        </NuxtLink>
+        <NuxtLink v-if="canAccess('compras')" to="/admin/proveedores" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-building" />
+          <span>Proveedores</span>
+        </NuxtLink>
+
+        <div class="pos-nav-divider" />
         <NuxtLink v-if="canAccess('categorias')" to="/admin/categorias" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-tags" />
           <span>Categorías</span>
@@ -86,6 +103,13 @@
           <span>Egreso Rápido</span>
         </button>
       </nav>
+
+      <!-- Botón colapsar sidebar (solo desktop) -->
+      <button class="pos-sidebar-collapse-btn" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'">
+        <i :class="sidebarCollapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'" />
+        <span class="sidebar-label">{{ sidebarCollapsed ? '' : 'Colapsar' }}</span>
+      </button>
+
       <div class="pos-sidebar-version">Version v{{ appVersion }}</div>
 
       <div class="pos-sidebar-footer">
@@ -272,6 +296,7 @@ const posStore = usePosStore()
 const configStore = useConfigStore()
 const { isDark, toggleDark, initDark } = useDarkMode()
 const sidebarOpen = ref(false)
+const sidebarCollapsed = ref(false)
 const isOnline = ref(import.meta.client ? navigator.onLine : true)
 const notificacionesRef = ref<HTMLElement | null>(null)
 const route = useRoute()
@@ -280,16 +305,20 @@ const appVersion = computed(() => String(runtimeConfig.public.appVersion || 'dev
 const mostrarConsultaPrecio = useState<boolean>('consulta-precio-open', () => false)
 const mostrarEgresoRapido = ref(false)
 const seccionActual = computed(() => {
-  if (route.path.startsWith('/superadmin/empresas')) return 'Negocios'
-  if (route.path === '/') return 'Dashboard'
-  if (route.path.startsWith('/pos')) return 'Punto de Venta'
-  if (route.path.startsWith('/caja')) return 'Caja'
-  if (route.path.startsWith('/admin/productos')) return 'Inventario'
-  if (route.path.startsWith('/admin/ajuste-stock')) return 'Ajuste Stock'
-  if (route.path.startsWith('/admin/categorias')) return 'Categorías'
-  if (route.path.startsWith('/admin/reportes')) return 'Reportes'
-  if (route.path.startsWith('/admin/clientes')) return 'Clientes'
-  if (route.path.startsWith('/admin/configuracion')) return 'Configuración'
+  const path = route.path
+  if (path.startsWith('/superadmin/empresas')) return 'Negocios'
+  if (path === '/') return 'Dashboard'
+  if (path.startsWith('/pos')) return 'Punto de Venta'
+  if (path.startsWith('/caja')) return 'Caja'
+  if (path.startsWith('/admin/productos')) return 'Inventario'
+  if (path.startsWith('/admin/ajuste-stock')) return 'Ajuste Stock'
+  if (path.startsWith('/admin/recepcion-mercaderia')) return 'Recepción de Mercadería'
+  if (path.startsWith('/admin/compras')) return 'Órdenes de Compra'
+  if (path.startsWith('/admin/proveedores')) return 'Proveedores'
+  if (path.startsWith('/admin/categorias')) return 'Categorías'
+  if (path.startsWith('/admin/reportes')) return 'Reportes'
+  if (path.startsWith('/admin/clientes')) return 'Clientes'
+  if (path.startsWith('/admin/configuracion')) return 'Configuración'
   return 'GestorPOS'
 })
 
@@ -491,9 +520,85 @@ async function instalarApp() {
   flex-direction: column;
   padding: 1.5rem 1rem;
   flex-shrink: 0;
-  transition: transform 0.3s ease;
+  transition: width 0.3s ease, padding 0.3s ease;
   z-index: 999;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Sidebar colapsado (solo desktop) */
+.pos-sidebar--collapsed {
+  width: 64px;
+  padding: 1.5rem 0.5rem;
+}
+
+.pos-sidebar--collapsed .sidebar-label,
+.pos-sidebar--collapsed .pos-nav-shortcut,
+.pos-sidebar--collapsed .pos-sidebar-version,
+.pos-sidebar--collapsed .pos-user-info div,
+.pos-sidebar--collapsed .pos-sidebar-footer .pos-logout-btn,
+.pos-sidebar--collapsed .pos-nav-item span,
+.pos-sidebar--collapsed .pos-nav-item--egreso span {
+  display: none;
+}
+
+.pos-sidebar--collapsed .pos-nav-item {
+  justify-content: center;
+  padding: 0.65rem;
+}
+
+.pos-sidebar--collapsed .pos-nav-item i {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.pos-sidebar--collapsed .pos-sidebar-logo {
+  justify-content: center;
+}
+
+.pos-sidebar--collapsed .pos-sidebar-logo-inner {
+  justify-content: center;
+}
+
+.pos-sidebar--collapsed .pos-sidebar-logo .p-button {
+  display: none;
+}
+
+.pos-sidebar--collapsed .pos-sidebar-footer {
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.pos-sidebar--collapsed .pos-user-info {
+  justify-content: center;
+}
+
+/* Botón de colapsar */
+.pos-sidebar-collapse-btn {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  border: none;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-muted);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  justify-content: center;
+}
+
+.pos-sidebar-collapse-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--text-primary);
+}
+
+@media (min-width: 769px) {
+  .pos-sidebar-collapse-btn {
+    display: flex;
+  }
 }
 
 .pos-sidebar-logo {

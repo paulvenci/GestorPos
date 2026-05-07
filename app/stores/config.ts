@@ -9,6 +9,7 @@ interface AppConfigState {
   stock_minimo_defecto: number
   role_permissions: RolePermissionsMap
   impresion_tamano_fuente: number
+  iva?: number
 }
 
 export const useConfigStore = defineStore('config', () => {
@@ -20,7 +21,8 @@ export const useConfigStore = defineStore('config', () => {
     margen_ganancia_defecto: 30,
     stock_minimo_defecto: 5,
     role_permissions: defaultRolePermissions,
-    impresion_tamano_fuente: 11
+    impresion_tamano_fuente: 11,
+    iva: 19
   })
 
   const loading = ref(false)
@@ -49,6 +51,7 @@ export const useConfigStore = defineStore('config', () => {
         configuracion.value.stock_minimo_defecto = row.stock_minimo_defecto || 5
         configuracion.value.role_permissions = normalizeRolePermissions(row.role_permissions)
         configuracion.value.impresion_tamano_fuente = row.impresion_tamano_fuente || 11
+        configuracion.value.iva = row.iva || 19
       }
     } catch (err) {
       console.error('Error cargando configuracion', err)
@@ -62,6 +65,7 @@ export const useConfigStore = defineStore('config', () => {
     stock_minimo_defecto: number
     role_permissions?: RolePermissionsMap
     impresion_tamano_fuente?: number
+    iva?: number
   }) => {
     loading.value = true
     try {
@@ -81,6 +85,7 @@ export const useConfigStore = defineStore('config', () => {
         stock_minimo_defecto: nuevosAjustes.stock_minimo_defecto,
         role_permissions: rolePermissions,
         impresion_tamano_fuente: size,
+        iva: nuevosAjustes.iva || configuracion.value.iva || 19,
         updated_at: new Date().toISOString()
       }, { onConflict: 'empresa_id' })
 
@@ -90,7 +95,8 @@ export const useConfigStore = defineStore('config', () => {
         margen_ganancia_defecto: nuevosAjustes.margen_ganancia_defecto,
         stock_minimo_defecto: nuevosAjustes.stock_minimo_defecto,
         role_permissions: rolePermissions,
-        impresion_tamano_fuente: size
+        impresion_tamano_fuente: size,
+        iva: nuevosAjustes.iva || configuracion.value.iva || 19
       }
     } catch (err) {
       console.error('Error guardando configuracion', err)

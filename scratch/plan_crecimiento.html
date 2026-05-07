@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Plan Estratégico de Crecimiento — Panadería y Minimarket</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #1a1a2e;
+      line-height: 1.65;
+      font-size: 12px;
+      padding: 40px 50px;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+    }
+    @media print {
+      body { padding: 0; font-size: 11px; }
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 900;
+      color: #0f0f23;
+      border-bottom: 4px solid #6366f1;
+      padding-bottom: 12px;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-size: 16px;
+      color: #4338ca;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .meta {
+      color: #6b7280;
+      font-size: 11px;
+      font-style: italic;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #312e81;
+      margin-top: 32px;
+      margin-bottom: 14px;
+      border-left: 5px solid #6366f1;
+      padding-left: 14px;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4338ca;
+      margin-top: 22px;
+      margin-bottom: 10px;
+    }
+    h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #4f46e5;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px 0;
+      font-size: 11px;
+    }
+    th {
+      background: #312e81;
+      color: white;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 10.5px;
+    }
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    tr:nth-child(even) td {
+      background: #f5f3ff;
+    }
+    pre {
+      background: #1e1b4b;
+      color: #c7d2fe;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 10.5px;
+      line-height: 1.55;
+      overflow-x: auto;
+      margin: 12px 0;
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+    .alert {
+      padding: 14px 18px;
+      border-radius: 0 10px 10px 0;
+      margin: 16px 0;
+      font-size: 11.5px;
+      line-height: 1.6;
+    }
+    .alert-important {
+      background: #fef3c7;
+      border-left: 5px solid #f59e0b;
+    }
+    .alert-tip {
+      background: #ecfdf5;
+      border-left: 5px solid #10b981;
+    }
+    .alert-warning {
+      background: #fff1f2;
+      border-left: 5px solid #ef4444;
+    }
+    .alert-key {
+      background: #eef2ff;
+      border-left: 5px solid #6366f1;
+    }
+    .alert strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    hr {
+      border: none;
+      border-top: 2px solid #e5e7eb;
+      margin: 26px 0;
+    }
+    ul, ol {
+      padding-left: 22px;
+      margin: 8px 0;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    p {
+      margin-bottom: 8px;
+    }
+    strong { color: #1e1b4b; }
+    em { color: #4338ca; }
+    .checklist {
+      list-style: none;
+      padding-left: 4px;
+    }
+    .checklist li {
+      padding-left: 22px;
+      position: relative;
+      margin-bottom: 6px;
+    }
+    .checklist li::before {
+      content: '☐';
+      position: absolute;
+      left: 0;
+      font-size: 13px;
+    }
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .print-btn:hover {
+      background: #4f46e5;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(99,102,241,0.5);
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Guardar como PDF</button>
+
+<h1>📊 Plan Estratégico de Crecimiento de Ventas</h1>
+<p class="subtitle">Panadería y Minimarket — Basado en Datos Reales del POS</p>
+<p class="meta">
+  Elaborado el 21 de abril de 2026 a partir del análisis completo de la base de datos GestorPOS.<br>
+  Período analizado: ~5 días de operación &nbsp;|&nbsp; 1,000 transacciones &nbsp;|&nbsp; $2,832,470 CLP en ventas.
+</p>
+
+<hr>
+
+<h2>1. 🔍 Diagnóstico del Negocio (Situación Actual)</h2>
+
+<h3>Métricas Clave</h3>
+<table>
+  <tr><th>Métrica</th><th>Valor Actual</th><th>Observación</th></tr>
+  <tr><td><strong>Ventas totales (período)</strong></td><td>$2,832,470</td><td>~5 días de operación</td></tr>
+  <tr><td><strong>Venta diaria promedio</strong></td><td>$708,118</td><td>Base sólida</td></tr>
+  <tr><td><strong>Ticket promedio</strong></td><td>$2,832</td><td>⚠️ <strong>MUY BAJO</strong></td></tr>
+  <tr><td><strong>Transacciones/día</strong></td><td>~250</td><td>Buen flujo de clientes</td></tr>
+  <tr><td><strong>Items por carrito</strong></td><td>1.9</td><td>⚠️ Casi todos compran 1-2 cosas</td></tr>
+  <tr><td><strong>Productos activos</strong></td><td>848</td><td>Catálogo amplio</td></tr>
+  <tr><td><strong>Productos vendidos</strong></td><td>320 de 848</td><td>Solo el 37.7% se vende</td></tr>
+  <tr><td><strong>Productos nunca vendidos</strong></td><td>528</td><td>62.3% es peso muerto</td></tr>
+  <tr><td><strong>Productos sin stock</strong></td><td>82</td><td>Oportunidad perdida</td></tr>
+</table>
+
+<div class="alert alert-important">
+  <strong>⚠️ Los 3 problemas principales identificados:</strong>
+  1. <strong>Ticket promedio extremadamente bajo ($2,832)</strong> — Los clientes compran pocas cosas<br>
+  2. <strong>48.2% de las ventas son de 1 solo producto</strong> — No hay venta cruzada<br>
+  3. <strong>62% del catálogo no se mueve</strong> — Capital inmovilizado en estantes
+</div>
+
+<hr>
+
+<h2>2. 📈 Análisis Detallado</h2>
+
+<h3>2.1 🕐 Horas Pico y Horas Muertas</h3>
+<pre>
+Hora     Ventas   Ingreso      Clasificación
+─────────────────────────────────────────────────
+ 7:00      87    $216,490      🔥 HORA PICO AM
+ 8:00      90    $245,959      🔥 HORA PICO AM
+ 9:00      62    $212,113      ▲ Alto
+10:00      55    $176,435      ● Medio
+11:00      62    $198,740      ● Medio
+12:00      60    $160,340      ● Medio
+13:00      61    $175,310      ● Medio
+14:00      53    $128,240      ▼ Bajo
+15:00      44    $112,580      ❄️ HORA MUERTA
+16:00      74    $214,690      ▲ Alto (repunte)
+17:00      82    $212,100      ▲ Alto
+18:00     106    $292,120      🔥🔥 HORA PICO PM
+19:00     105    $296,210      🔥🔥 HORA PICO PM
+20:00      43    $111,640      ▼ Bajo
+21:00       7    $ 17,540      ❄️ Cierre</pre>
+
+<p><strong>Hallazgos:</strong></p>
+<ul>
+  <li><strong>2 picos claros:</strong> 7-9 AM (mañana) y 18-19 PM (tarde/noche)</li>
+  <li><strong>Hora muerta:</strong> 14:00-15:00 — baja significativa</li>
+  <li><strong>La hora más rentable es 19:00</strong> ($296,210)</li>
+  <li>El repunte de las 16-17 hrs sugiere demanda de "once" (merienda)</li>
+</ul>
+
+<h3>2.2 📅 Días de la Semana</h3>
+<table>
+  <tr><th>Día</th><th>Ventas</th><th>Ingreso</th><th>Observación</th></tr>
+  <tr><td><strong>Sábado</strong></td><td>278</td><td>$879,100</td><td>🏆 <strong>Mejor día</strong></td></tr>
+  <tr><td><strong>Viernes</strong></td><td>252</td><td>$672,350</td><td>Segundo mejor</td></tr>
+  <tr><td><strong>Domingo</strong></td><td>224</td><td>$616,320</td><td>Tercero</td></tr>
+  <tr><td><strong>Jueves</strong></td><td>128</td><td>$356,770</td><td>Medio</td></tr>
+  <tr><td><strong>Lunes</strong></td><td>118</td><td>$307,930</td><td>Más bajo</td></tr>
+</table>
+
+<div class="alert alert-tip">
+  <strong>💡 Dato clave:</strong>
+  Los fines de semana generan ~53% de los ingresos. El sábado es el rey. Hay espacio importante para crecer en días de semana.
+</div>
+
+<h3>2.3 🏆 Productos Estrella (Top Generadores de Ingreso)</h3>
+<table>
+  <tr><th>#</th><th>Producto</th><th>Ingreso</th><th>Uds</th><th>Margen</th><th>Categoría</th></tr>
+  <tr><td>1</td><td><strong>Pan corriente</strong></td><td>$562,608</td><td>239 kg</td><td>34.0%</td><td>Abarrotes</td></tr>
+  <tr><td>2</td><td>Huevos</td><td>$31,840</td><td>97</td><td>33.0%</td><td>Abarrotes</td></tr>
+  <tr><td>3</td><td>Empanadas de carne</td><td>$26,000</td><td>13</td><td><strong>99.4%</strong></td><td>Abarrotes</td></tr>
+  <tr><td>4</td><td>Donas</td><td>$25,200</td><td>21</td><td>N/A</td><td>Abarrotes</td></tr>
+  <tr><td>5</td><td>Queso de campo</td><td>$20,500</td><td>1.7 kg</td><td>35.4%</td><td>Lácteos</td></tr>
+  <tr><td>6</td><td>Palta</td><td>$18,500</td><td>2.5 kg</td><td>35.4%</td><td>Frutas</td></tr>
+  <tr><td>7</td><td>Cecina Lisa Pacel</td><td>$16,530</td><td>1.5 kg</td><td>N/A</td><td>Cecinas</td></tr>
+  <tr><td>8</td><td>Lays</td><td>$16,230</td><td>3</td><td>35.3%</td><td>Snacks</td></tr>
+  <tr><td>9</td><td>Torta En Caja</td><td>$15,000</td><td>6</td><td>N/A</td><td>Snacks</td></tr>
+  <tr><td>10</td><td>Cecina Pacel Q. Chancho</td><td>$14,220</td><td>1.2 kg</td><td>N/A</td><td>Cecinas</td></tr>
+</table>
+
+<div class="alert alert-important">
+  <strong>⚠️ El pan corriente representa el 19.9% de todos los ingresos.</strong>
+  Es tu ancla de tráfico — la gente viene por el pan. La pregunta clave es: <strong>¿qué más les podemos vender cuando vienen por el pan?</strong>
+</div>
+
+<h3>2.4 🛒 Análisis de Canasta (Qué compran juntos)</h3>
+<table>
+  <tr><th>Combinación</th><th>Frecuencia</th></tr>
+  <tr><td>Pan + Huevos</td><td>17 veces</td></tr>
+  <tr><td>Pan + Cecina Lisa Pacel</td><td>11 veces</td></tr>
+  <tr><td>Pan + Donas</td><td>10 veces</td></tr>
+  <tr><td>Pan + Palta</td><td>10 veces</td></tr>
+  <tr><td>Pan + Cecina Jamonada</td><td>8 veces</td></tr>
+  <tr><td>Pan + Queso crema</td><td>6 veces</td></tr>
+  <tr><td>Pan + Mantequilla</td><td>5 veces</td></tr>
+  <tr><td>Pan + Queso Chancho</td><td>5 veces</td></tr>
+  <tr><td>Pan + Jamón sandwich</td><td>5 veces</td></tr>
+</table>
+<p><strong>Patrón claro:</strong> El cliente tipo compra <strong>pan + 1 acompañamiento</strong> (cecina, queso, palta, huevos). Esto es una oportunidad enorme de venta cruzada.</p>
+
+<h3>2.5 📂 Categorías por Rendimiento</h3>
+<table>
+  <tr><th>Categoría</th><th>Ingreso</th><th>% del Total</th><th>Margen</th></tr>
+  <tr><td>Abarrotes (inc. pan)</td><td>$839,268</td><td>29.6%</td><td>50.4%</td></tr>
+  <tr><td>Snacks</td><td>$141,550</td><td>5.0%</td><td><strong>85.9%</strong></td></tr>
+  <tr><td>Bebidas</td><td>$111,550</td><td>3.9%</td><td><strong>95.5%</strong></td></tr>
+  <tr><td>Lácteos</td><td>$107,480</td><td>3.8%</td><td>94.9%</td></tr>
+  <tr><td>Cecinas</td><td>$86,660</td><td>3.1%</td><td><strong>84.4%</strong></td></tr>
+  <tr><td>Congelados</td><td>$83,220</td><td>2.9%</td><td>70.5%</td></tr>
+  <tr><td>Limpieza</td><td>$38,570</td><td>1.4%</td><td>35.8%</td></tr>
+  <tr><td>Aseo personal</td><td>$28,970</td><td>1.0%</td><td>36.9%</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>3. 🚀 PLAN DE ACCIÓN PARA AUMENTAR VENTAS</h2>
+
+<h3>🎯 ESTRATEGIA 1: Aumentar el Ticket Promedio (de $2,832 a $4,500+)</h3>
+<p><strong>Meta: +60% ticket promedio = +$425K/día adicional</strong></p>
+
+<h4>Acciones inmediatas (Semana 1-2):</h4>
+
+<p><strong>1. "Combo Desayuno/Once"</strong> — Crear combos visibles:</p>
+<ul>
+  <li><strong>Combo Pan + Cecina + Bebida</strong> → Descuento de $200-300 vs compra individual</li>
+  <li><strong>Combo Pan + Palta + Huevos</strong> → "Desayuno completo"</li>
+  <li><strong>Combo Pan + Mantequilla + Queso Crema</strong> → "Pack Once"</li>
+  <li>Poner cartel grande en la caja y en la zona del pan</li>
+</ul>
+
+<p><strong>2. Zona de "impulso" en la caja:</strong></p>
+<ul>
+  <li>Colocar al lado de la caja: Alfajores ($700-750), Coyak ($150), Braunichoc ($750), chicles</li>
+  <li>Los snacks tienen <strong>margen del 85-95%</strong> — cada venta impulso es pura ganancia</li>
+  <li>Asegurar que Quequitos Mini ($250) y Calzones Rotos ($200) estén siempre visibles</li>
+</ul>
+
+<p><strong>3. Sugerencia verbal del cajero:</strong></p>
+<ul>
+  <li>Cuando alguien compra pan: <em>"¿Le agrego unos huevos/palta/cecina?"</em></li>
+  <li>Entrenar al cajero para <strong>SIEMPRE</strong> ofrecer un producto complementario</li>
+  <li>Si solo el 20% acepta → ~50 ventas extra/día × $2,000 = <strong>$100K/día extra</strong></li>
+</ul>
+
+<h4>Acciones medio plazo (Semana 3-4):</h4>
+<p><strong>4. Programa "2do producto con descuento":</strong></p>
+<ul>
+  <li>Ej: <em>"Lleva tu pan y agrega cualquier cecina con 10% off"</em></li>
+  <li>Como las cecinas tienen buen margen, el descuento se absorbe fácilmente</li>
+</ul>
+
+<hr>
+
+<h3>🎯 ESTRATEGIA 2: Aumentar el Flujo en Horas Muertas</h3>
+<p><strong>Meta: +30 transacciones/día en horarios bajos</strong></p>
+
+<p><strong>1. Promoción "Hora Feliz" (14:00-16:00):</strong></p>
+<ul>
+  <li>Las empanadas tienen <strong>99.4% de margen</strong> → "2 empanadas por $3,500" (vs $4,000)</li>
+  <li>Café/bebida caliente + pastel a precio combo en la tarde</li>
+</ul>
+
+<p><strong>2. "Pan fresco de la tarde" (16:00-17:00):</strong></p>
+<ul>
+  <li>Hornear una tanda de pan fresco a las 16:00</li>
+  <li>Comunicar: <em>"Pan recién salido del horno a las 4 PM"</em></li>
+  <li>Capitalizar el repunte natural de las 16-17 hrs</li>
+</ul>
+
+<p><strong>3. Lunes y Martes — Días de ofertas:</strong></p>
+<ul>
+  <li>Ofrecer "Lunes de Cecinas" o "Martes de Lácteos" con 5-10% descuento</li>
+  <li>Atraer flujo en los días más bajos de la semana</li>
+</ul>
+
+<hr>
+
+<h3>🎯 ESTRATEGIA 3: Optimizar el Catálogo (528 productos muertos)</h3>
+<p><strong>Meta: Liberar capital + espacio para productos que SÍ venden</strong></p>
+
+<div class="alert alert-warning">
+  <strong>🚨 528 de 848 productos (62%) NUNCA se han vendido.</strong>
+  Esto es dinero estancado en estantes que no genera retorno.
+</div>
+
+<ul>
+  <li><strong>Auditoría inmediata:</strong> Identificar los 528 productos sin ventas. Clasificar en nuevos vs muertos.</li>
+  <li><strong>Liquidar muertos:</strong> Ofertas de 20-30% off o devolver al proveedor.</li>
+  <li><strong>Reducir SKUs:</strong> Consolidar variantes innecesarias. Limpiar categorías duplicadas.</li>
+  <li><strong>Reinvertir en lo que SÍ vende:</strong> Nunca quedarse sin stock de los Top 20. <strong>82 productos sin stock = ventas perdidas cada día.</strong></li>
+</ul>
+
+<hr>
+
+<h3>🎯 ESTRATEGIA 4: Maximizar los Fines de Semana</h3>
+<p><em>El sábado genera $879K vs $308K del lunes — 2.8x más</em></p>
+<ul>
+  <li><strong>"Pack Fin de Semana":</strong> cecinas + pan + salsas para asado/parrilla</li>
+  <li><strong>Tortas/pasteles más visibles:</strong> Torta en Caja genera $2,500/ticket</li>
+  <li><strong>Preparación:</strong> Doble stock de pan, cecinas, quesos y empanadas para sáb/dom</li>
+</ul>
+
+<hr>
+
+<h3>🎯 ESTRATEGIA 5: Potenciar Productos de Alto Margen</h3>
+<table>
+  <tr><th>Producto/Categoría</th><th>Margen</th><th>Acción Recomendada</th></tr>
+  <tr><td>Empanadas de carne</td><td><strong>99.4%</strong></td><td>🔥 Aumentar producción, combo, visibilidad máxima</td></tr>
+  <tr><td>Snacks (categoría)</td><td><strong>85.9%</strong></td><td>Expandir variedad, zona de impulso en caja</td></tr>
+  <tr><td>Bebidas</td><td><strong>95.5%</strong></td><td>Asegurar stock frío, promocionar con combos</td></tr>
+  <tr><td>Cecinas</td><td><strong>84.4%</strong></td><td>Sugerir siempre con pan, crear "picada lista"</td></tr>
+  <tr><td>Confitería</td><td><strong>74.3%</strong></td><td>Alfajores y chocolates en caja</td></tr>
+  <tr><td>Galletas</td><td><strong>67.7%</strong></td><td>Poner cerca del pan/pastelería</td></tr>
+</table>
+
+<div class="alert alert-tip">
+  <strong>💡 Las Empanadas de Carne son tu producto más rentable.</strong>
+  Cada empanada de $2,000 tiene un costo de ~$12. Vender 10 más por día = <strong>$20K extra de utilidad pura diaria.</strong>
+</div>
+
+<hr>
+
+<h3>🎯 ESTRATEGIA 6: Diversificar Métodos de Pago</h3>
+<ul>
+  <li><strong>Promover transferencias</strong> con cartel visible del QR</li>
+  <li><strong>Aceptar tarjeta sin mínimo</strong> — no poner barreras de compra</li>
+  <li><strong>Considerar débito contactless</strong> — reduce fricciones y tiempos</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2>4. 📋 Resumen de Impacto Esperado</h2>
+
+<table>
+  <tr><th>Estrategia</th><th>Impacto Diario Estimado</th><th>Prioridad</th></tr>
+  <tr><td><strong>Aumentar ticket</strong> (combos + impulso + sugerencia)</td><td>+$150K - $250K</td><td>🔴 <strong>ALTA</strong></td></tr>
+  <tr><td><strong>Hora feliz + pan de la tarde</strong></td><td>+$50K - $80K</td><td>🟡 MEDIA</td></tr>
+  <tr><td><strong>Limpiar catálogo muerto</strong></td><td>Liberar capital + espacio</td><td>🔴 <strong>ALTA</strong></td></tr>
+  <tr><td><strong>Nunca sin stock Top 20</strong></td><td>+$30K - $50K</td><td>🔴 <strong>ALTA</strong></td></tr>
+  <tr><td><strong>Combo fin de semana</strong></td><td>+$50K sáb/dom</td><td>🟡 MEDIA</td></tr>
+  <tr><td><strong>Potenciar empanadas</strong></td><td>+$20K - $40K utilidad</td><td>🔴 <strong>ALTA</strong></td></tr>
+</table>
+
+<div class="alert alert-important">
+  <strong>🎯 Meta Global:</strong>
+  De <strong>$708K/día</strong> actual → <strong>$950K - $1.1M/día</strong> en 30 días = <strong>+34% a +55% de crecimiento</strong>
+</div>
+
+<hr>
+
+<h2>5. 🗓️ Cronograma de Implementación</h2>
+
+<h3>Semana 1 (Inmediato — Costo $0)</h3>
+<ul class="checklist">
+  <li>Cajero ofrece producto complementario en cada venta de pan</li>
+  <li>Mover snacks y confitería a la zona de caja</li>
+  <li>Reponer stock de los 82 productos agotados (priorizando Top 20)</li>
+  <li>Crear cartel de combos (pan+cecina, pan+huevos, etc.)</li>
+</ul>
+
+<h3>Semana 2</h3>
+<ul class="checklist">
+  <li>Implementar "Hora Feliz" de empanadas 14:00-16:00</li>
+  <li>Hornear pan fresco a las 16:00 (comunicar con cartel)</li>
+  <li>Iniciar auditoría de los 528 productos sin movimiento</li>
+</ul>
+
+<h3>Semana 3-4</h3>
+<ul class="checklist">
+  <li>Liquidar productos muertos (ofertas de limpieza de inventario)</li>
+  <li>Implementar promociones por día de semana</li>
+  <li>Evaluar resultados y ajustar</li>
+</ul>
+
+<h3>Mes 2</h3>
+<ul class="checklist">
+  <li>Analizar datos nuevos del POS para medir impacto</li>
+  <li>Ajustar combos según resultados</li>
+  <li>Considerar ampliar horario si hay demanda post 21:30</li>
+</ul>
+
+<hr>
+
+<h2>6. 💡 Ideas Adicionales para el Mediano Plazo</h2>
+<ol>
+  <li><strong>Programa de fidelidad simple:</strong> Tarjeta "Compra 10 panes, lleva 1 gratis"</li>
+  <li><strong>Encargos por WhatsApp:</strong> Tortas, empanadas por docena, pedidos para eventos</li>
+  <li><strong>Pan congelado para llevar:</strong> Paquete de panes para el fin de semana</li>
+  <li><strong>Café para llevar:</strong> Un café simple ($500-800) con margen del 80%+</li>
+  <li><strong>Vitrina caliente visible:</strong> Empanadas y productos calientes generan compra impulsiva por aroma</li>
+</ol>
+
+<hr>
+
+<div class="alert alert-key">
+  <strong>🔑 LA CLAVE MÁS IMPORTANTE DE TODO ESTE ANÁLISIS:</strong>
+  <p style="margin-top:8px;font-size:12px;">
+    <strong>250 clientes por día ya entran a tu local.</strong> No necesitas más clientes — necesitas que cada uno compre <strong>1 producto más</strong>.
+  </p>
+  <p style="font-size:12px;">
+    Si cada cliente agrega $1,500 a su compra actual de $2,832:<br>
+    • $1,500 × 250 = <strong>$375,000 adicionales por día</strong><br>
+    • = <strong>$11.25 millones adicionales por mes</strong>
+  </p>
+  <p style="font-size:13px;font-weight:700;color:#312e81;margin-top:8px;">
+    La forma más barata y rápida de crecer es vender más a quien ya te compra.
+  </p>
+</div>
+
+<br>
+<p style="text-align:center;color:#9ca3af;font-size:10px;margin-top:24px;">
+  Plan generado automáticamente por GestorPOS — Sistema de Punto de Venta Inteligente<br>
+  Datos extraídos el 21 de abril de 2026
+</p>
+
+</body>
+</html>

@@ -39,6 +39,7 @@ export const useProductosStore = defineStore('productos', () => {
   }
 
   async function fetchProductos() {
+    if (!authStore.empresaId) return
     loading.value = true
     try {
       const { data, error } = await supabase
@@ -64,6 +65,7 @@ export const useProductosStore = defineStore('productos', () => {
   }
 
   async function saveProducto(prod: Partial<ProductoLocal>) {
+    if (!authStore.empresaId) throw new Error('Empresa no identificada')
     loading.value = true
     try {
       const payload = normalizarPayloadProducto(prod)
@@ -103,6 +105,7 @@ export const useProductosStore = defineStore('productos', () => {
   }
   
   async function toggleActivo(id: string, activo: boolean) {
+    if (!authStore.empresaId) return
     loading.value = true
     try {
       const { error } = await supabase
