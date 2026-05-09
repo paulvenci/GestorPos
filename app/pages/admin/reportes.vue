@@ -1,11 +1,6 @@
 <template>
   <div class="admin-page">
-    <div class="admin-header">
-      <div class="admin-header-titles">
-        <h1>Centro de Reportes</h1>
-        <p>Visualiza el rendimiento y auditoría de tu negocio.</p>
-      </div>
-    </div>
+
 
     <!-- Navegación por Pestañas -->
     <Tabs value="0">

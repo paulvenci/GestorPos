@@ -1,13 +1,8 @@
 <template>
   <div class="admin-page">
-    <div class="admin-header">
-      <div class="admin-header-titles">
-        <h1>Clientes</h1>
-        <p>Gestiona tus clientes y cuentas de crédito (fiado).</p>
-      </div>
+    <div class="admin-header flex justify-end mb-4">
       <Button v-if="esAdminOSupervisor" label="Nuevo Cliente" icon="pi pi-plus" @click="abrirNuevoCliente" />
     </div>
-
     <!-- Filtros -->
     <div class="flex flex-wrap gap-3 mb-4 items-end">
       <div class="w-72 max-w-full">

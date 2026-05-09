@@ -1,12 +1,6 @@
 <template>
   <div class="admin-page max-w-7xl mx-auto px-4">
-    <div class="admin-header flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-bold flex items-center gap-2 text-color">
-          <i class="pi pi-shopping-bag text-indigo-500"></i> Órdenes de Compra
-        </h1>
-        <p class="text-color-secondary text-sm mt-1">Gestiona tus pedidos a proveedores y revisa su estado.</p>
-      </div>
+    <div class="admin-header flex justify-end items-center mb-6">
       <Button label="Crear Nueva Lista" icon="pi pi-plus" severity="primary" @click="router.push('/admin/compras/generador')" />
     </div>
 

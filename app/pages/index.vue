@@ -1,14 +1,12 @@
 <template>
   <div class="dashboard-page">
     <div class="dashboard-header">
-      <div>
-        <h1>Dashboard</h1>
-        <p>Resumen general del negocio — {{ fechaHoy }}</p>
-      </div>
+      <p>{{ fechaHoy }}</p>
     </div>
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
+      <!-- Grupo 1: Hoy y Estado -->
       <div class="kpi-card kpi-card--ventas">
         <div class="kpi-icon"><i class="pi pi-shopping-cart" /></div>
         <div class="kpi-content">
@@ -17,28 +15,60 @@
           <span class="kpi-sub">{{ kpi.cantVentasHoy }} transacciones</span>
         </div>
       </div>
-      <div class="kpi-card kpi-card--productos">
-        <div class="kpi-icon"><i class="pi pi-box" /></div>
+      <div class="kpi-card kpi-card--ticket">
+        <div class="kpi-icon"><i class="pi pi-ticket" /></div>
         <div class="kpi-content">
-          <span class="kpi-label">Productos</span>
-          <span class="kpi-value">{{ kpi.totalProductos }}</span>
-          <span class="kpi-sub">{{ kpi.productosLowStock }} bajo stock</span>
+          <span class="kpi-label">Ticket Promedio</span>
+          <span class="kpi-value">{{ formatMonto(kpi.ticketPromedio) }}</span>
+          <span class="kpi-sub">Gasto por cliente</span>
         </div>
       </div>
-      <div class="kpi-card kpi-card--caja">
-        <div class="kpi-icon"><i class="pi pi-wallet" /></div>
-        <div class="kpi-content">
-          <span class="kpi-label">Turno Activo</span>
-          <span class="kpi-value">{{ kpi.turnoActivo ? 'Abierto' : 'Cerrado' }}</span>
-          <span class="kpi-sub">{{ kpi.turnoActivo ? `Desde ${kpi.turnoHora}` : 'Sin turno' }}</span>
-        </div>
-      </div>
+
+      <!-- Grupo 2: Mes y Tendencia -->
       <div class="kpi-card kpi-card--ventas-mes">
         <div class="kpi-icon"><i class="pi pi-chart-line" /></div>
         <div class="kpi-content">
           <span class="kpi-label">Ventas del Mes</span>
           <span class="kpi-value">{{ formatMonto(kpi.ventasMes) }}</span>
-          <span class="kpi-sub">{{ kpi.cantVentasMes }} ventas</span>
+          <div class="kpi-footer">
+            <span class="kpi-sub">{{ kpi.cantVentasMes }} ventas</span>
+            <Tag 
+              v-if="porcentajeComparacionMes !== null" 
+              :severity="porcentajeComparacionMes >= 0 ? 'success' : 'danger'" 
+              :icon="porcentajeComparacionMes >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+              :value="`${Math.abs(porcentajeComparacionMes).toFixed(1)}%`"
+              class="kpi-trend-tag"
+              v-tooltip.top="'vs total mes pasado'"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--tendencia">
+        <div class="kpi-icon"><i class="pi pi-compass" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Tendencia MTD</span>
+          <span class="kpi-value">{{ porcentajeTendencia !== null ? (porcentajeTendencia >= 0 ? '+' : '-') : '' }}{{ Math.abs(porcentajeTendencia || 0).toFixed(1) }}%</span>
+          <div class="kpi-footer">
+            <span class="kpi-sub">vs mismo día mes pasado</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grupo 3: Riesgo y Stock -->
+      <div class="kpi-card kpi-card--deuda">
+        <div class="kpi-icon"><i class="pi pi-money-bill" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Por Cobrar</span>
+          <span class="kpi-value text-red-500">{{ formatMonto(kpi.totalPorCobrar) }}</span>
+          <span class="kpi-sub">Deuda total clientes</span>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--productos">
+        <div class="kpi-icon"><i class="pi pi-box" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Inventario</span>
+          <span class="kpi-value">{{ kpi.totalProductos }}</span>
+          <span class="kpi-sub">{{ kpi.productosLowStock }} bajo stock</span>
         </div>
       </div>
     </div>
@@ -72,6 +102,20 @@
           <Chart type="bar" :data="chartDataDiario" :options="chartOptionsBar" class="h-[300px]" />
           <div v-if="loadingChartDia" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
           <div v-if="!loadingChartDia && (!chartDataDiario.labels || chartDataDiario.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico de Ventas Mensuales (Tendencia) -->
+    <div class="dashboard-section mt-4">
+      <div class="chart-container chart-container--line">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-line" /> Tendencia Mensual (Últimos 6 meses)</h2>
+        </div>
+        <div class="chart-content chart-content--mensual">
+          <Chart type="bar" :data="chartDataMensual" :options="chartOptionsBarMensual" class="h-[300px]" />
+          <div v-if="loadingChartMes" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartMes && (!chartDataMensual.labels || chartDataMensual.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
         </div>
       </div>
     </div>
@@ -162,12 +206,27 @@ const kpi = ref({
   totalProductos: 0,
   productosLowStock: 0,
   turnoActivo: false,
-  turnoHora: ''
+  turnoHora: '',
+  ventasMesPasado: 0,
+  ventasPMTD: 0,
+  ticketPromedio: 0,
+  totalPorCobrar: 0
+})
+
+const porcentajeComparacionMes = computed(() => {
+  if (kpi.value.ventasMesPasado === 0) return null
+  return ((kpi.value.ventasMes / kpi.value.ventasMesPasado) - 1) * 100
+})
+
+const porcentajeTendencia = computed(() => {
+  if (kpi.value.ventasPMTD === 0) return null
+  return ((kpi.value.ventasMes / kpi.value.ventasPMTD) - 1) * 100
 })
 
 // Gráficos
 const loadingChartCat = ref(false)
 const loadingChartDia = ref(false)
+const loadingChartMes = ref(false)
 const filtroCategoria = ref('30d')
 const filtroDiario = ref('7d')
 
@@ -183,6 +242,7 @@ const opcionesFiltroDiario = [
 
 const chartDataCategoria = ref<any>({ labels: [], datasets: [] })
 const chartDataDiario = ref<any>({ labels: [], datasets: [] })
+const chartDataMensual = ref<any>({ labels: [], datasets: [] })
 
 const vibrantPalette = [
   '#6366f1', '#10b981', '#f59e0b', '#ef4444', 
@@ -237,6 +297,36 @@ const chartOptionsBar = ref({
   responsive: true
 })
 
+const chartOptionsBarMensual = ref({
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(0,0,0,0.05)' },
+      ticks: {
+        font: { size: 10 },
+        callback: (value: any) => formatMonto(value).substring(0, 10)
+      }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { 
+        font: { size: 10 },
+        autoSkip: false // Asegura que se vean todos los meses
+      }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
+
 const fechaHoy = computed(() =>
   new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 )
@@ -247,7 +337,8 @@ onMounted(async () => {
     fetchKPIs(), 
     fetchUltimasVentas(),
     fetchVentasPorCategoria(),
-    fetchVentasPorDia()
+    fetchVentasPorDia(),
+    fetchVentasMensuales()
   ])
 })
 
@@ -258,19 +349,24 @@ async function fetchKPIs() {
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
 
     // Helper para paginar consultas de ventas
-    async function fetchAllVentas(desde: string) {
+    async function fetchAllVentas(desde: string, hasta?: string) {
       const PAGE_SIZE = 1000
       let all: { total: number }[] = []
       let from = 0
       let hasMore = true
       while (hasMore) {
-        const { data, error } = await supabase
+        let query = supabase
           .from('ventas')
           .select('total')
           .eq('empresa_id', authStore.empresaId)
           .or('estado.is.null,estado.neq.cancelada')
           .gte('created_at', desde)
-          .range(from, from + PAGE_SIZE - 1)
+        
+        if (hasta) {
+          query = query.lt('created_at', hasta)
+        }
+
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
         if (error) throw error
         all = all.concat(data || [])
         hasMore = (data?.length ?? 0) === PAGE_SIZE
@@ -288,6 +384,30 @@ async function fetchKPIs() {
     const ventasMes = await fetchAllVentas(inicioMes)
     kpi.value.cantVentasMes = ventasMes.length
     kpi.value.ventasMes = ventasMes.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ventas del mes pasado (para comparación)
+    const inicioMesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString()
+    const ventasMesPasado = await fetchAllVentas(inicioMesPasado, inicioMes)
+    kpi.value.ventasMesPasado = ventasMesPasado.reduce((s, v) => s + (v.total || 0), 0)
+
+    const dAnterior = new Date(ahora)
+    dAnterior.setMonth(ahora.getMonth() - 1)
+    const ventasPMTD = await fetchAllVentas(inicioMesPasado, dAnterior.toISOString())
+    kpi.value.ventasPMTD = ventasPMTD.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ticket Promedio Hoy
+    kpi.value.ticketPromedio = kpi.value.cantVentasHoy > 0 
+      ? kpi.value.ventasHoy / kpi.value.cantVentasHoy 
+      : 0
+      
+    // Total por cobrar (Deuda de clientes)
+    const { data: deudas } = await supabase
+      .from('clientes')
+      .select('saldo_pendiente')
+      .eq('empresa_id', authStore.empresaId)
+      .gt('saldo_pendiente', 0)
+    
+    kpi.value.totalPorCobrar = deudas?.reduce((s, c) => s + (c.saldo_pendiente || 0), 0) || 0
 
     // Productos
     const { count: totalProds } = await supabase.from('productos')
@@ -471,6 +591,83 @@ async function fetchVentasPorDia() {
   }
 }
 
+async function fetchVentasMensuales() {
+  loadingChartMes.value = true
+  try {
+    const ahora = new Date()
+    const inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 5, 1)
+    
+    // Paginar para superar el límite de 1000 filas
+    const PAGE_SIZE = 1000
+    let allData: { created_at: string | null; total: number }[] = []
+    let from = 0
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('created_at, total')
+        .eq('empresa_id', authStore.empresaId)
+        .or('estado.is.null,estado.neq.cancelada')
+        .gte('created_at', inicio.toISOString())
+        .order('created_at', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
+
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    const dataMeses: { key: string, label: string, total: number }[] = []
+    
+    // Inicializar últimos 6 meses (garantizando orden)
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      dataMeses.push({
+        key,
+        label: `${meses[d.getMonth()]} ${d.getFullYear()}`,
+        total: 0
+      })
+    }
+
+    allData.forEach(v => {
+      const d = new Date(v.created_at!)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const item = dataMeses.find(m => m.key === key)
+      if (item) {
+        item.total += Number(v.total || 0)
+      }
+    })
+
+    const labels = dataMeses.map(m => m.label)
+    const values = dataMeses.map(m => m.total)
+    const colors = dataMeses.map((_, index) => 
+      index === dataMeses.length - 1 ? '#3b82f6' : 'rgba(148, 163, 184, 0.5)'
+    )
+
+    chartDataMensual.value = {
+      labels,
+      datasets: [{
+        label: 'Ventas Mensuales',
+        data: values,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c === '#3b82f6' ? '#2563eb' : '#94a3b8'),
+        borderWidth: 1,
+        borderRadius: 8,
+        barPercentage: 0.6
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Mes:', e)
+  } finally {
+    loadingChartMes.value = false
+  }
+}
+
 async function fetchUltimasVentas() {
   loadingVentas.value = true
   try {
@@ -552,6 +749,13 @@ async function fetchUltimasVentas() {
 .kpi-card--productos .kpi-icon { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
 .kpi-card--caja .kpi-icon { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 .kpi-card--ventas-mes .kpi-icon { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.kpi-card--tendencia .kpi-icon { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+.kpi-card--ticket .kpi-icon { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+.kpi-card--deuda .kpi-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+.kpi-card--tendencia .kpi-value {
+  color: var(--text-app);
+}
 
 .kpi-content {
   display: flex;
@@ -575,7 +779,21 @@ async function fetchUltimasVentas() {
 .kpi-sub {
   font-size: 0.75rem;
   color: var(--text-muted);
-  margin-top: 0.1rem;
+}
+
+.kpi-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  gap: 0.5rem;
+}
+
+:deep(.kpi-trend-tag) {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  padding: 0.1rem 0.4rem !important;
+  border-radius: 6px !important;
 }
 
 /* ─── Dashboard sections ─── */
@@ -801,6 +1019,10 @@ async function fetchUltimasVentas() {
   backdrop-filter: blur(2px);
   border-radius: 1rem;
   z-index: 10;
+}
+
+.chart-content--mensual {
+  min-height: 200px;
 }
 
 @media (max-width: 1024px) {

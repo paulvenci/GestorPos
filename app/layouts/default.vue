@@ -8,7 +8,12 @@
     />
 
     <!-- Sidebar de Navegacion -->
-    <aside class="pos-sidebar" :class="{ 'pos-sidebar--open': sidebarOpen, 'pos-sidebar--collapsed': sidebarCollapsed }">
+    <aside 
+      class="pos-sidebar" 
+      :class="{ 'pos-sidebar--open': sidebarOpen, 'pos-sidebar--collapsed': sidebarCollapsed }"
+      @mouseenter="sidebarCollapsed = false"
+      @mouseleave="sidebarCollapsed = true"
+    >
       <div class="pos-sidebar-logo">
         <div class="pos-sidebar-logo-inner">
           <span class="pos-logo-icon">&#9889;</span>
@@ -139,8 +144,8 @@
           <button class="pos-topbar-menu" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen ? 'true' : 'false'" aria-label="Abrir menú">
             <i :class="sidebarOpen ? 'pi pi-times' : 'pi pi-bars'" />
           </button>
+          <div class="pos-topbar-title">{{ seccionActual }}</div>
         </div>
-        <div class="pos-topbar-title">{{ seccionActual }}</div>
         <div class="pos-topbar-info flex items-center gap-4">
           <Tag
             :value="isOnline ? 'Online' : 'Offline'"
@@ -296,7 +301,7 @@ const posStore = usePosStore()
 const configStore = useConfigStore()
 const { isDark, toggleDark, initDark } = useDarkMode()
 const sidebarOpen = ref(false)
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const isOnline = ref(import.meta.client ? navigator.onLine : true)
 const notificacionesRef = ref<HTMLElement | null>(null)
 const route = useRoute()
@@ -520,10 +525,25 @@ async function instalarApp() {
   flex-direction: column;
   padding: 1.5rem 1rem;
   flex-shrink: 0;
-  transition: width 0.3s ease, padding 0.3s ease;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, box-shadow 0.3s ease;
   z-index: 999;
   overflow-y: auto;
   overflow-x: hidden;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.pos-sidebar:not(.pos-sidebar--collapsed) {
+  box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+}
+
+.pos-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.pos-sidebar--collapsed {
+  overflow: hidden;
 }
 
 /* Sidebar colapsado (solo desktop) */
@@ -549,7 +569,10 @@ async function instalarApp() {
 
 .pos-sidebar--collapsed .pos-nav-item i {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.25rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .pos-sidebar--collapsed .pos-sidebar-logo {
@@ -562,6 +585,10 @@ async function instalarApp() {
 
 .pos-sidebar--collapsed .pos-sidebar-logo .p-button {
   display: none;
+}
+
+.pos-sidebar--collapsed .pos-logo-icon {
+  margin: 0 auto;
 }
 
 .pos-sidebar--collapsed .pos-sidebar-footer {
@@ -763,6 +790,7 @@ async function instalarApp() {
   flex-direction: column;
   overflow: hidden;
   transition: background-color 0.3s ease;
+  margin-left: 64px;
 }
 
 /* Topbar */
@@ -787,7 +815,11 @@ async function instalarApp() {
 }
 
 .pos-topbar-title {
-  display: none;
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-app);
+  letter-spacing: -0.02em;
 }
 
 .pos-topbar-menu {
@@ -1056,18 +1088,14 @@ async function instalarApp() {
 
   .pos-topbar-title {
     display: block;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     max-width: 42vw;
-    font-size: 0.82rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--text-app);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    pointer-events: none;
+    margin-left: 0.5rem;
   }
 
   .pos-topbar-info :deep(.p-tag) {

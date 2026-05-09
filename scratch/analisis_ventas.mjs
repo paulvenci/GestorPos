@@ -1,8 +1,16 @@
 // Script de análisis de ventas - GestorPOS
 // Extrae datos de Supabase para análisis de negocio
+// MODO DE USO SEGURO:
+// node --env-file=.env scratch/analisis_ventas.mjs
 
-const SUPABASE_URL = 'https://izijfwlnhkyqaygoietn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6aWpmd2xuaGt5cWF5Z29pZXRuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1OTQzMywiZXhwIjoyMDkwODM1NDMzfQ.39qXJ2FlKI5h9TwZmP6DpS-dzjE84lIE6Q6FW2CBwCw';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('❌ ERROR: Faltan variables de entorno SUPABASE_URL o SUPABASE_SERVICE_KEY');
+  console.log('Asegúrate de ejecutar el script con: node --env-file=.env scratch/analisis_ventas.mjs');
+  process.exit(1);
+}
 
 const headers = {
   'apikey': SUPABASE_KEY,

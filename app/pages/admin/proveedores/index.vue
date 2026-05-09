@@ -1,12 +1,6 @@
 <template>
   <div class="admin-page max-w-7xl mx-auto px-4">
-    <div class="admin-header flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-bold flex items-center gap-2">
-          <i class="pi pi-building text-blue-500"></i> Directorio de Proveedores
-        </h1>
-        <p class="text-color-secondary text-sm mt-1">Gestiona los contactos y empresas que abastecen tu inventario.</p>
-      </div>
+    <div class="admin-header flex justify-end items-center mb-6">
       <Button label="Nuevo Proveedor" icon="pi pi-plus" @click="abrirNuevo" />
     </div>
 

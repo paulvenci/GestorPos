@@ -1,11 +1,6 @@
 <template>
   <div class="admin-page">
-    <div class="admin-header">
-      <div class="admin-header-titles">
-        <h1>Auditoría de Cajas</h1>
-        <p>Revisa y aprueba los cierres de caja de los vendedores de forma segura.</p>
-      </div>
-    </div>
+
 
     <!-- Filtros y Resumen -->
     <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
