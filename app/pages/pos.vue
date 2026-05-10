@@ -374,7 +374,7 @@
         label="Guardar (F2)"
         icon="pi pi-save"
         :loading="posStore.procesando || confirmandoCobro"
-        :disabled="confirmandoCobro || !pagoValido || ventaActualGuardada"
+        :disabled="confirmandoCobro || !pagoValido || ventaActualGuardada || limiteExcedido"
         severity="secondary"
         outlined
         @click="confirmarCobro(false)"
@@ -383,7 +383,7 @@
         :label="ventaActualGuardada ? 'Reimprimir (F1)' : 'Guardar e Imprimir (F1)'"
         :icon="ventaActualGuardada ? 'pi pi-print' : 'pi pi-check'"
         :loading="posStore.procesando || confirmandoCobro"
-        :disabled="confirmandoCobro || (!pagoValido && !ventaActualGuardada)"
+        :disabled="confirmandoCobro || (!pagoValido && !ventaActualGuardada) || limiteExcedido"
         class="pos-btn-cta"
         @click="confirmarCobro(true)"
       />
@@ -715,6 +715,13 @@ const clienteRapidoTelefono = ref('')
 const clienteFiadoObj = computed(() => {
   if (!clienteFiadoId.value) return null
   return clientesStoreRef.clientes.find(c => c.id === clienteFiadoId.value) || null
+})
+
+const limiteExcedido = computed(() => {
+  if (!esFiado.value || !clienteFiadoObj.value) return false
+  if (clienteFiadoObj.value.limite_credito === null || clienteFiadoObj.value.limite_credito === undefined) return false
+  // Usamos el total del cobro actual que es reactivo en el modal
+  return (clienteFiadoObj.value.saldo_pendiente || 0) + posStore.total > clienteFiadoObj.value.limite_credito
 })
 
 async function buscarClientesFiado(event: any) {
@@ -1715,6 +1722,28 @@ async function confirmarCobro(imprimir = true) {
   const fechaTicket = new Date()
   const esFiadoActual = esFiado.value
   const clienteIdFiado = clienteFiadoId.value
+
+  // Validar Límite de Crédito preventivamente
+  if (esFiadoActual && clienteIdFiado) {
+    const cliente = clienteFiadoObj.value
+    if (cliente && cliente.limite_credito !== null && cliente.limite_credito !== undefined) {
+      const nuevaDeuda = (cliente.saldo_pendiente || 0) + totalCobrado
+      if (nuevaDeuda > cliente.limite_credito) {
+        toast.add({
+          severity: 'error',
+          summary: 'Venta Rechazada',
+          detail: `Límite de crédito excedido para ${cliente.nombre}. Límite: ${formatMonto(cliente.limite_credito)}. Nueva deuda proyectada: ${formatMonto(nuevaDeuda)}`,
+          life: 5000
+        })
+        confirmandoCobro.value = false
+        return
+      }
+    } else if (esFiadoActual && !clienteIdFiado) {
+       toast.add({ severity: 'warn', summary: 'Atención', detail: 'Debes seleccionar un cliente para vender a crédito', life: 3000 })
+       confirmandoCobro.value = false
+       return
+    }
+  }
   const detallePago = esFiadoActual
     ? { metodo: 'fiado', etiqueta: `Fiado — ${clienteFiadoObj.value?.nombre || 'Cliente'}` }
     : construirDetallePago()

@@ -197,6 +197,15 @@ export const useClientesStore = defineStore('clientes', () => {
       })
     if (errCredito) throw errCredito
 
+    // Validar límite de crédito antes de proceder
+    const cliente = clientes.value.find(c => c.id === idCliente)
+    if (cliente && cliente.limite_credito !== null && cliente.limite_credito !== undefined) {
+      const nuevoSaldo = (cliente.saldo_pendiente || 0) + montoTotal
+      if (nuevoSaldo > cliente.limite_credito) {
+        throw new Error(`Límite de crédito excedido. Saldo actual: ${cliente.saldo_pendiente}, Venta: ${montoTotal}, Límite: ${cliente.limite_credito}`)
+      }
+    }
+
     // Incrementar saldo_pendiente del cliente con RPC atómico
     const { error: errRpc } = await (supabase.rpc as any)('incrementar_saldo_cliente', {
       p_cliente_id: idCliente,
@@ -204,8 +213,12 @@ export const useClientesStore = defineStore('clientes', () => {
     })
 
     if (errRpc) {
-      // Fallback: si el RPC falla, hacer update manual
-      const cliente = clientes.value.find(c => c.id === idCliente)
+      // Si el error es de límite de crédito (desde la DB), relanzarlo
+      if (errRpc.message.includes('Límite de crédito excedido')) {
+        throw new Error(errRpc.message)
+      }
+      
+      // Fallback: si el RPC falla por otros motivos, hacer update manual (manteniendo consistencia)
       await (supabase.from('clientes') as any)
         .update({
           saldo_pendiente: (cliente?.saldo_pendiente || 0) + montoTotal,
