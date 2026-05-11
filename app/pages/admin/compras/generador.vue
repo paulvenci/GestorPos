@@ -90,25 +90,34 @@
           <div class="flex items-center gap-3 flex-shrink-0">
             <div class="flex flex-col items-center">
               <label class="text-[10px] text-color-secondary uppercase font-bold mb-1">A Pedir</label>
-              <div class="flex items-center rounded-lg overflow-hidden border surface-border">
-                <button
-                  class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors"
-                  @click="item.cantidad = Math.max(1, item.cantidad - 1)"
-                >
-                  <i class="pi pi-minus text-xs"></i>
-                </button>
-                <input
-                  type="number"
-                  v-model="item.cantidad"
-                  class="w-12 h-8 text-center bg-transparent border-none text-sm font-bold focus:ring-0 outline-none p-0 text-color"
-                  min="1"
+              <div class="flex items-center gap-2">
+                <div class="flex items-center rounded-lg overflow-hidden border surface-border">
+                  <button
+                    class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors"
+                    @click="item.cantidad = Math.max(1, item.cantidad - 1)"
+                  >
+                    <i class="pi pi-minus text-xs"></i>
+                  </button>
+                  <input
+                    type="number"
+                    v-model="item.cantidad"
+                    class="w-12 h-8 text-center bg-transparent border-none text-sm font-bold focus:ring-0 outline-none p-0 text-color"
+                    min="1"
+                  />
+                  <button
+                    class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors"
+                    @click="item.cantidad++"
+                  >
+                    <i class="pi pi-plus text-xs"></i>
+                  </button>
+                </div>
+                <Dropdown 
+                  v-model="item.unidad" 
+                  :options="unidadesOpciones" 
+                  editable 
+                  class="w-28 text-sm"
+                  placeholder="Unidad"
                 />
-                <button
-                  class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors"
-                  @click="item.cantidad++"
-                >
-                  <i class="pi pi-plus text-xs"></i>
-                </button>
               </div>
             </div>
             <Button icon="pi pi-trash" text rounded severity="danger" @click="listaFaltantes.splice(index, 1)" />
@@ -138,8 +147,10 @@ const productosStore = useProductosStore()
 
 const busqueda = ref('')
 const resultados = ref<ProductoLocal[]>([])
-const listaFaltantes = ref<{ producto: ProductoLocal, cantidad: number, proveedorSugerido: string | null }[]>([])
+const listaFaltantes = ref<{ producto: ProductoLocal, cantidad: number, proveedorSugerido: string | null, unidad: string }[]>([])
 const procesando = ref(false)
+
+const unidadesOpciones = ref(['Unidades', 'Cajas', 'Displays', 'Kilos', 'Gramos', 'Paquetes', 'Tiras'])
 
 const formatMonto = (valor: number) => {
   return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(valor)
@@ -185,7 +196,8 @@ async function agregarALista(prod: ProductoLocal) {
     listaFaltantes.value.unshift({
       producto: prod,
       cantidad: cantidadSugerida,
-      proveedorSugerido
+      proveedorSugerido,
+      unidad: 'Unidades'
     })
   }
   busqueda.value = ''

@@ -165,6 +165,9 @@
         <Column header="Cant." style="width: 100px">
           <template #body="{ data }">
             <InputNumber v-model="data.cantidad" :min="1" class="w-full" input-class="w-full text-center" />
+            <div v-if="data.unidadPedida" class="text-[10px] text-center text-indigo-500 font-bold mt-1 uppercase">
+              Pidió: {{ data.unidadPedida }}
+            </div>
           </template>
         </Column>
         <Column header="Costo Unit. (Neto)" style="width: 140px">
@@ -252,6 +255,7 @@ interface FilaRevision {
   umOriginal?: string;
   unidadesPorCaja?: number;
   productoAsociado: any | null;
+  unidadPedida?: string;
 }
 
 const productosExtraidos = ref<FilaRevision[]>([])
@@ -372,7 +376,8 @@ async function cargarDesdePedido(pedido: PedidoCompra) {
     cantidad: d.cantidad_pedida,
     costo: d.precio_unitario_estimado || d.producto?.costo || 0,
     skuOriginal: d.producto?.sku || '',
-    productoAsociado: d.producto ? { value: d.producto.id, nombre: d.producto.nombre, match: true } : null
+    productoAsociado: d.producto ? { value: d.producto.id, nombre: d.producto.nombre, match: true } : null,
+    unidadPedida: d.unidad
   }))
 
   toast.add({ severity: 'success', summary: 'Pedido cargado', detail: `${detalles.length} productos listos para confirmar.`, life: 3000 })

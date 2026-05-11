@@ -17,7 +17,7 @@
       <div class="pos-sidebar-logo">
         <div class="pos-sidebar-logo-inner">
           <span class="pos-logo-icon">&#9889;</span>
-          <span class="pos-logo-text sidebar-label">GestorPOS</span>
+          <span class="pos-logo-text sidebar-label">ZumaPos</span>
         </div>
         <Button 
           :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'" 
@@ -57,16 +57,16 @@
           <i class="pi pi-sync" />
           <span>Ajuste Stock</span>
         </NuxtLink>
-        <NuxtLink v-if="canAccess('ajuste_stock')" to="/admin/recepcion-mercaderia" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
-          <i class="pi pi-camera" />
-          <span>Recepción IA</span>
-        </NuxtLink>
-        
+
         <div class="pos-nav-divider" />
-        
+
         <NuxtLink v-if="canAccess('compras')" to="/admin/compras" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-shopping-bag" />
           <span>Órdenes de Compra</span>
+        </NuxtLink>
+        <NuxtLink v-if="canAccess('ajuste_stock')" to="/admin/recepcion-mercaderia" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-camera" />
+          <span>Recepción IA</span>
         </NuxtLink>
         <NuxtLink v-if="canAccess('compras')" to="/admin/proveedores" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-building" />
@@ -100,20 +100,9 @@
           <span>Configuración</span>
         </NuxtLink>
 
-        <div class="pos-nav-divider" />
-
-        <!-- Botón de Egreso Rápido (Accesible para todos) -->
-        <button class="pos-nav-item pos-nav-item--egreso" @click="mostrarEgresoRapido = true">
-          <i class="pi pi-sign-out" />
-          <span>Egreso Rápido</span>
-        </button>
       </nav>
 
-      <!-- Botón colapsar sidebar (solo desktop) -->
-      <button class="pos-sidebar-collapse-btn" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'">
-        <i :class="sidebarCollapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'" />
-        <span class="sidebar-label">{{ sidebarCollapsed ? '' : 'Colapsar' }}</span>
-      </button>
+
 
       <div class="pos-sidebar-version">Version v{{ appVersion }}</div>
 
@@ -147,6 +136,15 @@
           <div class="pos-topbar-title">{{ seccionActual }}</div>
         </div>
         <div class="pos-topbar-info flex items-center gap-4">
+          <Button 
+            icon="pi pi-sign-out" 
+            label="Egreso Rápido" 
+            severity="danger" 
+            size="small"
+            text
+            class="pos-topbar-egreso-btn"
+            @click="mostrarEgresoRapido = true"
+          />
           <Tag
             :value="isOnline ? 'Online' : 'Offline'"
             :severity="isOnline ? 'success' : 'danger'"
@@ -324,7 +322,7 @@ const seccionActual = computed(() => {
   if (path.startsWith('/admin/reportes')) return 'Reportes'
   if (path.startsWith('/admin/clientes')) return 'Clientes'
   if (path.startsWith('/admin/configuracion')) return 'Configuración'
-  return 'GestorPOS'
+  return 'ZumaPos'
 })
 
 const turnoLabel = computed(() =>

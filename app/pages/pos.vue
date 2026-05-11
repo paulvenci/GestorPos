@@ -1982,7 +1982,7 @@ function imprimirComprobante80mm(payload: {
         </style>
       </head>
       <body>
-        <div class="center title">GESTORPOS</div>
+        <div class="center title">ZUMAPOS</div>
         <div class="center">Comprobante de Venta</div>
         <div class="line"></div>
         <div>ID: ${escapeHtml(payload.ventaId)}</div>

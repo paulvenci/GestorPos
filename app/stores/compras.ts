@@ -10,6 +10,7 @@ export interface DetallePedido {
   cantidad_pedida: number
   cantidad_recibida: number
   precio_unitario_estimado: number
+  unidad?: string
   // Relacion
   producto?: ProductoLocal
 }
@@ -121,7 +122,7 @@ export const useComprasStore = defineStore('compras', () => {
   }
 
   // --- LÓGICA INTELIGENTE: Generar pedidos separados desde una lista general ---
-  async function generarPedidosAgrupados(itemsFaltantes: { producto: ProductoLocal, cantidad: number }[]) {
+  async function generarPedidosAgrupados(itemsFaltantes: { producto: ProductoLocal, cantidad: number, unidad?: string }[]) {
     if (!authStore.empresaId || itemsFaltantes.length === 0) return
     loading.value = true
     try {
@@ -185,7 +186,8 @@ export const useComprasStore = defineStore('compras', () => {
           pedido_id: pedidoData.id,
           producto_id: item.producto.id,
           cantidad_pedida: item.cantidad,
-          precio_unitario_estimado: item.producto.costo || 0
+          precio_unitario_estimado: item.producto.costo || 0,
+          unidad: item.unidad || 'Unidades'
         }))
 
         const { error: errDetalles } = await supabase
@@ -269,13 +271,17 @@ export const useComprasStore = defineStore('compras', () => {
     }
   }
 
-  async function actualizarDetallePedido(pedidoId: string, detalleId: string, nuevaCantidad: number) {
+  async function actualizarDetallePedido(pedidoId: string, detalleId: string, nuevaCantidad: number, nuevaUnidad?: string) {
     if (!authStore.empresaId) return
     try {
+      const updatePayload: any = { cantidad_pedida: nuevaCantidad }
+      if (nuevaUnidad !== undefined) updatePayload.unidad = nuevaUnidad
+
       const { error } = await supabase
         .from('detalle_pedidos')
-        .update({ cantidad_pedida: nuevaCantidad })
+        .update(updatePayload)
         .eq('id', detalleId)
+
       
       if (error) throw error
       
@@ -323,7 +329,7 @@ export const useComprasStore = defineStore('compras', () => {
     }
   }
 
-  async function agregarProductoAPedido(pedidoId: string, producto: any, cantidad: number) {
+  async function agregarProductoAPedido(pedidoId: string, producto: any, cantidad: number, unidad: string = 'Unidades') {
     if (!authStore.empresaId) return
     try {
       // 1. Insertar detalle
@@ -333,7 +339,8 @@ export const useComprasStore = defineStore('compras', () => {
           pedido_id: pedidoId,
           producto_id: producto.id,
           cantidad_pedida: cantidad,
-          precio_unitario_estimado: producto.costo || 0
+          precio_unitario_estimado: producto.costo || 0,
+          unidad: unidad
         })
       
       if (errInsert) throw errInsert

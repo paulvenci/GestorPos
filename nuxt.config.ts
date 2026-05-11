@@ -46,8 +46,8 @@ export default defineNuxtConfig({
   },
   pwa: {
     manifest: {
-      name: 'GestorPOS',
-      short_name: 'POS',
+      name: 'ZumaPos',
+      short_name: 'ZumaPos',
       theme_color: '#6366f1',
       background_color: '#0f172a',
       display: 'standalone',

@@ -5,7 +5,7 @@
       <div class="login-branding-content">
         <div class="login-logo">
           <span class="login-logo-icon">⚡</span>
-          <span class="login-logo-name">GestorPOS</span>
+          <span class="login-logo-name">ZumaPos</span>
         </div>
         <h1 class="login-tagline">Control total<br />sobre tu negocio.</h1>
         <p class="login-subtitle">

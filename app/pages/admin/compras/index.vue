@@ -135,43 +135,52 @@
     </div>
 
     <!-- Modal Detalles -->
-    <Dialog v-model:visible="mostrarModal" header="Detalle del Pedido" :modal="true" class="w-full max-w-2xl">
+    <Dialog 
+      v-model:visible="mostrarModal" 
+      header="Detalle del Pedido" 
+      :modal="true" 
+      class="w-full max-w-4xl"
+    >
       <div v-if="pedidoSeleccionado" class="pb-2">
-        <div class="flex justify-between items-start mb-6">
+        <div class="flex justify-between items-start mb-2">
           <div>
-            <p class="text-sm text-color-secondary">Proveedor</p>
-            <p class="font-bold text-lg">{{ pedidoSeleccionado.proveedor?.nombre || 'Sin Proveedor' }}</p>
-            <p v-if="pedidoSeleccionado.proveedor?.rut" class="text-sm text-color-secondary">RUT: {{ pedidoSeleccionado.proveedor.rut }}</p>
-            <p class="text-xs text-indigo-500 mt-2 font-bold flex items-center gap-1">
-              <i class="pi pi-user text-[10px]"></i> Creado por: {{ pedidoSeleccionado.perfil?.nombre || 'Sistema' }}
+            <p class="font-bold text-base leading-tight">{{ pedidoSeleccionado.proveedor?.nombre || 'Sin Proveedor' }}</p>
+            <p class="text-[10px] text-indigo-500 font-bold mt-1">
+              <i class="pi pi-user text-[9px]"></i> {{ pedidoSeleccionado.perfil?.nombre || 'Sistema' }}
             </p>
           </div>
-          <div class="text-right">
-            <p class="text-sm text-color-secondary">Estado Actual</p>
-            <Tag :value="formatoEstado(pedidoSeleccionado.estado).texto" :severity="formatoEstado(pedidoSeleccionado.estado).color" class="mt-1" />
+          <div class="text-right flex flex-col items-end gap-1">
+            <Tag :value="formatoEstado(pedidoSeleccionado.estado).texto" :severity="formatoEstado(pedidoSeleccionado.estado).color" />
+            <div class="mt-1 text-right">
+              <span class="text-[10px] uppercase font-bold text-color-secondary block leading-none mb-1">Total Estimado</span>
+              <span class="text-indigo-600 dark:text-indigo-400 text-lg font-bold leading-none">{{ formatMonto(pedidoSeleccionado.total_estimado) }}</span>
+            </div>
           </div>
         </div>
 
         <!-- Buscador de productos para añadir (Solo en Borrador) -->
-        <div v-if="pedidoSeleccionado.estado === 'pendiente_pedido'" class="mb-4 p-3 surface-ground rounded-lg border surface-border">
-          <p class="text-xs font-bold uppercase text-color-secondary mb-2">Agregar Producto al Pedido</p>
-          <div class="flex gap-2">
+        <div v-if="pedidoSeleccionado.estado === 'pendiente_pedido'" class="mb-2 p-2 surface-ground rounded border surface-border">
+          <div class="flex flex-col sm:flex-row gap-2">
             <AutoComplete 
               v-model="productoBuscado" 
               :suggestions="productosSugeridos" 
               @complete="buscarProductos" 
               optionLabel="nombre"
               placeholder="Buscar por nombre o código..." 
-              class="flex-1"
+              class="flex-1 w-full"
               forceSelection
             />
-            <InputNumber v-model="cantidadNueva" :min="1" class="w-24" placeholder="Cant." />
-            <Button icon="pi pi-plus" label="Agregar" @click="confirmarAgregarProducto" :disabled="!productoBuscado" />
+            <div class="flex gap-2 w-full sm:w-auto">
+              <InputNumber v-model="cantidadNueva" :min="1" class="w-20 shrink-0" input-class="w-full text-center" placeholder="Cant." />
+              <Dropdown v-model="unidadNueva" :options="unidadesOpciones" editable class="flex-1 sm:w-36 shrink-0" placeholder="Unidad" />
+              <Button icon="pi pi-plus" label="Agregar" @click="confirmarAgregarProducto" :disabled="!productoBuscado" class="shrink-0" />
+            </div>
           </div>
         </div>
 
-        <DataTable :value="detallesActuales" class="p-datatable-sm mb-4 border rounded">
-          <Column header="Producto">
+        <div>
+          <DataTable :value="detallesActuales" class="p-datatable-sm mb-2 border rounded" scrollable scrollHeight="60vh">
+            <Column header="Producto">
             <template #body="{ data }">
               <div class="flex flex-col">
                 <span class="font-medium text-sm text-color">{{ data.producto?.nombre || 'Producto Desconocido' }}</span>
@@ -189,6 +198,19 @@
               <span v-else class="font-bold text-color">{{ data.cantidad_pedida }}</span>
             </template>
           </Column>
+          <Column header="Unidad" style="width: 150px;">
+            <template #body="{ data }">
+              <Dropdown 
+                v-if="pedidoSeleccionado.estado === 'pendiente_pedido'"
+                v-model="data.unidad" 
+                :options="unidadesOpciones" 
+                editable 
+                class="w-full text-sm p-dropdown-sm"
+                @change="cambiarUnidad(data)"
+              />
+              <span v-else class="text-xs text-color-secondary font-bold uppercase tracking-wider block text-center">{{ data.unidad || 'UNIDADES' }}</span>
+            </template>
+          </Column>
           <Column header="Costo Estimado" style="width: 120px; text-align: right;">
             <template #body="{ data }">
               <span class="text-sm text-color-secondary">{{ formatMonto(data.precio_unitario_estimado) }}</span>
@@ -200,10 +222,6 @@
             </template>
           </Column>
         </DataTable>
-
-        <div class="flex justify-between items-center surface-section border surface-border p-3 rounded-lg font-bold mt-2">
-          <span class="text-color">Total Estimado:</span>
-          <span class="text-indigo-600 dark:text-indigo-400 text-lg">{{ formatMonto(pedidoSeleccionado.total_estimado) }}</span>
         </div>
       </div>
     </Dialog>
@@ -261,6 +279,8 @@ const proveedorElegido = ref<string | null>(null)
 const productoBuscado = ref<any>(null)
 const productosSugeridos = ref<any[]>([])
 const cantidadNueva = ref(1)
+const unidadNueva = ref('Unidades')
+const unidadesOpciones = ref(['Unidades', 'Cajas', 'Displays', 'Kilos', 'Gramos', 'Paquetes', 'Tiras'])
 
 onMounted(async () => {
   await comprasStore.fetchPedidos()
@@ -323,9 +343,10 @@ function construirTexto(pedido: any, detalles: any[]): string {
   detalles.forEach((d: any, index: number) => {
     const nombre = d.producto?.nombre || 'Producto'
     const cant = d.cantidad_pedida
+    const und = d.unidad || 'Unidades'
     const sku = d.producto?.sku ? `   _Ref: ${d.producto.sku}_` : ''
     
-    texto += `${index + 1}. *CANT: ${cant}* - ${nombre}\n${sku}\n`
+    texto += `${index + 1}. *CANT: ${cant} ${und}* - ${nombre}\n${sku}\n`
   })
   
   texto += `\n*TOTAL ESTIMADO:* ${formatMonto(pedido.total_estimado)}\n`
@@ -351,7 +372,7 @@ async function generarPDF(pedido: any) {
     <tr>
       <td style="padding:8px;border-bottom:1px solid #eee">${d.producto?.nombre || '—'}</td>
       <td style="padding:8px;border-bottom:1px solid #eee;font-family:monospace;font-size:12px">${d.producto?.sku || '—'}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${d.cantidad_pedida}</td>
+      <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${d.cantidad_pedida} ${d.unidad || 'Unidades'}</td>
       <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${formatMonto(d.precio_unitario_estimado)}</td>
     </tr>`).join('')
   
@@ -398,13 +419,23 @@ async function cambiarCantidad(detalle: any, delta: number) {
   if (nuevaCant === detalle.cantidad_pedida) return
   
   try {
-    const nuevosDetalles = await comprasStore.actualizarDetallePedido(pedidoSeleccionado.value.id, detalle.id, nuevaCant)
+    const nuevosDetalles = await comprasStore.actualizarDetallePedido(pedidoSeleccionado.value.id, detalle.id, nuevaCant, detalle.unidad)
     detallesActuales.value = nuevosDetalles
     // Actualizar la cabecera local para reflejar el nuevo total
     const ped = comprasStore.pedidos.find(p => p.id === pedidoSeleccionado.value.id)
     if (ped) pedidoSeleccionado.value.total_estimado = ped.total_estimado
   } catch (e) {
     toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar la cantidad.', life: 2000 })
+  }
+}
+
+async function cambiarUnidad(detalle: any) {
+  try {
+    const nuevosDetalles = await comprasStore.actualizarDetallePedido(pedidoSeleccionado.value.id, detalle.id, detalle.cantidad_pedida, detalle.unidad)
+    detallesActuales.value = nuevosDetalles
+    toast.add({ severity: 'success', summary: 'Actualizado', detail: 'Unidad actualizada.', life: 1500 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar la unidad.', life: 2000 })
   }
 }
 
@@ -451,7 +482,8 @@ async function confirmarAgregarProducto() {
     const nuevosDetalles = await comprasStore.agregarProductoAPedido(
       pedidoSeleccionado.value.id, 
       productoBuscado.value, 
-      cantidadNueva.value
+      cantidadNueva.value,
+      unidadNueva.value
     )
     detallesActuales.value = nuevosDetalles
     
@@ -462,6 +494,7 @@ async function confirmarAgregarProducto() {
     // Limpiar buscador
     productoBuscado.value = null
     cantidadNueva.value = 1
+    unidadNueva.value = 'Unidades'
     toast.add({ severity: 'success', summary: 'Agregado', detail: 'Producto añadido al pedido.', life: 2000 })
   } catch (e) {
     toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo añadir el producto.', life: 2000 })

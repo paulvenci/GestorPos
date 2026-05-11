@@ -437,7 +437,7 @@ function imprimirSeleccionados() {
   printWindow.document.write(`
     <html>
     <head>
-      <title>Códigos de Barras - GestorPOS</title>
+      <title>Códigos de Barras - ZumaPos</title>
       <style>
         @page { size: letter; margin: 1cm; }
         body { font-family: sans-serif; margin: 0; padding: 10px; }
@@ -465,7 +465,7 @@ function imprimirSeleccionados() {
       </style>
     </head>
     <body>
-      <h1>Códigos de Barras — GestorPOS (${items.length} productos)</h1>
+      <h1>Códigos de Barras — ZumaPos (${items.length} productos)</h1>
       <div class="grid">${itemsHtml}</div>
       <script>window.onload = () => { window.print(); setTimeout(() => window.close(), 800); }<\/script>
     </body>

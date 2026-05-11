@@ -5,7 +5,7 @@
         <p class="superadmin-eyebrow">Superadmin</p>
         <h1>Negocios</h1>
         <p class="superadmin-copy">
-          Supervisa los clientes de GestorPOS, su estado, plan y onboarding inicial.
+          Supervisa los clientes de ZumaPos, su estado, plan y onboarding inicial.
         </p>
       </div>
       <Button label="Nuevo negocio" icon="pi pi-plus" @click="abrirNuevaEmpresa" />

@@ -6,7 +6,7 @@
           <i class="pi pi-question-circle text-indigo-500"></i> Centro de Ayuda
         </h1>
         <p class="mt-2 text-sm max-w-2xl font-bold" style="color: var(--text-app)">
-          Encuentra guías visuales y pasos detallados para realizar tus operaciones diarias en GestorPOS. Haz clic en las imágenes para ver la galería a pantalla completa.
+          Encuentra guías visuales y pasos detallados para realizar tus operaciones diarias en ZumaPos. Haz clic en las imágenes para ver la galería a pantalla completa.
         </p>
       </div>
     </div>

@@ -10,7 +10,7 @@
     <div v-if="venta" class="ticket-container">
       <!-- Encabezado del Ticket -->
       <div class="ticket-header text-center mb-4">
-        <h3 class="ticket-title font-bold text-xl uppercase tracking-tighter">GestorPOS</h3>
+        <h3 class="ticket-title font-bold text-xl uppercase tracking-tighter">ZumaPos</h3>
         <p class="text-[10px] text-muted font-mono mt-1">ID: {{ venta.idCorto }}</p>
         <p class="text-[11px] text-muted font-medium">{{ formatFecha(venta.fecha) }}</p>
         <div class="mt-2">
