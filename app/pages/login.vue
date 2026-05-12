@@ -102,6 +102,14 @@ const password = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 
+const route = useRoute()
+
+onMounted(() => {
+  if (route.query.error === 'account_suspended') {
+    errorMsg.value = 'Tu cuenta ha sido suspendida por falta de pago o por el administrador. Por favor, contacta a soporte.'
+  }
+})
+
 async function handleLogin() {
   if (!email.value || !password.value) {
     errorMsg.value = 'Por favor completa todos los campos.'
@@ -113,13 +121,20 @@ async function handleLogin() {
 
   try {
     await authStore.signIn(email.value, password.value)
+    
+    // Verificamos si la cuenta está suspendida antes de celebrar
+    if (authStore.perfil?.empresa?.activo === false && authStore.perfil?.rol !== 'super_admin') {
+      errorMsg.value = 'Tu cuenta ha sido suspendida por falta de pago o por el administrador. Por favor, contacta a soporte.'
+      loading.value = false
+      return
+    }
+
     toast.add({
       severity: 'success',
       summary: 'Bienvenido',
       detail: `Sesión iniciada correctamente`,
       life: 3000
     })
-    // Esperar a que el estado de auth se propague antes de navegar
     await nextTick()
     await navigateTo('/', { replace: true })
   } catch (err: any) {

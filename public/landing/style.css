@@ -162,7 +162,7 @@ body {
   letter-spacing: -0.03em;
 }
 
-.logo-icon { font-size: 1.6rem; }
+.logo-icon { width: 28px; height: 28px; display: block; }
 .logo-accent { color: var(--primary-light); }
 
 .nav-links {

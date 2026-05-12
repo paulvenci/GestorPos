@@ -1,0 +1,12 @@
+<svg viewBox="0 0 24 24" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+  </defs>
+  <!-- Parte superior de la Z -->
+  <path d="M4 4H18L13 10H4V4Z" fill="url(#logoGrad2)" />
+  <!-- Parte inferior de la Z (desplazada) -->
+  <path d="M11 14H20V20H6L11 14Z" fill="url(#logoGrad2)" opacity="0.8" />
+</svg>

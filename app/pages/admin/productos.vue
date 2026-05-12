@@ -10,12 +10,12 @@
         <Button
           v-if="selectedProducts.length > 0"
           :label="`Imprimir códigos (${selectedProducts.length})`"
-          icon="pi pi-print"
+          :icon="!planLimits.canUseFeature('barcode_printing') ? 'pi pi-lock' : 'pi pi-print'"
           severity="secondary"
           outlined
-          @click="imprimirSeleccionados"
+          @click="!planLimits.canUseFeature('barcode_printing') ? planLimits.mostrarAlertaPro('Impresión de Etiquetas') : imprimirSeleccionados()"
         />
-        <Button label="Nuevo Producto" icon="pi pi-plus" severity="success" @click="abrirNuevo" />
+        <Button label="Nuevo Producto" icon="pi pi-plus" severity="success" @click="validarNuevoProducto" />
       </div>
     </div>
 
@@ -94,7 +94,16 @@
         <template #body="slotProps">
           <div class="flex gap-2">
             <Button icon="pi pi-pencil" outlined rounded severity="info" size="small" @click="abrirEditar(slotProps.data)" title="Editar" />
-            <Button icon="pi pi-barcode" outlined rounded severity="secondary" size="small" @click="abrirEtiquetas(slotProps.data)" title="Imprimir Etiqueta" :disabled="!slotProps.data.sku" />
+            <Button 
+              :icon="!planLimits.canUseFeature('barcode_printing') ? 'pi pi-lock' : 'pi pi-barcode'" 
+              outlined 
+              rounded 
+              :severity="!planLimits.canUseFeature('barcode_printing') ? 'secondary' : 'secondary'" 
+              size="small" 
+              @click="!planLimits.canUseFeature('barcode_printing') ? planLimits.mostrarAlertaPro('Impresión de Etiquetas') : abrirEtiquetas(slotProps.data)" 
+              :title="!planLimits.canUseFeature('barcode_printing') ? 'Función Pro' : 'Imprimir Etiqueta'" 
+              :disabled="planLimits.canUseFeature('barcode_printing') && !slotProps.data.sku" 
+            />
           </div>
         </template>
       </Column>
@@ -330,7 +339,10 @@ import type { ProductoLocal } from '~/db'
 import JsBarcode from 'jsbarcode'
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { BarcodeFormat, DecodeHintType } from '@zxing/library'
+import { usePlanLimits } from '~/composables/usePlanLimits'
 import { FilterMatchMode } from '@primevue/core/api'
+
+const planLimits = usePlanLimits()
 
 const productosStore = useProductosStore()
 const categoriasStore = useCategoriasStore()
@@ -493,6 +505,19 @@ const mostrarCamaraFoto = ref(false)
 const videoFotoRef = ref<HTMLVideoElement | null>(null)
 const canvasFotoRef = ref<HTMLCanvasElement | null>(null)
 let streamCamaraFoto: MediaStream | null = null
+
+function validarNuevoProducto() {
+  if (!planLimits.checkLimit(productosStore.productos.length, 'max_productos')) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Límite de productos',
+      detail: planLimits.getLimitMessage('max_productos'),
+      life: 5000
+    })
+    return
+  }
+  abrirNuevo()
+}
 
 function abrirNuevo() {
   productoActual.value = { 

@@ -12,6 +12,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap"
     rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="logo1.svg" />
   <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -21,7 +22,7 @@
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
       <div class="nav-logo">
-        <span class="logo-icon">⚡</span>
+        <img src="logo1.svg" alt="ZumaPos" class="logo-icon" width="28" height="28" />
         <span class="logo-text">Zuma<span class="logo-accent">Pos</span></span>
       </div>
       <ul class="nav-links">
@@ -34,7 +35,7 @@
         <span class="theme-icon theme-icon-dark">🌙</span>
         <span class="theme-icon theme-icon-light">☀️</span>
       </button>
-      <a href="#contact" class="nav-cta">Solicitar Demo</a>
+      <a href="/registro" class="nav-cta">Prueba Gratuita</a>
     </div>
   </nav>
 
@@ -60,8 +61,8 @@
         sola pantalla — incluso <strong>sin internet</strong>.
       </p>
       <div class="hero-actions">
-        <a href="#contact" class="btn-primary" id="hero-demo-btn">
-          <span>Quiero ver una Demo</span>
+        <a href="/registro" class="btn-primary" id="hero-demo-btn">
+          <span>Probar Gratis 7 días</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
@@ -221,81 +222,83 @@
         <div class="feat-icon-wrap">
           <span class="feat-icon">⚡</span>
         </div>
-        <h3>Cobro Ultrarrápido</h3>
-        <p>Escanea con lector de código de barras o busca por nombre. Procesa una venta completa en menos de 5 segundos.
+        <h3>Cobro Ultrarrápido Offline</h3>
+        <p>Vende en menos de 3 segundos sin importar si se corta el internet. Sincronización transparente y automática
+          cuando vuelve la conexión.</p>
+        <ul class="feat-points">
+          <li>✓ Tecnología PWA Offline-First probada</li>
+          <li>✓ Panel dinámico de Top 20 más vendidos</li>
+          <li>✓ Compatible con cualquier lector USB</li>
+        </ul>
+        <div class="feat-tag">⚡ Ventas a prueba de cortes</div>
+      </div>
+
+      <div class="feature-card" id="feat-invoices">
+        <div class="feat-icon-wrap">
+          <span class="feat-icon">📄</span>
+        </div>
+        <h3>Ingreso de Facturas Automático</h3>
+        <p>Olvídate de digitar la mercadería manualmente. Automatiza tu recepción de inventario y actualiza precios al
+          instante.</p>
+        <ul class="feat-points">
+          <li>✓ Carga inteligente desde facturas</li>
+          <li>✓ Actualización automática de costos</li>
+          <li>✓ Cero errores de digitación</li>
+        </ul>
+      </div>
+
+      <div class="feature-card" id="feat-procurement">
+        <div class="feat-icon-wrap">
+          <span class="feat-icon">🛒</span>
+        </div>
+        <h3>Compras Automatizadas</h3>
+        <p>Genera órdenes de pedido exactas basadas en faltantes reales. Maneja distintas medidas (Cajas, Displays) sin
+          enredos.</p>
+        <ul class="feat-points">
+          <li>✓ Generación automática de faltantes</li>
+          <li>✓ Multi-unidad de medida por producto</li>
+          <li>✓ Envío de órdenes por WhatsApp en 1 clic</li>
+        </ul>
+      </div>
+
+      <div class="feature-card" id="feat-bi">
+        <div class="feat-icon-wrap">
+          <span class="feat-icon">📈</span>
+        </div>
+        <h3>Business Intelligence Avanzado</h3>
+        <p>Mide el pulso de tu negocio en tiempo real. Deja de intuir y toma el control total basado en datos duros.</p>
+        <ul class="feat-points">
+          <li>✓ KPIs: Ticket Promedio y Deudas</li>
+          <li>✓ Tendencias de crecimiento mensual (MTD)</li>
+          <li>✓ Gráficos interactivos de ventas</li>
+        </ul>
+      </div>
+
+      <div class="feature-card" id="feat-blind-cashier">
+        <div class="feat-icon-wrap">
+          <span class="feat-icon">🛡️</span>
+        </div>
+        <h3>Sistema Anti-Fraude 'Cajero Ciego'</h3>
+        <p>Máxima seguridad en el punto de venta. Evita manipulaciones forzando arqueos de caja 100% reales y ciegos.
         </p>
         <ul class="feat-points">
-          <li>✓ Compatible con cualquier lector USB</li>
-          <li>✓ Búsqueda inteligente por nombre o SKU</li>
-          <li>✓ Atajos de teclado para cajeros veloces</li>
-        </ul>
-        <div class="feat-tag">⚡ Venta más rápida del mercado</div>
-      </div>
-
-      <div class="feature-card" id="feat-offline">
-        <div class="feat-icon-wrap">
-          <span class="feat-icon">📡</span>
-        </div>
-        <h3>Funciona Sin Internet</h3>
-        <p>¿Se fue el internet? No hay problema. ZumaPos sigue vendiendo y sincroniza automático cuando vuelve la
-          conexión.</p>
-        <ul class="feat-points">
-          <li>✓ Tecnología PWA Offline-First</li>
-          <li>✓ Cero pérdida de ventas</li>
-          <li>✓ Sincronización automática</li>
+          <li>✓ Cierre de turno a ciegas para el cajero</li>
+          <li>✓ Requiere autorización de administrador</li>
+          <li>✓ Detección milimétrica de descuadres</li>
         </ul>
       </div>
 
-      <div class="feature-card" id="feat-inventory">
+      <div class="feature-card" id="feat-credit">
         <div class="feat-icon-wrap">
-          <span class="feat-icon">📦</span>
+          <span class="feat-icon">💳</span>
         </div>
-        <h3>Inventario en Tiempo Real</h3>
-        <p>Cada venta descuenta el stock automáticamente. Recibe alertas antes de que se agote un producto.</p>
+        <h3>Control de 'Fiado' (Límites de Crédito)</h3>
+        <p>Da crédito a tus clientes de confianza de manera profesional, estableciendo límites estrictos y bloqueos
+          automáticos.</p>
         <ul class="feat-points">
-          <li>✓ Alertas de stock mínimo</li>
-          <li>✓ Imprime etiquetas con código de barras</li>
-          <li>✓ Control de costos y márgenes</li>
-        </ul>
-      </div>
-
-      <div class="feature-card" id="feat-reports">
-        <div class="feat-icon-wrap">
-          <span class="feat-icon">📊</span>
-        </div>
-        <h3>Reportes Inteligentes</h3>
-        <p>Sabe exactamente cuánto vendiste, qué productos se mueven más y cuánto dinero hay en caja — en segundos.</p>
-        <ul class="feat-points">
-          <li>✓ Dashboard de ventas diarias</li>
-          <li>✓ Top 10 productos más vendidos</li>
-          <li>✓ Arqueod de caja con diferencias</li>
-        </ul>
-      </div>
-
-      <div class="feature-card" id="feat-cash">
-        <div class="feat-icon-wrap">
-          <span class="feat-icon">💼</span>
-        </div>
-        <h3>Control de Caja y Turnos</h3>
-        <p>Cada cajero abre su propio turno con monto inicial. Al cerrar, el sistema detecta faltantes o sobrantes
-          automáticamente.</p>
-        <ul class="feat-points">
-          <li>✓ Múltiples cajeros y turnos</li>
-          <li>✓ Reporte de arqueo automático</li>
-          <li>✓ Historial de todos los movimientos</li>
-        </ul>
-      </div>
-
-      <div class="feature-card" id="feat-secure">
-        <div class="feat-icon-wrap">
-          <span class="feat-icon">🔒</span>
-        </div>
-        <h3>Seguro y en la Nube</h3>
-        <p>Tus datos siempre respaldados en la nube. Cada usuario accede solo a lo que le corresponde.</p>
-        <ul class="feat-points">
-          <li>✓ Respaldo automático en la nube</li>
-          <li>✓ Roles: Administrador y Cajero</li>
-          <li>✓ Accede desde cualquier dispositivo</li>
+          <li>✓ Límite de crédito estricto por cliente</li>
+          <li>✓ Bloqueo inteligente al exceder cupo</li>
+          <li>✓ Respaldo Cloud 24/7 de tu información</li>
         </ul>
       </div>
     </div>
@@ -373,7 +376,7 @@
           <li class="disabled"><span>✗</span> Múltiples cajeros</li>
           <li class="disabled"><span>✗</span> Reportes avanzados</li>
         </ul>
-        <a href="#contact" class="price-btn-ghost">Elegir Básico</a>
+        <a href="/registro" class="price-btn-ghost">Empezar Gratis</a>
       </div>
 
       <div class="price-card featured" id="price-pro">
@@ -397,7 +400,7 @@
           <li><span class="check">✓</span> Respaldo en la nube</li>
           <li><span class="check">✓</span> Soporte prioritario</li>
         </ul>
-        <a href="#contact" class="price-btn-primary">¡Lo Quiero!</a>
+        <a href="/registro" class="price-btn-primary">Probar Plan Pro</a>
       </div>
 
       <div class="price-card" id="price-enterprise">
@@ -486,8 +489,12 @@
     <div class="cta-content">
       <span class="section-tag">¿Listo para dar el salto?</span>
       <h2>Moderniza tu negocio hoy mismo</h2>
-      <p>Agenda una demostración gratuita y ve ZumaPos funcionando en vivo en tu tipo de negocio. Sin compromisos, sin
-        costo.</p>
+      <p>Comienza ahora mismo sin esperas. Crea tu cuenta en 1 minuto y empieza a vender.</p>
+      <div class="hero-actions" style="justify-content: center; margin-top: 2rem;">
+        <a href="/registro" class="btn-primary" style="padding: 1.2rem 2.5rem; font-size: 1.2rem;">
+          <span>🚀 Crear mi Cuenta Gratis</span>
+        </a>
+      </div>
 
       <div class="contact-cards">
         <a href="https://wa.me/56961337579?text=Hola!%20quiero%20una%20demo%20de%20ZumaPos"
@@ -533,7 +540,7 @@
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-logo">
-        <span class="logo-icon">⚡</span>
+        <img src="logo1.svg" alt="ZumaPos" class="logo-icon" width="28" height="28" />
         <span class="logo-text">Gestor<span class="logo-accent">POS</span></span>
       </div>
       <p class="footer-tagline">El sistema de punto de venta moderno para el comercio chileno.</p>

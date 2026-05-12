@@ -32,6 +32,7 @@
       dataKey="id"
       responsiveLayout="scroll"
       class="p-datatable-sm superadmin-table"
+      :rowClass="rowClass"
     >
       <Column field="nombre" header="Negocio" style="min-width: 16rem">
         <template #body="slotProps">
@@ -54,12 +55,15 @@
         </template>
       </Column>
 
-      <Column header="Admins" style="min-width: 14rem">
+      <Column header="Admins" style="min-width: 15rem">
         <template #body="slotProps">
           <div class="empresa-admins">
-            <span v-if="slotProps.data.admins?.length">
-              {{ slotProps.data.admins.map((admin: any) => admin.nombre || admin.id?.slice(0, 8)).join(', ') }}
-            </span>
+            <div v-if="slotProps.data.admins?.length" class="admins-list">
+              <div v-for="admin in slotProps.data.admins" :key="admin.id" class="admin-entry">
+                <strong>{{ admin.nombre || 'Admin' }}</strong>
+                <span class="admin-email" v-if="admin.email">{{ admin.email }}</span>
+              </div>
+            </div>
             <span v-else>Sin admin creado</span>
           </div>
         </template>
@@ -75,15 +79,33 @@
         </template>
       </Column>
 
-      <Column field="fecha_vencimiento" header="Vence" style="min-width: 10rem">
+      <Column field="fecha_vencimiento" header="Vence" style="min-width: 12rem">
         <template #body="slotProps">
-          <span>{{ slotProps.data.fecha_vencimiento ? formatFecha(slotProps.data.fecha_vencimiento) : 'Sin fecha' }}</span>
+          <div class="vencimiento-cell">
+            <span>{{ slotProps.data.fecha_vencimiento ? formatFecha(slotProps.data.fecha_vencimiento) : 'Sin fecha' }}</span>
+            <Tag 
+              v-if="slotProps.data.fecha_vencimiento"
+              :value="getDiasRestantesText(slotProps.data.fecha_vencimiento)" 
+              :severity="getDiasRestantesSeverity(slotProps.data.fecha_vencimiento)"
+              class="vencimiento-tag"
+            />
+          </div>
         </template>
       </Column>
 
       <Column style="min-width: 8rem">
         <template #body="slotProps">
-          <Button icon="pi pi-pencil" rounded outlined severity="secondary" @click="editarEmpresa(slotProps.data)" />
+          <div class="flex gap-2">
+            <Button 
+              icon="pi pi-calendar-plus" 
+              v-tooltip.top="'Extender 30 días'"
+              rounded 
+              outlined 
+              severity="success" 
+              @click="confirmarExtension(slotProps.data)" 
+            />
+            <Button icon="pi pi-pencil" rounded outlined severity="secondary" @click="editarEmpresa(slotProps.data)" />
+          </div>
         </template>
       </Column>
     </DataTable>
@@ -187,12 +209,39 @@ const authStore = useAuthStore()
 const toast = useToast()
 const { formatFecha } = useFormatMonto()
 
+function getDiasRestantes(fecha: string) {
+  const hoy = new Date()
+  const vencimiento = new Date(fecha)
+  const diffTime = vencimiento.getTime() - hoy.getTime()
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
+function getDiasRestantesText(fecha: string) {
+  const dias = getDiasRestantes(fecha)
+  if (dias < 0) return `Vencido (${Math.abs(dias)}d)`
+  if (dias === 0) return 'Vence hoy'
+  return `${dias} días`
+}
+
+function getDiasRestantesSeverity(fecha: string) {
+  const dias = getDiasRestantes(fecha)
+  if (dias < 0) return 'danger'
+  if (dias <= 5) return 'warn'
+  return 'secondary'
+}
+
 const loading = ref(false)
 const guardando = ref(false)
 const mostrarDialogo = ref(false)
 const modoEdicion = ref(false)
 const empresaEditandoId = ref<string | null>(null)
 const empresas = ref<EmpresaResumen[]>([])
+
+function rowClass(data: any) {
+  return [
+    { 'row-pausada': !data.activo }
+  ]
+}
 
 const planes = [
   { label: 'Básico', value: 'basico' },
@@ -230,6 +279,39 @@ async function getAuthHeaders() {
 
   return {
     Authorization: `Bearer ${accessToken}`
+  }
+}
+
+async function confirmarExtension(empresa: EmpresaResumen) {
+  // Calculamos la nueva fecha: Si ya venció, es hoy + 30. Si no, es fecha_vencimiento + 30.
+  const baseDate = empresa.fecha_vencimiento && new Date(empresa.fecha_vencimiento) > new Date()
+    ? new Date(empresa.fecha_vencimiento)
+    : new Date()
+  
+  const nuevaFecha = new Date(baseDate)
+  nuevaFecha.setDate(nuevaFecha.getDate() + 30)
+
+  if (!confirm(`¿Confirmas extender la suscripción de "${empresa.nombre}" hasta el ${formatFecha(nuevaFecha.toISOString())}?`)) {
+    return
+  }
+
+  loading.value = true
+  try {
+    const headers = await getAuthHeaders()
+    await $fetch(`/api/superadmin/empresas/${empresa.id}`, {
+      method: 'PATCH',
+      headers,
+      body: { 
+        fecha_vencimiento: nuevaFecha.toISOString(),
+        activo: true // Al extender, la activamos automáticamente
+      }
+    })
+    toast.add({ severity: 'success', summary: 'Suscripción extendida', detail: 'Se agregaron 30 días adicionales.', life: 3000 })
+    await fetchEmpresas()
+  } catch (error: any) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo extender la suscripción', life: 4000 })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -417,10 +499,43 @@ async function guardarEmpresa() {
   font-size: 0.82rem;
 }
 
-.empresa-metrics {
+.admins-list {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.5rem;
+}
+
+.admin-entry {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.admin-entry strong {
+  color: var(--text-app);
+  font-size: 0.85rem;
+}
+
+.admin-email {
+  font-size: 0.75rem;
+  color: var(--color-brand-primary);
+  opacity: 0.8;
+}
+
+.vencimiento-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.vencimiento-tag {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+}
+
+:deep(.row-pausada) {
+  opacity: 0.65;
+  background: rgba(255, 100, 100, 0.05) !important;
 }
 
 .superadmin-form {

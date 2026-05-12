@@ -30,7 +30,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo('/login')
   }
 
-  if (currentUser?.id && to.path === '/login') {
+  if (currentUser?.id && to.path === '/login' && !to.query.error) {
     return navigateTo('/')
   }
 
@@ -64,6 +64,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (!perfil || perfil.activo === false || !perfil.empresa_id) {
     return navigateTo('/login')
+  }
+
+  // Si la empresa está pausada (ej: falta de pago), bloqueamos el acceso excepto para super_admin
+  if (perfil.empresa?.activo === false && perfil.rol !== 'super_admin') {
+    // Podríamos crear una página específica /suspendido, por ahora login
+    return navigateTo('/login?error=account_suspended')
   }
 
   if (!canAccessSection(perfil.rol, section, permissions)) {

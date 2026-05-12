@@ -1,4 +1,4 @@
-﻿import { requireSuperAdmin } from '../../../utils/superadmin'
+import { requireSuperAdmin } from '../../../utils/superadmin'
 
 export default defineEventHandler(async (event) => {
   const { adminClient } = await requireSuperAdmin(event)
@@ -18,8 +18,8 @@ export default defineEventHandler(async (event) => {
       adminClient.from('productos').select('*', { count: 'exact', head: true }).eq('empresa_id', empresa.id),
       adminClient.from('ventas').select('*', { count: 'exact', head: true }).eq('empresa_id', empresa.id),
       adminClient
-        .from('perfiles')
-        .select('id, nombre')
+        .from('v_perfiles_admin')
+        .select('id, nombre, email')
         .eq('empresa_id', empresa.id)
         .eq('rol', 'admin')
         .limit(3)

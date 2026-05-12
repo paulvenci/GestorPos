@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
     rol: string
     activo?: boolean | null
     empresa_id: string | null
-    empresa?: { nombre: string | null } | null
+    empresa?: { nombre: string | null; activo: boolean; plan: 'basico' | 'pro' } | null
   } | null>(null)
 
   const nombrePerfil = computed(() => perfil.value?.nombre?.trim() || '')
@@ -26,10 +26,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchPerfil(userId: string) {
+    perfil.value = null
     try {
       const { data } = await supabase
         .from('perfiles')
-        .select('nombre, rol, activo, empresa_id, empresa:empresas(nombre)')
+        .select('nombre, rol, activo, empresa_id, empresa:empresas(nombre, activo, plan)')
         .eq('id', userId)
         .single()
       if (data) {

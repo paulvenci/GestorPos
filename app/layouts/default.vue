@@ -16,7 +16,7 @@
     >
       <div class="pos-sidebar-logo">
         <div class="pos-sidebar-logo-inner">
-          <span class="pos-logo-icon">&#9889;</span>
+          <img src="/logo1.svg" alt="ZumaPos" class="pos-logo-icon" width="24" height="24" />
           <span class="pos-logo-text sidebar-label">ZumaPos</span>
         </div>
         <Button 
@@ -110,7 +110,14 @@
         <div class="pos-user-info">
           <Avatar icon="pi pi-user" shape="circle" class="pos-avatar" />
           <div>
-            <p class="pos-user-name">{{ authStore.nombreUsuario }}</p>
+            <div class="flex items-center gap-2">
+              <p class="pos-user-name">{{ authStore.nombreUsuario }}</p>
+              <Tag 
+                :value="planLimits.plan.value.toUpperCase()" 
+                :severity="planLimits.plan.value === 'pro' ? 'success' : 'info'" 
+                class="!text-[9px] !px-1.5 !py-0.5 !h-auto" 
+              />
+            </div>
             <p class="pos-user-role">{{ authStore.rolUsuario }}</p>
           </div>
         </div>
@@ -138,12 +145,13 @@
         <div class="pos-topbar-info flex items-center gap-4">
           <Button 
             icon="pi pi-sign-out" 
-            label="Egreso Rápido" 
+            :label="$device?.isMobile ? undefined : 'Egreso Rápido'" 
             severity="danger" 
             size="small"
             text
             class="pos-topbar-egreso-btn"
             @click="mostrarEgresoRapido = true"
+            v-tooltip.bottom="'Egreso Rápido'"
           />
           <Tag
             :value="isOnline ? 'Online' : 'Offline'"
@@ -165,6 +173,12 @@
             :severity="cajaStore.hayTurnoActivo ? 'success' : 'warn'"
             :icon="cajaStore.hayTurnoActivo ? 'pi pi-check-circle' : 'pi pi-minus-circle'"
             class="pos-turno-tag"
+          />
+          <Tag 
+            :value="'PLAN ' + planLimits.plan.value.toUpperCase()" 
+            :severity="planLimits.plan.value === 'pro' ? 'success' : 'info'" 
+            variant="outlined"
+            class="pos-plan-tag !text-[10px]"
           />
           <span class="pos-app-version">v{{ appVersion }}</span>
 
@@ -289,6 +303,9 @@ import { usePosStore } from '~/stores/pos'
 import { useDarkMode } from '~/composables/useDarkMode'
 import { useConfigStore } from '~/stores/config'
 import { canAccessSection, normalizeRolePermissions, type SectionKey } from '~/composables/useRolePermissions'
+import { usePlanLimits } from '~/composables/usePlanLimits'
+
+const planLimits = usePlanLimits()
 
 const toast = useToast()
 
@@ -641,7 +658,10 @@ async function instalarApp() {
 }
 
 .pos-logo-icon {
-  font-size: 1.5rem;
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .pos-logo-text {
@@ -1010,6 +1030,37 @@ async function instalarApp() {
 
   .pos-main-content {
     padding-top: 0;
+    margin-left: 0;
+  }
+
+  /* Anular el estado colapsado en móvil para que el sidebar muestre textos e íconos correctamente */
+  .pos-sidebar {
+    width: 240px !important;
+    padding: 1.5rem 1rem !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  .pos-sidebar--collapsed .sidebar-label,
+  .pos-sidebar--collapsed .pos-sidebar-version,
+  .pos-sidebar--collapsed .pos-user-info div,
+  .pos-sidebar--collapsed .pos-sidebar-footer .pos-logout-btn,
+  .pos-sidebar--collapsed .pos-nav-item span,
+  .pos-sidebar--collapsed .pos-nav-item--egreso span {
+    display: block !important;
+  }
+  .pos-sidebar--collapsed .pos-sidebar-logo .p-button {
+    display: inline-flex !important;
+  }
+  .pos-sidebar--collapsed .pos-nav-item {
+    justify-content: flex-start !important;
+    padding: 0.75rem 1rem !important;
+  }
+  .pos-sidebar--collapsed .pos-nav-item i {
+    width: 1.25rem !important;
+  }
+  .pos-sidebar--collapsed .pos-sidebar-footer {
+    justify-content: space-between !important;
+    padding: 0.75rem !important;
   }
 
   .pos-topbar {
@@ -1055,6 +1106,14 @@ async function instalarApp() {
 
   .pos-online-tag {
     order: 1;
+  }
+
+  .pos-topbar-egreso-btn {
+    padding: 0.3rem !important;
+    font-size: 0.75rem !important;
+  }
+  .pos-topbar-egreso-btn :deep(.p-button-label) {
+    display: none !important;
   }
 
   .pos-bell-btn {

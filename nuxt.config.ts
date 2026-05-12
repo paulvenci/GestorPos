@@ -10,6 +10,13 @@ const resolvedAppVersion = process.env.APP_VERSION || packageJson.version || 'de
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false, // <-- IMPORTANTE: Modo SPA para Offline-First
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg?v=2' }
+      ]
+    }
+  },
   runtimeConfig: {
     supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
     public: {

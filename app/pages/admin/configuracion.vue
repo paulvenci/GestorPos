@@ -23,7 +23,7 @@
               <h2><i class="pi pi-users" /> Equipo del negocio</h2>
               <p>Administra los roles de cada miembro para controlar sus permisos en el sistema.</p>
             </div>
-            <Button label="Nuevo Usuario" icon="pi pi-user-plus" severity="success" @click="abrirNuevo" />
+            <Button label="Nuevo Usuario" icon="pi pi-user-plus" severity="success" @click="validarNuevoUsuario" />
           </div>
 
           <DataTable
@@ -294,6 +294,9 @@ import {
   type RoleKey,
   type SectionKey
 } from '~/composables/useRolePermissions'
+import { usePlanLimits } from '~/composables/usePlanLimits'
+
+const planLimits = usePlanLimits()
 
 interface Perfil {
   id: string
@@ -459,6 +462,19 @@ async function fetchUsuarios() {
   } finally {
     loading.value = false
   }
+}
+
+function validarNuevoUsuario() {
+  if (!planLimits.checkLimit(usuarios.value.length, 'max_usuarios')) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Límite de equipo',
+      detail: planLimits.getLimitMessage('max_usuarios'),
+      life: 5000
+    })
+    return
+  }
+  abrirNuevo()
 }
 
 function abrirNuevo() {

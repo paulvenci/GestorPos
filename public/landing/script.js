@@ -189,13 +189,7 @@ const statsObserver = new IntersectionObserver((entries) => {
 const heroStats = document.querySelector('.hero-stats');
 if (heroStats) statsObserver.observe(heroStats);
 
-// ── WhatsApp contact — update phone number ──
-// If you need to update the number, change it here:
-const WA_NUMBER = '56912345678'; // <-- Cambia este número
-document.querySelectorAll('[href*="wa.me"]').forEach(el => {
-  const url = new URL(el.href);
-  el.href = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Hola! Me interesa conocer ZumaPos. ¿Pueden mostrarme una demo gratuita?')}`;
-});
+// (El número de WhatsApp se configura directamente en el archivo index.html)
 
 console.log('%c⚡ ZumaPos', 'font-size:24px;font-weight:900;color:#8b5cf6;');
 console.log('%cSistema de Punto de Venta Moderno', 'color:#6366f1;font-size:14px;');

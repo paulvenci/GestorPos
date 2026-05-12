@@ -1,28 +1,29 @@
 <template>
-  <div class="admin-page max-w-7xl mx-auto px-4">
-    <div class="flex justify-between items-center mb-6">
-      <div class="flex items-center gap-3">
-        <Button icon="pi pi-arrow-left" text rounded severity="secondary" @click="router.push('/admin/compras')" />
-        <div>
-          <h1 class="text-2xl font-bold flex items-center gap-2 text-color">
-            <i class="pi pi-sparkles text-indigo-500"></i> Generador de Pedidos
+  <div class="admin-page max-w-7xl mx-auto px-3 md:px-4">
+    <!-- Header -->
+    <div class="flex justify-between items-start gap-3 mb-4 md:mb-6">
+      <div class="flex items-start gap-2 min-w-0">
+        <Button icon="pi pi-arrow-left" text rounded severity="secondary" class="mt-1 flex-shrink-0" @click="router.push('/admin/compras')" />
+        <div class="min-w-0">
+          <h1 class="text-lg md:text-2xl font-bold flex items-center gap-2 text-color leading-tight">
+            <i class="pi pi-sparkles text-indigo-500 hidden md:inline"></i> Generador de Pedidos
           </h1>
-          <p class="text-color-secondary text-sm mt-1">Haz tu lista de faltantes y el sistema la dividirá por proveedor.</p>
+          <p class="text-color-secondary text-xs md:text-sm mt-0.5 leading-snug">Haz tu lista de faltantes y el sistema la dividirá por proveedor.</p>
         </div>
       </div>
       <Button 
-        label="Procesar y Crear Pedidos" 
+        :label="windowWidth >= 640 ? 'Procesar y Crear Pedidos' : 'Procesar'"
         icon="pi pi-check" 
         :disabled="listaFaltantes.length === 0" 
         :loading="procesando"
+        size="small"
+        class="flex-shrink-0"
         @click="procesarLista" 
       />
     </div>
 
-    <!-- Layout vertical: búsqueda arriba, lista abajo -->
-
-    <!-- Buscador (arriba) -->
-    <div class="surface-card p-4 rounded-xl border surface-border mb-4">
+    <!-- Buscador -->
+    <div class="surface-card p-3 md:p-4 rounded-xl border surface-border mb-3 md:mb-4">
       <div class="flex items-center gap-3">
         <span class="p-input-icon-left flex-1">
           <i class="pi pi-search" />
@@ -37,7 +38,7 @@
       </div>
 
       <!-- Resultados de búsqueda -->
-      <div v-if="resultados.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+      <div v-if="resultados.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mt-3">
         <div
           v-for="prod in resultados"
           :key="prod.id"
@@ -54,81 +55,94 @@
       <p v-else-if="busqueda.length > 1" class="text-color-secondary text-sm mt-3 text-center">No se encontraron productos.</p>
     </div>
 
-    <!-- Lista actual (abajo) -->
-    <div class="surface-card rounded-xl border surface-border flex flex-col" style="min-height: 400px">
-      <div class="flex justify-between items-center border-b surface-border p-4">
-        <h2 class="font-bold text-lg flex items-center gap-2">
+    <!-- Lista actual -->
+    <div class="surface-card rounded-xl border surface-border flex flex-col" style="min-height: 300px">
+      <div class="flex justify-between items-center border-b surface-border p-3 md:p-4">
+        <h2 class="font-bold text-base md:text-lg flex items-center gap-2">
           <i class="pi pi-list"></i> Tu Lista Actual
         </h2>
         <Tag :value="listaFaltantes.length + ' ítems'" severity="info" rounded />
       </div>
 
-      <div v-if="listaFaltantes.length === 0" class="flex-1 flex flex-col items-center justify-center text-color-secondary opacity-50 p-10">
-        <i class="pi pi-cart-plus text-6xl mb-4"></i>
-        <p>Busca productos arriba y agrégalos a tu lista.</p>
+      <div v-if="listaFaltantes.length === 0" class="flex-1 flex flex-col items-center justify-center text-color-secondary opacity-50 p-8 md:p-10">
+        <i class="pi pi-cart-plus text-5xl md:text-6xl mb-4"></i>
+        <p class="text-sm">Busca productos arriba y agrégalos a tu lista.</p>
       </div>
 
       <div v-else class="divide-y surface-border">
         <div
           v-for="(item, index) in listaFaltantes"
           :key="item.producto.id"
-          class="flex items-center justify-between px-4 py-3"
+          class="px-3 md:px-4 py-3"
         >
-          <!-- Info producto -->
-          <div class="flex-1 min-w-0 pr-4">
-            <p class="font-bold text-sm truncate">{{ item.producto.nombre }}</p>
-            <div class="flex gap-3 text-xs text-color-secondary mt-0.5">
-              <span>Stock: {{ item.producto.stock }}</span>
-              <span v-if="item.proveedorSugerido" class="flex items-center gap-1">
-                <i class="pi pi-building text-[10px]"></i> {{ item.proveedorSugerido }}
-              </span>
-              <span v-else class="italic">Proveedor por determinar</span>
+          <!-- Desktop: una fila horizontal -->
+          <div class="hidden md:flex items-center justify-between">
+            <div class="flex-1 min-w-0 pr-4">
+              <p class="font-bold text-sm truncate">{{ item.producto.nombre }}</p>
+              <div class="flex gap-3 text-xs text-color-secondary mt-0.5">
+                <span>Stock: {{ item.producto.stock }}</span>
+                <span v-if="item.proveedorSugerido" class="flex items-center gap-1">
+                  <i class="pi pi-building text-[10px]"></i> {{ item.proveedorSugerido }}
+                </span>
+                <span v-else class="italic">Proveedor por determinar</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+              <div class="flex flex-col items-center">
+                <label class="text-[10px] text-color-secondary uppercase font-bold mb-1">A Pedir</label>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center rounded-lg overflow-hidden border surface-border">
+                    <button class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors" @click="item.cantidad = Math.max(1, item.cantidad - 1)">
+                      <i class="pi pi-minus text-xs"></i>
+                    </button>
+                    <input type="number" v-model="item.cantidad" class="w-12 h-8 text-center bg-transparent border-none text-sm font-bold focus:ring-0 outline-none p-0 text-color" min="1" />
+                    <button class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors" @click="item.cantidad++">
+                      <i class="pi pi-plus text-xs"></i>
+                    </button>
+                  </div>
+                  <Dropdown v-model="item.unidad" :options="unidadesOpciones" editable class="w-28 text-sm" placeholder="Unidad" />
+                </div>
+              </div>
+              <Button icon="pi pi-trash" text rounded severity="danger" @click="listaFaltantes.splice(index, 1)" />
             </div>
           </div>
 
-          <!-- Control cantidad + acciones -->
-          <div class="flex items-center gap-3 flex-shrink-0">
-            <div class="flex flex-col items-center">
-              <label class="text-[10px] text-color-secondary uppercase font-bold mb-1">A Pedir</label>
-              <div class="flex items-center gap-2">
-                <div class="flex items-center rounded-lg overflow-hidden border surface-border">
-                  <button
-                    class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors"
-                    @click="item.cantidad = Math.max(1, item.cantidad - 1)"
-                  >
-                    <i class="pi pi-minus text-xs"></i>
-                  </button>
-                  <input
-                    type="number"
-                    v-model="item.cantidad"
-                    class="w-12 h-8 text-center bg-transparent border-none text-sm font-bold focus:ring-0 outline-none p-0 text-color"
-                    min="1"
-                  />
-                  <button
-                    class="w-8 h-8 flex items-center justify-center surface-hover text-color hover:text-primary transition-colors"
-                    @click="item.cantidad++"
-                  >
-                    <i class="pi pi-plus text-xs"></i>
-                  </button>
+          <!-- Mobile: layout apilado -->
+          <div class="flex md:hidden flex-col gap-2">
+            <!-- Fila 1: nombre + eliminar -->
+            <div class="flex justify-between items-start gap-2">
+              <div class="min-w-0 flex-1">
+                <p class="font-bold text-sm leading-tight">{{ item.producto.nombre }}</p>
+                <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-color-secondary mt-0.5">
+                  <span>Stock: <strong :class="item.producto.stock <= (item.producto.stock_minimo||0) ? 'text-red-500' : ''">{{ item.producto.stock }}</strong></span>
+                  <span v-if="item.proveedorSugerido" class="flex items-center gap-0.5">
+                    <i class="pi pi-building text-[9px]"></i> {{ item.proveedorSugerido }}
+                  </span>
                 </div>
-                <Dropdown 
-                  v-model="item.unidad" 
-                  :options="unidadesOpciones" 
-                  editable 
-                  class="w-28 text-sm"
-                  placeholder="Unidad"
-                />
               </div>
+              <Button icon="pi pi-trash" text rounded size="small" severity="danger" class="flex-shrink-0 !w-8 !h-8" @click="listaFaltantes.splice(index, 1)" />
             </div>
-            <Button icon="pi pi-trash" text rounded severity="danger" @click="listaFaltantes.splice(index, 1)" />
+            <!-- Fila 2: controles de cantidad + unidad -->
+            <div class="flex items-center gap-2">
+              <div class="flex items-center rounded-lg overflow-hidden border surface-border flex-shrink-0">
+                <button class="w-8 h-8 flex items-center justify-center surface-hover text-color" @click="item.cantidad = Math.max(1, item.cantidad - 1)">
+                  <i class="pi pi-minus text-xs"></i>
+                </button>
+                <input type="number" v-model="item.cantidad" class="w-10 h-8 text-center bg-transparent border-none text-sm font-bold focus:ring-0 outline-none p-0 text-color" min="1" />
+                <button class="w-8 h-8 flex items-center justify-center surface-hover text-color" @click="item.cantidad++">
+                  <i class="pi pi-plus text-xs"></i>
+                </button>
+              </div>
+              <Dropdown v-model="item.unidad" :options="unidadesOpciones" editable class="flex-1 text-sm" placeholder="Unidad" />
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Totales -->
-      <div class="border-t surface-border p-4 mt-auto flex justify-between items-center">
-        <span class="text-color-secondary font-medium">Inversión Estimada:</span>
-        <span class="font-black text-xl text-indigo-600 dark:text-indigo-400">{{ formatMonto(inversionEstimada) }}</span>
+      <div class="border-t surface-border p-3 md:p-4 mt-auto flex justify-between items-center">
+        <span class="text-color-secondary font-medium text-sm">Inversión Estimada:</span>
+        <span class="font-black text-lg md:text-xl text-indigo-600 dark:text-indigo-400">{{ formatMonto(inversionEstimada) }}</span>
       </div>
     </div>
   </div>
@@ -149,6 +163,11 @@ const busqueda = ref('')
 const resultados = ref<ProductoLocal[]>([])
 const listaFaltantes = ref<{ producto: ProductoLocal, cantidad: number, proveedorSugerido: string | null, unidad: string }[]>([])
 const procesando = ref(false)
+
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', () => { windowWidth.value = window.innerWidth })
+}
 
 const unidadesOpciones = ref(['Unidades', 'Cajas', 'Displays', 'Kilos', 'Gramos', 'Paquetes', 'Tiras'])
 

@@ -5,41 +5,41 @@
     </div>
 
     <!-- Resumen -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="surface-card p-4 rounded-xl border surface-border flex items-center gap-4 hover:shadow-md transition-shadow">
-        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 flex-shrink-0 border border-amber-500/20">
-          <i class="pi pi-file-edit text-xl"></i>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+      <div class="surface-card p-3 md:p-4 rounded-xl border surface-border flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-4 hover:shadow-md transition-shadow text-center md:text-left">
+        <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 flex-shrink-0 border border-amber-500/20">
+          <i class="pi pi-file-edit text-lg md:text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] text-color-secondary font-black uppercase tracking-wider mb-1">Borradores</p>
-          <p class="text-3xl font-black">{{ pedidos.filter(p => p.estado === 'pendiente_pedido').length }}</p>
+          <p class="text-[9px] md:text-[10px] text-color-secondary font-black uppercase tracking-wider mb-0.5">Borradores</p>
+          <p class="text-2xl md:text-3xl font-black leading-none">{{ pedidos.filter(p => p.estado === 'pendiente_pedido').length }}</p>
         </div>
       </div>
-      <div class="surface-card p-4 rounded-xl border surface-border flex items-center gap-4 hover:shadow-md transition-shadow">
-        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 flex-shrink-0 border border-indigo-500/20">
-          <i class="pi pi-send text-xl"></i>
+      <div class="surface-card p-3 md:p-4 rounded-xl border surface-border flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-4 hover:shadow-md transition-shadow text-center md:text-left">
+        <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 flex-shrink-0 border border-indigo-500/20">
+          <i class="pi pi-send text-lg md:text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] text-color-secondary font-black uppercase tracking-wider mb-1">Enviados</p>
-          <p class="text-3xl font-black">{{ pedidos.filter(p => p.estado === 'pedido_realizado').length }}</p>
+          <p class="text-[9px] md:text-[10px] text-color-secondary font-black uppercase tracking-wider mb-0.5">Enviados</p>
+          <p class="text-2xl md:text-3xl font-black leading-none">{{ pedidos.filter(p => p.estado === 'pedido_realizado').length }}</p>
         </div>
       </div>
-      <div class="surface-card p-4 rounded-xl border surface-border flex items-center gap-4 hover:shadow-md transition-shadow">
-        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 flex-shrink-0 border border-emerald-500/20">
-          <i class="pi pi-check-circle text-xl"></i>
+      <div class="surface-card p-3 md:p-4 rounded-xl border surface-border flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-4 hover:shadow-md transition-shadow text-center md:text-left">
+        <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 flex-shrink-0 border border-emerald-500/20">
+          <i class="pi pi-check-circle text-lg md:text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] text-color-secondary font-black uppercase tracking-wider mb-1">Recibidos</p>
-          <p class="text-3xl font-black">{{ pedidos.filter(p => p.estado === 'recibido_e_ingresado').length }}</p>
+          <p class="text-[9px] md:text-[10px] text-color-secondary font-black uppercase tracking-wider mb-0.5">Recibidos</p>
+          <p class="text-2xl md:text-3xl font-black leading-none">{{ pedidos.filter(p => p.estado === 'recibido_e_ingresado').length }}</p>
         </div>
       </div>
-      <div class="surface-card p-4 rounded-xl border surface-border flex items-center gap-4 hover:shadow-md transition-shadow">
-        <div class="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-600 flex-shrink-0 border border-rose-500/20">
-          <i class="pi pi-ban text-xl"></i>
+      <div class="surface-card p-3 md:p-4 rounded-xl border surface-border flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-4 hover:shadow-md transition-shadow text-center md:text-left">
+        <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-600 flex-shrink-0 border border-rose-500/20">
+          <i class="pi pi-ban text-lg md:text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] text-color-secondary font-black uppercase tracking-wider mb-1">Anulados</p>
-          <p class="text-3xl font-black">{{ pedidos.filter(p => p.estado === 'anulado').length }}</p>
+          <p class="text-[9px] md:text-[10px] text-color-secondary font-black uppercase tracking-wider mb-0.5">Anulados</p>
+          <p class="text-2xl md:text-3xl font-black leading-none">{{ pedidos.filter(p => p.estado === 'anulado').length }}</p>
         </div>
       </div>
     </div>

@@ -7,9 +7,17 @@
       <TabList>
         <Tab value="0"><i class="pi pi-receipt text-emerald-500 mr-2"></i>Ventas del Día</Tab>
         <Tab value="1"><i class="pi pi-chart-bar text-amber-500 mr-2"></i>Rotación y Top 10</Tab>
-        <Tab value="2"><i class="pi pi-dollar text-primary mr-2"></i>Rentabilidad</Tab>
+        <Tab value="2" :disabled="!planLimits.canUseFeature('advanced_reports')">
+          <i :class="!planLimits.canUseFeature('advanced_reports') ? 'pi pi-lock text-slate-400' : 'pi pi-dollar text-primary'" class="mr-2"></i>
+          Rentabilidad
+          <Tag v-if="!planLimits.canUseFeature('advanced_reports')" value="PRO" severity="info" class="ml-2 !text-[9px] !px-1.5 !py-0.5" />
+        </Tab>
         <Tab value="3"><i class="pi pi-calendar text-cyan-500 mr-2"></i>Historial de Ventas</Tab>
-        <Tab value="4"><i class="pi pi-users text-purple-500 mr-2"></i>Reporte Consolidado</Tab>
+        <Tab value="4" :disabled="!planLimits.canUseFeature('advanced_reports')">
+          <i :class="!planLimits.canUseFeature('advanced_reports') ? 'pi pi-lock text-slate-400' : 'pi pi-users text-purple-500'" class="mr-2"></i>
+          Reporte Consolidado
+          <Tag v-if="!planLimits.canUseFeature('advanced_reports')" value="PRO" severity="info" class="ml-2 !text-[9px] !px-1.5 !py-0.5" />
+        </Tab>
       </TabList>
 
       <TabPanels class="pt-6 px-0 pb-0">
@@ -489,6 +497,9 @@ import { useFormatMonto } from '~/composables/useFormatMonto'
 import type { Database } from '~/types/database.types'
 import { useConfigStore } from '~/stores/config'
 import { useAuthStore } from '~/stores/auth'
+import { usePlanLimits } from '~/composables/usePlanLimits'
+
+const planLimits = usePlanLimits()
 
 const supabase = useSupabaseClient<Database>()
 const authStore = useAuthStore()
