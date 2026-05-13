@@ -10,6 +10,7 @@
         <ul class="nav-links">
           <li><a href="#features">Características</a></li>
           <li><a href="#how-it-works">Cómo Funciona</a></li>
+          <li><a href="#requirements">Requisitos</a></li>
           <li><a href="#pricing">Planes</a></li>
           <li><a href="#contact">Contacto</a></li>
         </ul>
@@ -323,6 +324,90 @@
             <p>Tu equipo aprende a usar el sistema en 15 minutos. Soporte incluido para cualquier duda que surja.</p>
           </div>
           <div class="step-arrow last"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── QUÉ NECESITAS ───── -->
+    <section class="requirements" id="requirements">
+      <div class="section-header">
+        <span class="section-tag">Todo lo que necesitas</span>
+        <h2>¿Qué necesito para empezar?</h2>
+        <p>ZumaPos se adapta a lo que ya tienes. No necesitas equipos costosos ni configuraciones complejas.</p>
+      </div>
+
+      <div class="requirements-grid">
+        <div class="req-card req-essential">
+          <div class="req-badge">Esencial</div>
+          <div class="req-icon">💻</div>
+          <h3>Computador o Tablet</h3>
+          <p>Cualquier PC, notebook o tablet con navegador web moderno (Chrome, Edge, Firefox). No necesitas un equipo potente.</p>
+          <div class="req-specs">
+            <span class="req-spec-item">🪟 Windows / Mac / Linux</span>
+            <span class="req-spec-item">📱 Android / iPad</span>
+          </div>
+        </div>
+
+        <div class="req-card req-essential">
+          <div class="req-badge">Esencial</div>
+          <div class="req-icon">🌐</div>
+          <h3>Conexión a Internet</h3>
+          <p>Para la sincronización inicial y respaldos. Después, ZumaPos funciona <strong>100% offline</strong> sin perder ningún dato.</p>
+          <div class="req-specs">
+            <span class="req-spec-item">📡 WiFi o datos móviles</span>
+            <span class="req-spec-item">⚡ Mínimo 5 Mbps</span>
+          </div>
+        </div>
+
+        <div class="req-card req-recommended">
+          <div class="req-badge recommended">Recomendado</div>
+          <div class="req-icon">🖨️</div>
+          <h3>Impresora Térmica</h3>
+          <p>Para imprimir boletas y tickets de venta. Compatible con impresoras térmicas de 58mm y 80mm vía USB o Bluetooth.</p>
+          <div class="req-specs">
+            <span class="req-spec-item">📄 58mm o 80mm</span>
+            <span class="req-spec-item">🔌 USB / Bluetooth</span>
+          </div>
+        </div>
+
+        <div class="req-card req-recommended">
+          <div class="req-badge recommended">Recomendado</div>
+          <div class="req-icon">💵</div>
+          <h3>Gaveta de Dinero</h3>
+          <p>Se conecta a la impresora térmica y se abre automáticamente con cada venta. También puedes usar una manual.</p>
+          <div class="req-specs">
+            <span class="req-spec-item">🔗 Conexión RJ11</span>
+            <span class="req-spec-item">🔓 Apertura automática</span>
+          </div>
+        </div>
+
+        <div class="req-card req-optional">
+          <div class="req-badge optional">Opcional</div>
+          <div class="req-icon">📷</div>
+          <h3>Lector de Códigos</h3>
+          <p>Escanea productos rápidamente. Puedes usar un escáner USB o la cámara de tu celular/tablet integrada en ZumaPos.</p>
+          <div class="req-specs">
+            <span class="req-spec-item">🔫 Escáner USB</span>
+            <span class="req-spec-item">📱 Cámara del dispositivo</span>
+          </div>
+        </div>
+
+        <div class="req-card req-optional">
+          <div class="req-badge optional">Opcional</div>
+          <div class="req-icon">🏷️</div>
+          <h3>Impresora de Etiquetas</h3>
+          <p>Para imprimir códigos de barras y precios directamente desde el sistema. Ideal para locales con muchos productos.</p>
+          <div class="req-specs">
+            <span class="req-spec-item">🖨️ Zebra / TSC</span>
+            <span class="req-spec-item">📏 Varios tamaños</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="req-note">
+        <div class="req-note-icon">💡</div>
+        <div class="req-note-text">
+          <strong>¿No tienes equipamiento?</strong> Te asesoramos en la compra del hardware más conveniente para tu negocio. Contáctanos y te armamos un kit completo.
         </div>
       </div>
     </section>
