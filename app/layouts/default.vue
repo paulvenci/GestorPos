@@ -34,6 +34,10 @@
           <i class="pi pi-building" />
           <span>Negocios</span>
         </NuxtLink>
+        <NuxtLink v-if="authStore.rolUsuario === 'super_admin'" to="/superadmin/blog" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-pencil" />
+          <span>Blog</span>
+        </NuxtLink>
         <NuxtLink v-if="canAccess('dashboard')" to="/dashboard" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-home" />
           <span>Dashboard</span>

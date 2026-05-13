@@ -13,6 +13,7 @@
           <li><a href="#requirements">Requisitos</a></li>
           <li><a href="#pricing">Planes</a></li>
           <li><a href="#contact">Contacto</a></li>
+          <li><NuxtLink to="/blog">Blog</NuxtLink></li>
         </ul>
         <button class="theme-toggle" id="theme-toggle" @click="toggleTheme" aria-label="Cambiar tema" title="Cambiar tema">
           <span class="theme-icon theme-icon-dark">🌙</span>

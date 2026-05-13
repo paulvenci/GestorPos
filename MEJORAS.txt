@@ -1,0 +1,4 @@
+Ideas de Mejoras para el POS.
+
+1. Mejoras en el diseño,  analizar el diseño, colores ergonomia y fluidez. Tomar como ejemplo la pagina de shopify para mas referencia.  
+2. Que detecte cuando exista una posible venta duplicada...
