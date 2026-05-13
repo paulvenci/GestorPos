@@ -24,14 +24,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
   }
 
-  const publicRoutes = ['/login']
+  const publicRoutes = ['/login', '/registro', '/confirmacion', '/recuperar-password', '/']
 
   if (!currentUser?.id && !publicRoutes.includes(to.path)) {
     return navigateTo('/login')
   }
 
-  if (currentUser?.id && to.path === '/login' && !to.query.error) {
-    return navigateTo('/')
+  if (currentUser?.id && (to.path === '/login' || to.path === '/registro')) {
+    return navigateTo('/dashboard')
   }
 
   if (!currentUser?.id) return

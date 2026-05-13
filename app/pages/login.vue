@@ -136,7 +136,7 @@ async function handleLogin() {
       life: 3000
     })
     await nextTick()
-    await navigateTo('/', { replace: true })
+    await navigateTo('/dashboard', { replace: true })
   } catch (err: any) {
     errorMsg.value = 'Credenciales incorrectas. Verifica tu correo y contraseña.'
   } finally {

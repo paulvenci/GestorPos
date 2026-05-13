@@ -1,1050 +1,708 @@
 <template>
-  <div class="dashboard-page">
-    <div class="dashboard-header">
-      <p>{{ fechaHoy }}</p>
-    </div>
-
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
-      <!-- Grupo 1: Hoy y Estado -->
-      <div class="kpi-card kpi-card--ventas">
-        <div class="kpi-icon"><i class="pi pi-shopping-cart" /></div>
-        <div class="kpi-content">
-          <span class="kpi-label">Ventas Hoy</span>
-          <span class="kpi-value">{{ formatMonto(kpi.ventasHoy) }}</span>
-          <span class="kpi-sub">{{ kpi.cantVentasHoy }} transacciones</span>
+  <div>
+    <!-- ───── NAVBAR ───── -->
+    <nav class="navbar" id="navbar">
+      <div class="nav-inner">
+        <div class="nav-logo">
+          <img src="/landing/logo1.svg" alt="ZumaPos" class="logo-icon" width="28" height="28" />
+          <span class="logo-text">Zuma<span class="logo-accent">Pos</span></span>
         </div>
+        <ul class="nav-links">
+          <li><a href="#features">Características</a></li>
+          <li><a href="#how-it-works">Cómo Funciona</a></li>
+          <li><a href="#pricing">Planes</a></li>
+          <li><a href="#contact">Contacto</a></li>
+        </ul>
+        <button class="theme-toggle" id="theme-toggle" @click="toggleTheme" aria-label="Cambiar tema" title="Cambiar tema">
+          <span class="theme-icon theme-icon-dark">🌙</span>
+          <span class="theme-icon theme-icon-light">☀️</span>
+        </button>
+        <NuxtLink to="/login" class="nav-login">Iniciar Sesión</NuxtLink>
+        <NuxtLink to="/registro" class="nav-cta">Prueba Gratuita</NuxtLink>
       </div>
-      <div class="kpi-card kpi-card--ticket">
-        <div class="kpi-icon"><i class="pi pi-ticket" /></div>
-        <div class="kpi-content">
-          <span class="kpi-label">Ticket Promedio</span>
-          <span class="kpi-value">{{ formatMonto(kpi.ticketPromedio) }}</span>
-          <span class="kpi-sub">Gasto por cliente</span>
-        </div>
-      </div>
+    </nav>
 
-      <!-- Grupo 2: Mes y Tendencia -->
-      <div class="kpi-card kpi-card--ventas-mes">
-        <div class="kpi-icon"><i class="pi pi-chart-line" /></div>
-        <div class="kpi-content">
-          <span class="kpi-label">Ventas del Mes</span>
-          <span class="kpi-value">{{ formatMonto(kpi.ventasMes) }}</span>
-          <div class="kpi-footer">
-            <span class="kpi-sub">{{ kpi.cantVentasMes }} ventas</span>
-            <Tag 
-              v-if="porcentajeComparacionMes !== null" 
-              :severity="porcentajeComparacionMes >= 0 ? 'success' : 'danger'" 
-              :icon="porcentajeComparacionMes >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
-              :value="`${Math.abs(porcentajeComparacionMes).toFixed(1)}%`"
-              class="kpi-trend-tag"
-              v-tooltip.top="'vs total mes pasado'"
-            />
+    <!-- ───── HERO ───── -->
+    <section class="hero" id="hero">
+      <div class="hero-bg-grid"></div>
+      <div class="hero-orb orb-1"></div>
+      <div class="hero-orb orb-2"></div>
+      <div class="hero-orb orb-3"></div>
+
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          Sistema de Punto de Venta Moderno · Hecho para Chile
+        </div>
+        <h1 class="hero-title">
+          Vende más rápido.<br />
+          Controla mejor.<br />
+          <span class="gradient-text">Crece sin límites.</span>
+        </h1>
+        <p class="hero-subtitle">
+          ZumaPos es la solución completa para modernizar tu negocio. Gestiona ventas, inventario y reportes desde una sola pantalla — incluso <strong>sin internet</strong>.
+        </p>
+        <div class="hero-actions">
+          <NuxtLink to="/registro" class="btn-primary" id="hero-demo-btn">
+            <span>Probar Gratis 7 días</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </NuxtLink>
+          <a href="#features" class="btn-ghost">
+            Ver características
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-number">3 seg</span>
+            <span class="stat-label">Por venta promedio</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">100%</span>
+            <span class="stat-label">Offline sin perder datos</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">24/7</span>
+            <span class="stat-label">Disponibilidad cloud</span>
           </div>
         </div>
       </div>
-      <div class="kpi-card kpi-card--tendencia">
-        <div class="kpi-icon"><i class="pi pi-compass" /></div>
-        <div class="kpi-content">
-          <span class="kpi-label">Tendencia MTD</span>
-          <span class="kpi-value">{{ porcentajeTendencia !== null ? (porcentajeTendencia >= 0 ? '+' : '-') : '' }}{{ Math.abs(porcentajeTendencia || 0).toFixed(1) }}%</span>
-          <div class="kpi-footer">
-            <span class="kpi-sub">vs mismo día mes pasado</span>
+
+      <!-- POS Mockup -->
+      <div class="hero-mockup">
+        <div class="mockup-screen">
+          <div class="mockup-toolbar">
+            <span class="toolbar-dot red"></span>
+            <span class="toolbar-dot yellow"></span>
+            <span class="toolbar-dot green"></span>
+            <span class="toolbar-title">ZumaPos · Turno Activo</span>
+          </div>
+          <div class="mockup-body">
+            <div class="mockup-left">
+              <div class="mockup-search">
+                <span class="search-icon">🔍</span>
+                <span class="search-placeholder">Escanear o buscar producto...</span>
+                <span class="search-cursor blink">|</span>
+              </div>
+              <div class="mockup-products">
+                <div class="mock-product active">
+                  <span class="product-emoji">🥤</span>
+                  <div class="product-info">
+                    <span class="p-name">Coca-Cola 500ml</span>
+                    <span class="p-price">$1.200</span>
+                  </div>
+                  <span class="p-stock">↑ 48</span>
+                </div>
+                <div class="mock-product">
+                  <span class="product-emoji">🍫</span>
+                  <div class="product-info">
+                    <span class="p-name">Chocolate Mani</span>
+                    <span class="p-price">$850</span>
+                  </div>
+                  <span class="p-stock">↑ 120</span>
+                </div>
+                <div class="mock-product">
+                  <span class="product-emoji">🧴</span>
+                  <div class="product-info">
+                    <span class="p-name">Shampoo Head&amp;S</span>
+                    <span class="p-price">$4.990</span>
+                  </div>
+                  <span class="p-stock">↑ 15</span>
+                </div>
+                <div class="mock-product">
+                  <span class="product-emoji">🍞</span>
+                  <div class="product-info">
+                    <span class="p-name">Pan de Molde</span>
+                    <span class="p-price">$2.150</span>
+                  </div>
+                  <span class="p-stock">↑ 8</span>
+                </div>
+              </div>
+            </div>
+            <div class="mockup-right">
+              <div class="mockup-cart-title">
+                <span>🛒 Carrito</span>
+                <span class="cart-badge">3 ítems</span>
+              </div>
+              <div class="cart-items">
+                <div class="cart-item">
+                  <span class="ci-name">Coca-Cola 500ml</span>
+                  <div class="ci-qty">
+                    <span class="qty-btn">−</span>
+                    <span class="qty-num">2</span>
+                    <span class="qty-btn">+</span>
+                  </div>
+                  <span class="ci-total">$2.400</span>
+                </div>
+                <div class="cart-item">
+                  <span class="ci-name">Chocolate Mani</span>
+                  <div class="ci-qty">
+                    <span class="qty-btn">−</span>
+                    <span class="qty-num">1</span>
+                    <span class="qty-btn">+</span>
+                  </div>
+                  <span class="ci-total">$850</span>
+                </div>
+                <div class="cart-item">
+                  <span class="ci-name">Pan de Molde</span>
+                  <div class="ci-qty">
+                    <span class="qty-btn">−</span>
+                    <span class="qty-num">1</span>
+                    <span class="qty-btn">+</span>
+                  </div>
+                  <span class="ci-total">$2.150</span>
+                </div>
+              </div>
+              <div class="cart-total-row">
+                <span>TOTAL</span>
+                <span class="cart-total-amount">$5.400</span>
+              </div>
+              <div class="payment-methods">
+                <div class="pay-btn active">💵 Efectivo</div>
+                <div class="pay-btn">💳 Débito</div>
+                <div class="pay-btn">📱 QR</div>
+              </div>
+              <button class="checkout-btn" id="mockup-checkout">
+                <span>✓ Cobrar $5.400</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="mockup-glow"></div>
+      </div>
+    </section>
+
+    <!-- ───── LOGOS / PRUEBA SOCIAL ───── -->
+    <section class="social-proof">
+      <p class="sp-label">Ideal para todo tipo de comercio</p>
+      <div class="sp-categories">
+        <div class="sp-cat"><span>🏪</span> Minimarket</div>
+        <div class="sp-cat"><span>🍕</span> Restorán / Café</div>
+        <div class="sp-cat"><span>💊</span> Farmacia</div>
+        <div class="sp-cat"><span>👗</span> Boutique / Ropa</div>
+        <div class="sp-cat"><span>🔧</span> Ferretería</div>
+        <div class="sp-cat"><span>🥩</span> Carnicería</div>
+        <div class="sp-cat"><span>🌿</span> Verdulería</div>
+        <div class="sp-cat"><span>🐾</span> Veterinaria</div>
+      </div>
+    </section>
+
+    <!-- ───── FEATURES ───── -->
+    <section class="features" id="features">
+      <div class="section-header">
+        <span class="section-tag">Todo lo que necesitas</span>
+        <h2>Un sistema completo para tu negocio</h2>
+        <p>Olvídate de cuadernos, planillas y sistemas obsoletos. ZumaPos centraliza todo lo que necesitas para vender con confianza.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card featured" id="feat-pos">
+          <div class="feat-icon-wrap">
+            <span class="feat-icon">⚡</span>
+          </div>
+          <h3>Cobro Ultrarrápido Offline</h3>
+          <p>Vende en menos de 3 segundos sin importar si se corta el internet. Sincronización transparente y automática cuando vuelve la conexión.</p>
+          <ul class="feat-points">
+            <li>✓ Tecnología PWA Offline-First probada</li>
+            <li>✓ Panel dinámico de Top 20 más vendidos</li>
+            <li>✓ Compatible con cualquier lector USB</li>
+          </ul>
+          <div class="feat-tag">⚡ Ventas a prueba de cortes</div>
+        </div>
+
+        <div class="feature-card" id="feat-invoices">
+          <div class="feat-icon-wrap">
+            <span class="feat-icon">📄</span>
+          </div>
+          <h3>Ingreso de Facturas Automático</h3>
+          <p>Olvídate de digitar la mercadería manualmente. Automatiza tu recepción de inventario y actualiza precios al instante.</p>
+          <ul class="feat-points">
+            <li>✓ Carga inteligente desde facturas</li>
+            <li>✓ Actualización automática de costos</li>
+            <li>✓ Cero errores de digitación</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" id="feat-procurement">
+          <div class="feat-icon-wrap">
+            <span class="feat-icon">🛒</span>
+          </div>
+          <h3>Compras Automatizadas</h3>
+          <p>Genera órdenes de pedido exactas basadas en faltantes reales. Maneja distintas medidas (Cajas, Displays) sin enredos.</p>
+          <ul class="feat-points">
+            <li>✓ Generación automática de faltantes</li>
+            <li>✓ Multi-unidad de medida por producto</li>
+            <li>✓ Envío de órdenes por WhatsApp en 1 clic</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" id="feat-bi">
+          <div class="feat-icon-wrap">
+            <span class="feat-icon">📈</span>
+          </div>
+          <h3>Business Intelligence Avanzado</h3>
+          <p>Mide el pulso de tu negocio en tiempo real. Deja de intuir y toma el control total basado en datos duros.</p>
+          <ul class="feat-points">
+            <li>✓ KPIs: Ticket Promedio y Deudas</li>
+            <li>✓ Tendencias de crecimiento mensual (MTD)</li>
+            <li>✓ Gráficos interactivos de ventas</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" id="feat-blind-cashier">
+          <div class="feat-icon-wrap">
+            <span class="feat-icon">🛡️</span>
+          </div>
+          <h3>Sistema Anti-Fraude 'Cajero Ciego'</h3>
+          <p>Máxima seguridad en el punto de venta. Evita manipulaciones forzando arqueos de caja 100% reales y ciegos.</p>
+          <ul class="feat-points">
+            <li>✓ Cierre de turno a ciegas para el cajero</li>
+            <li>✓ Requiere autorización de administrador</li>
+            <li>✓ Detección milimétrica de descuadres</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" id="feat-credit">
+          <div class="feat-icon-wrap">
+            <span class="feat-icon">💳</span>
+          </div>
+          <h3>Control de 'Fiado' (Límites de Crédito)</h3>
+          <p>Da crédito a tus clientes de confianza de manera profesional, estableciendo límites estrictos y bloqueos automáticos.</p>
+          <ul class="feat-points">
+            <li>✓ Límite de crédito estricto por cliente</li>
+            <li>✓ Bloqueo inteligente al exceder cupo</li>
+            <li>✓ Respaldo Cloud 24/7 de tu información</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── HOW IT WORKS ───── -->
+    <section class="how-it-works" id="how-it-works">
+      <div class="section-header">
+        <span class="section-tag">Simple y rápido</span>
+        <h2>Listo para vender en minutos</h2>
+        <p>No necesitas ser técnico. ZumaPos está diseñado para que cualquier persona lo use desde el primer día.</p>
+      </div>
+
+      <div class="steps-container">
+        <div class="step" id="step-1">
+          <div class="step-number">01</div>
+          <div class="step-content">
+            <div class="step-icon">📋</div>
+            <h3>Cargamos tus productos</h3>
+            <p>Nosotros te ayudamos a ingresar tu catálogo de productos con precios, costos y códigos de barras. En pocas horas está listo.</p>
+          </div>
+          <div class="step-arrow">→</div>
+        </div>
+
+        <div class="step" id="step-2">
+          <div class="step-number">02</div>
+          <div class="step-content">
+            <div class="step-icon">💻</div>
+            <h3>Instalamos en tu equipo</h3>
+            <p>ZumaPos funciona en cualquier PC o tablet con navegador. Sin instalaciones complicadas, sin hardware especial.</p>
+          </div>
+          <div class="step-arrow">→</div>
+        </div>
+
+        <div class="step" id="step-3">
+          <div class="step-number">03</div>
+          <div class="step-content">
+            <div class="step-icon">🚀</div>
+            <h3>¡Empiezas a vender!</h3>
+            <p>Tu equipo aprende a usar el sistema en 15 minutos. Soporte incluido para cualquier duda que surja.</p>
+          </div>
+          <div class="step-arrow last"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── PRICING ───── -->
+    <section class="pricing" id="pricing">
+      <div class="section-header">
+        <span class="section-tag">Planes accesibles</span>
+        <h2>Inversión que se paga sola</h2>
+        <p>Un solo sistema reemplaza cuadernos, planillas, errores y tiempo perdido. El retorno es inmediato.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <div class="price-card" id="price-starter">
+          <div class="price-header">
+            <span class="price-plan-name">Básico</span>
+            <div class="price-amount">
+              <span class="price-currency">$</span>
+              <span class="price-number">24.990</span>
+              <span class="price-period">/mes</span>
+            </div>
+            <p class="price-desc">Perfecto para comenzar</p>
+          </div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> 1 caja / 1 cajero</li>
+            <li><span class="check">✓</span> Hasta 500 productos</li>
+            <li><span class="check">✓</span> Ventas y boletas</li>
+            <li><span class="check">✓</span> Control de stock</li>
+            <li><span class="check">✓</span> Reportes básicos</li>
+            <li><span class="check">✓</span> Soporte por WhatsApp</li>
+            <li class="disabled"><span>✗</span> Múltiples cajeros</li>
+            <li class="disabled"><span>✗</span> Reportes avanzados</li>
+          </ul>
+          <NuxtLink to="/registro" class="price-btn-ghost">Empezar Gratis</NuxtLink>
+        </div>
+
+        <div class="price-card featured" id="price-pro">
+          <div class="price-popular">⭐ Más Popular</div>
+          <div class="price-header">
+            <span class="price-plan-name">Profesional</span>
+            <div class="price-amount">
+              <span class="price-currency">$</span>
+              <span class="price-number">34.990</span>
+              <span class="price-period">/mes</span>
+            </div>
+            <p class="price-desc">Para negocios en crecimiento</p>
+          </div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> Cajeros ilimitados</li>
+            <li><span class="check">✓</span> Productos ilimitados</li>
+            <li><span class="check">✓</span> Control de turnos</li>
+            <li><span class="check">✓</span> Reportes avanzados</li>
+            <li><span class="check">✓</span> Impresión etiquetas barras</li>
+            <li><span class="check">✓</span> Modo offline completo</li>
+            <li><span class="check">✓</span> Respaldo en la nube</li>
+            <li><span class="check">✓</span> Soporte prioritario</li>
+          </ul>
+          <NuxtLink to="/registro" class="price-btn-primary">Probar Plan Pro</NuxtLink>
+        </div>
+
+        <div class="price-card" id="price-enterprise">
+          <div class="price-header">
+            <span class="price-plan-name">A Medida</span>
+            <div class="price-amount-custom">
+              <span class="price-custom-label">Cotización</span>
+              <span class="price-custom-sub">personalizada</span>
+            </div>
+            <p class="price-desc">Para cadenas y locales múltiples</p>
+          </div>
+          <ul class="price-features">
+            <li><span class="check">✓</span> Todo lo del Pro</li>
+            <li><span class="check">✓</span> Múltiples sucursales</li>
+            <li><span class="check">✓</span> Integración a tu medida</li>
+            <li><span class="check">✓</span> Capacitación presencial</li>
+            <li><span class="check">✓</span> SLA garantizado</li>
+            <li><span class="check">✓</span> Gestor de cuenta dedicado</li>
+            <li><span class="check">✓</span> Mantenimiento incluido</li>
+            <li><span class="check">✓</span> Personalización de marca</li>
+          </ul>
+          <a href="#contact" class="price-btn-ghost">Conversemos</a>
+        </div>
+      </div>
+
+      <div class="pricing-note">
+        <span>🎁</span>
+        <p><strong>30 días gratis</strong> en cualquier plan. Sin tarjeta de crédito. Sin compromisos. Si no te convence, no pagas nada.</p>
+      </div>
+    </section>
+
+    <!-- ───── TESTIMONIALS ───── -->
+    <section class="testimonials" id="testimonials">
+      <div class="section-header">
+        <span class="section-tag">Lo que dicen nuestros clientes</span>
+        <h2>Negocios que ya crecen con ZumaPos</h2>
+      </div>
+
+      <div class="testimonials-grid">
+        <div class="testimonial-card" id="test-1">
+          <div class="test-stars">★★★★★</div>
+          <p class="test-quote">"Antes llevaba todo en un cuaderno y perdía tiempo contando la caja. Ahora en 2 minutos sé exactamente cuánto vendí y si falta plata."</p>
+          <div class="test-author">
+            <div class="test-avatar">M</div>
+            <div class="test-info">
+              <span class="test-name">María González</span>
+              <span class="test-business">Minimarket "La Esquina" · Maipu</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card" id="test-2">
+          <div class="test-stars">★★★★★</div>
+          <p class="test-quote">"Lo mejor fue que funciona sin internet. En mi local a veces falla la fibra óptica y antes perdíamos ventas. Ahora ni nos damos cuenta."</p>
+          <div class="test-author">
+            <div class="test-avatar" style="background: linear-gradient(135deg, #0ea5e9, #6366f1);">C</div>
+            <div class="test-info">
+              <span class="test-name">Carlos Herrera</span>
+              <span class="test-business">Distribuidora · San Bernardo</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card" id="test-3">
+          <div class="test-stars">★★★★★</div>
+          <p class="test-quote">"Mis cajeros aprendieron en media hora. El sistema es súper intuitivo y cuando tengo dudas me responden por WhatsApp al tiro."</p>
+          <div class="test-author">
+            <div class="test-avatar" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">A</div>
+            <div class="test-info">
+              <span class="test-name">Ana Retamal</span>
+              <span class="test-business">Rotisería · Puente Alto</span>
+            </div>
           </div>
         </div>
       </div>
+    </section>
 
-      <!-- Grupo 3: Riesgo y Stock -->
-      <div class="kpi-card kpi-card--deuda">
-        <div class="kpi-icon"><i class="pi pi-money-bill" /></div>
-        <div class="kpi-content">
-          <span class="kpi-label">Por Cobrar</span>
-          <span class="kpi-value text-red-500">{{ formatMonto(kpi.totalPorCobrar) }}</span>
-          <span class="kpi-sub">Deuda total clientes</span>
+    <!-- ───── CTA FINAL ───── -->
+    <section class="cta-section" id="contact">
+      <div class="cta-orb cta-orb-1"></div>
+      <div class="cta-orb cta-orb-2"></div>
+      <div class="cta-content">
+        <span class="section-tag">¿Listo para dar el salto?</span>
+        <h2>Moderniza tu negocio hoy mismo</h2>
+        <p>Comienza ahora mismo sin esperas. Crea tu cuenta en 1 minuto y empieza a vender.</p>
+        <div class="hero-actions" style="justify-content: center; margin-top: 2rem;">
+          <NuxtLink to="/registro" class="btn-primary" style="padding: 1.2rem 2.5rem; font-size: 1.2rem;">
+            <span>🚀 Crear mi Cuenta Gratis</span>
+          </NuxtLink>
         </div>
-      </div>
-      <div class="kpi-card kpi-card--productos">
-        <div class="kpi-icon"><i class="pi pi-box" /></div>
-        <div class="kpi-content">
-          <span class="kpi-label">Inventario</span>
-          <span class="kpi-value">{{ kpi.totalProductos }}</span>
-          <span class="kpi-sub">{{ kpi.productosLowStock }} bajo stock</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Gráficos de Análisis -->
-    <div class="dashboard-charts">
-      <div class="chart-container chart-container--pie">
-        <div class="chart-header">
-          <h2><i class="pi pi-chart-pie" /> Ventas por Categoría</h2>
-          <div class="flex gap-2">
-            <Button size="small" label="30 Días" :severity="filtroCategoria === '30d' ? 'primary' : 'secondary'" :text="filtroCategoria !== '30d'" @click="filtroCategoria = '30d'; fetchVentasPorCategoria()" />
-            <Button size="small" label="Mes Actual" :severity="filtroCategoria === 'mes' ? 'primary' : 'secondary'" :text="filtroCategoria !== 'mes'" @click="filtroCategoria = 'mes'; fetchVentasPorCategoria()" />
+        <div class="contact-cards">
+          <a href="https://wa.me/56961337579?text=Hola!%20quiero%20una%20demo%20de%20ZumaPos"
+            class="contact-card whatsapp" id="whatsapp-btn" target="_blank">
+            <div class="contact-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+            </div>
+            <div class="contact-info">
+              <span class="contact-label">WhatsApp directo</span>
+              <span class="contact-value">Escríbenos ahora →</span>
+            </div>
+          </a>
+
+          <a href="tel:+56961337579" class="contact-card phone" id="phone-btn">
+            <div class="contact-icon">📞</div>
+            <div class="contact-info">
+              <span class="contact-label">Llámanos</span>
+              <span class="contact-value">+56 9 6133 7579</span>
+            </div>
+          </a>
+
+          <div class="contact-card email" id="email-card">
+            <div class="contact-icon">✉️</div>
+            <div class="contact-info">
+              <span class="contact-label">Email</span>
+              <span class="contact-value">paulvenci@gmail.com</span>
+            </div>
           </div>
         </div>
-        <div class="chart-content">
-          <Chart type="pie" :data="chartDataCategoria" :options="chartOptionsPie" class="h-[300px]" />
-          <div v-if="loadingChartCat" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
-          <div v-if="!loadingChartCat && (!chartDataCategoria.labels || chartDataCategoria.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
-        </div>
-      </div>
 
-      <div class="chart-container chart-container--bar">
-        <div class="chart-header">
-          <h2><i class="pi pi-chart-bar" /> Rendimiento Diario</h2>
-          <div class="flex gap-2">
-            <Button size="small" label="7 Días" :severity="filtroDiario === '7d' ? 'primary' : 'secondary'" :text="filtroDiario !== '7d'" @click="filtroDiario = '7d'; fetchVentasPorDia()" />
-            <Button size="small" label="Este Mes" :severity="filtroDiario === 'mes' ? 'primary' : 'secondary'" :text="filtroDiario !== 'mes'" @click="filtroDiario = 'mes'; fetchVentasPorDia()" />
-          </div>
-        </div>
-        <div class="chart-content">
-          <Chart type="bar" :data="chartDataDiario" :options="chartOptionsBar" class="h-[300px]" />
-          <div v-if="loadingChartDia" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
-          <div v-if="!loadingChartDia && (!chartDataDiario.labels || chartDataDiario.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        <div class="cta-guarantee">
+          <span class="guarantee-icon">🛡️</span>
+          <p><strong>30 días de prueba gratuita</strong> · Sin tarjeta de crédito · Cancela cuando quieras · Soporte en español</p>
         </div>
       </div>
-    </div>
-    
-    <!-- Gráfico de Ventas Mensuales (Tendencia) -->
-    <div class="dashboard-section mt-4">
-      <div class="chart-container chart-container--line">
-        <div class="chart-header">
-          <h2><i class="pi pi-chart-line" /> Tendencia Mensual (Últimos 6 meses)</h2>
-        </div>
-        <div class="chart-content chart-content--mensual">
-          <Chart type="bar" :data="chartDataMensual" :options="chartOptionsBarMensual" class="h-[300px]" />
-          <div v-if="loadingChartMes" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
-          <div v-if="!loadingChartMes && (!chartDataMensual.labels || chartDataMensual.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
-        </div>
-      </div>
-    </div>
+    </section>
 
-    <!-- Últimas ventas -->
-    <div class="dashboard-section mt-4">
-      <h2><i class="pi pi-history" /> Últimas ventas</h2>
-      <DataTable :value="ultimasVentas" :loading="loadingVentas" class="p-datatable-sm" :rows="5" responsiveLayout="scroll">
-        <Column header="Fecha">
-          <template #body="slotProps">
-            <span class="text-sm" style="color: var(--text-muted)">{{ formatFecha(slotProps.data.created_at) }}</span>
-          </template>
-        </Column>
-        <Column field="total" header="Total">
-          <template #body="slotProps">
-            <span class="precio-cell">{{ formatMonto(slotProps.data.total) }}</span>
-          </template>
-        </Column>
-        <Column field="metodo_pago" header="Método" />
-        <Column header="Turno">
-          <template #body="slotProps">
-            <Tag :value="slotProps.data.id_turno ? 'En turno' : 'Fuera'" :severity="slotProps.data.id_turno ? 'success' : 'warn'" />
-          </template>
-        </Column>
-        <template #empty>
-          <div class="p-4 text-center" style="color: var(--text-muted)">No hay ventas registradas aún.</div>
-        </template>
-      </DataTable>
-    </div>
-
-    <!-- Accesos rápidos (tarjetas compactas) -->
-    <div class="dashboard-section">
-      <h2><i class="pi pi-th-large" /> Acceso Rápido</h2>
-      <div class="navcard-grid">
-        <NuxtLink to="/pos" class="navcard">
-          <i class="pi pi-shopping-cart navcard-icon" />
-          <span class="navcard-label">Punto de Venta</span>
-        </NuxtLink>
-        <NuxtLink to="/caja" class="navcard">
-          <i class="pi pi-wallet navcard-icon" />
-          <span class="navcard-label">Caja</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/productos" class="navcard">
-          <i class="pi pi-box navcard-icon" />
-          <span class="navcard-label">Inventario</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/ajuste-stock" class="navcard">
-          <i class="pi pi-sync navcard-icon" />
-          <span class="navcard-label">Ajuste Stock</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/categorias" class="navcard">
-          <i class="pi pi-tags navcard-icon" />
-          <span class="navcard-label">Categorías</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/reportes" class="navcard">
-          <i class="pi pi-chart-bar navcard-icon" />
-          <span class="navcard-label">Reportes</span>
-        </NuxtLink>
-        <NuxtLink to="/admin/configuracion" class="navcard">
-          <i class="pi pi-cog navcard-icon" />
-          <span class="navcard-label">Configuración</span>
-        </NuxtLink>
+    <!-- ───── FOOTER ───── -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-logo">
+          <img src="/landing/logo1.svg" alt="ZumaPos" class="logo-icon" width="28" height="28" />
+          <span class="logo-text">Gestor<span class="logo-accent">POS</span></span>
+        </div>
+        <p class="footer-tagline">El sistema de punto de venta moderno para el comercio chileno.</p>
+        <div class="footer-links">
+          <a href="#features">Características</a>
+          <a href="#pricing">Precios</a>
+          <a href="#contact">Contacto</a>
+        </div>
+        <p class="footer-copy">© {{ new Date().getFullYear() }} ZumaPos · Desarrollado con ❤️ en Chile</p>
       </div>
-    </div>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useFormatMonto } from '~/composables/useFormatMonto'
-import { useCajaStore } from '~/stores/caja'
-import type { Database } from '~/types/database.types'
+import { onMounted, onUnmounted, ref } from 'vue'
+import '~/assets/css/landing-original.css'
 
-import { useAuthStore } from '~/stores/auth'
-
-const supabase = useSupabaseClient<Database>()
-const authStore = useAuthStore()
-const cajaStore = useCajaStore()
-const { formatMonto, formatFecha } = useFormatMonto()
-
-const loadingVentas = ref(false)
-const ultimasVentas = ref<any[]>([])
-
-const kpi = ref({
-  ventasHoy: 0,
-  cantVentasHoy: 0,
-  ventasMes: 0,
-  cantVentasMes: 0,
-  totalProductos: 0,
-  productosLowStock: 0,
-  turnoActivo: false,
-  turnoHora: '',
-  ventasMesPasado: 0,
-  ventasPMTD: 0,
-  ticketPromedio: 0,
-  totalPorCobrar: 0
+definePageMeta({
+  layout: false
 })
 
-const porcentajeComparacionMes = computed(() => {
-  if (kpi.value.ventasMesPasado === 0) return null
-  return ((kpi.value.ventasMes / kpi.value.ventasMesPasado) - 1) * 100
+const isDark = ref(true)
+
+useHead({
+  link: [
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap' }
+  ]
 })
 
-const porcentajeTendencia = computed(() => {
-  if (kpi.value.ventasPMTD === 0) return null
-  return ((kpi.value.ventasMes / kpi.value.ventasPMTD) - 1) * 100
-})
-
-// Gráficos
-const loadingChartCat = ref(false)
-const loadingChartDia = ref(false)
-const loadingChartMes = ref(false)
-const filtroCategoria = ref('30d')
-const filtroDiario = ref('7d')
-
-const opcionesFiltro = [
-  { label: '30 Días', value: '30d' },
-  { label: 'Mes Actual', value: 'mes' }
-]
-
-const opcionesFiltroDiario = [
-  { label: '7 Días', value: '7d' },
-  { label: 'Este Mes', value: 'mes' }
-]
-
-const chartDataCategoria = ref<any>({ labels: [], datasets: [] })
-const chartDataDiario = ref<any>({ labels: [], datasets: [] })
-const chartDataMensual = ref<any>({ labels: [], datasets: [] })
-
-const vibrantPalette = [
-  '#6366f1', '#10b981', '#f59e0b', '#ef4444', 
-  '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4',
-  '#f97316', '#14b8a6', '#4f46e5', '#d946ef'
-]
-
-const chartOptionsPie = ref({
-  plugins: {
-    legend: {
-      position: 'right',
-      labels: {
-        usePointStyle: true,
-        font: { size: 11 },
-        color: '#64748b'
-      }
-    },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => ` ${context.label}: ${formatMonto(context.raw)}`
-      }
-    }
-  },
-  maintainAspectRatio: false,
-  responsive: true
-})
-
-const chartOptionsBar = ref({
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
-      }
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      grid: { color: 'rgba(0,0,0,0.05)' },
-      ticks: {
-        font: { size: 10 },
-        callback: (value: any) => formatMonto(value).substring(0, 10)
-      }
-    },
-    x: {
-      grid: { display: false },
-      ticks: { font: { size: 10 } }
-    }
-  },
-  maintainAspectRatio: false,
-  responsive: true
-})
-
-const chartOptionsBarMensual = ref({
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
-      }
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      grid: { color: 'rgba(0,0,0,0.05)' },
-      ticks: {
-        font: { size: 10 },
-        callback: (value: any) => formatMonto(value).substring(0, 10)
-      }
-    },
-    x: {
-      grid: { display: false },
-      ticks: { 
-        font: { size: 10 },
-        autoSkip: false // Asegura que se vean todos los meses
-      }
-    }
-  },
-  maintainAspectRatio: false,
-  responsive: true
-})
-
-const fechaHoy = computed(() =>
-  new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-)
-
-onMounted(async () => {
-  await cajaStore.fetchTurnoActivo()
-  await Promise.all([
-    fetchKPIs(), 
-    fetchUltimasVentas(),
-    fetchVentasPorCategoria(),
-    fetchVentasPorDia(),
-    fetchVentasMensuales()
-  ])
-})
-
-async function fetchKPIs() {
-  try {
-    const ahora = new Date()
-    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString()
-    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
-
-    // Helper para paginar consultas de ventas
-    async function fetchAllVentas(desde: string, hasta?: string) {
-      const PAGE_SIZE = 1000
-      let all: { total: number }[] = []
-      let from = 0
-      let hasMore = true
-      while (hasMore) {
-        let query = supabase
-          .from('ventas')
-          .select('total')
-          .eq('empresa_id', authStore.empresaId)
-          .or('estado.is.null,estado.neq.cancelada')
-          .gte('created_at', desde)
-        
-        if (hasta) {
-          query = query.lt('created_at', hasta)
-        }
-
-        const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
-        if (error) throw error
-        all = all.concat(data || [])
-        hasMore = (data?.length ?? 0) === PAGE_SIZE
-        from += PAGE_SIZE
-      }
-      return all
-    }
-
-    // Ventas de hoy
-    const ventasHoy = await fetchAllVentas(inicioHoy)
-    kpi.value.cantVentasHoy = ventasHoy.length
-    kpi.value.ventasHoy = ventasHoy.reduce((s, v) => s + (v.total || 0), 0)
-
-    // Ventas del mes
-    const ventasMes = await fetchAllVentas(inicioMes)
-    kpi.value.cantVentasMes = ventasMes.length
-    kpi.value.ventasMes = ventasMes.reduce((s, v) => s + (v.total || 0), 0)
-
-    // Ventas del mes pasado (para comparación)
-    const inicioMesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString()
-    const ventasMesPasado = await fetchAllVentas(inicioMesPasado, inicioMes)
-    kpi.value.ventasMesPasado = ventasMesPasado.reduce((s, v) => s + (v.total || 0), 0)
-
-    const dAnterior = new Date(ahora)
-    dAnterior.setMonth(ahora.getMonth() - 1)
-    const ventasPMTD = await fetchAllVentas(inicioMesPasado, dAnterior.toISOString())
-    kpi.value.ventasPMTD = ventasPMTD.reduce((s, v) => s + (v.total || 0), 0)
-
-    // Ticket Promedio Hoy
-    kpi.value.ticketPromedio = kpi.value.cantVentasHoy > 0 
-      ? kpi.value.ventasHoy / kpi.value.cantVentasHoy 
-      : 0
-      
-    // Total por cobrar (Deuda de clientes)
-    const { data: deudas } = await supabase
-      .from('clientes')
-      .select('saldo_pendiente')
-      .eq('empresa_id', authStore.empresaId)
-      .gt('saldo_pendiente', 0)
-    
-    kpi.value.totalPorCobrar = deudas?.reduce((s, c) => s + (c.saldo_pendiente || 0), 0) || 0
-
-    // Productos
-    const { count: totalProds } = await supabase.from('productos')
-      .select('*', { count: 'exact', head: true })
-      .eq('empresa_id', authStore.empresaId)
-    kpi.value.totalProductos = totalProds ?? 0
-
-    const { count: lowStock } = await supabase.from('productos')
-      .select('*', { count: 'exact', head: true })
-      .eq('empresa_id', authStore.empresaId)
-      .lte('stock', 5)
-    kpi.value.productosLowStock = lowStock ?? 0
-
-    // Turno activo
-    kpi.value.turnoActivo = !!cajaStore.turnoActivo
-    if (cajaStore.turnoActivo) {
-      kpi.value.turnoHora = new Date(cajaStore.turnoActivo.fecha_apertura).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-    }
-  } catch (e) {
-    console.error('Error KPIs:', e)
+function toggleTheme() {
+  isDark.value = !isDark.value
+  document.documentElement.classList.toggle('dark', isDark.value)
+  localStorage.setItem('gpos-theme', isDark.value ? 'dark' : 'light')
+  
+  const themeBtn = document.getElementById('theme-toggle')
+  if (themeBtn) {
+    themeBtn.style.transform = 'rotate(360deg) scale(1.2)'
+    setTimeout(() => { themeBtn.style.transform = '' }, 400)
   }
 }
 
-async function fetchVentasPorCategoria() {
-  loadingChartCat.value = true
-  try {
-    const ahora = new Date()
-    let inicio = new Date(ahora.setDate(ahora.getDate() - 30))
-    if (filtroCategoria.value === 'mes') {
-      const hoy = new Date()
-      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-    }
-
-    const PAGE_SIZE = 1000
-    let allData: any[] = []
-    let from = 0
-    let hasMore = true
-
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from('detalle_ventas')
-        .select(`
-          subtotal,
-          productos:id_producto (categoria),
-          ventas!inner (created_at, estado)
-        `)
-        .eq('empresa_id', authStore.empresaId)
-        .gte('ventas.created_at', inicio.toISOString())
-        .order('id', { ascending: true }) // Using id for stable pagination
-        .range(from, from + PAGE_SIZE - 1)
-
-      if (error) throw error
-
-      allData = allData.concat(data || [])
-      hasMore = (data?.length ?? 0) === PAGE_SIZE
-      from += PAGE_SIZE
-    }
-
-    const agrupado: Record<string, number> = {}
-    allData.forEach((dv: any) => {
-      // Filtrar ventas canceladas aquí para asegurar soporte de NULLs en DB
-      if (dv.ventas?.estado === 'cancelada') return
-
-      // Formatear categoría capitalizada para evitar duplicados como "bebidas" y "Bebidas"
-      let catNombre = dv.productos?.categoria?.trim() || 'Sin Categoría'
-      if (catNombre !== 'Sin Categoría') {
-        catNombre = catNombre.charAt(0).toUpperCase() + catNombre.slice(1).toLowerCase()
-      }
-
-      agrupado[catNombre] = (agrupado[catNombre] || 0) + (dv.subtotal || 0)
-    })
-
-    // Ordenar de mayor a menor subtotal (para que el gráfico se vea consistente)
-    const sortedEntries = Object.entries(agrupado).sort((a, b) => b[1] - a[1])
-    const labels = sortedEntries.map(e => e[0])
-    const values = sortedEntries.map(e => e[1])
-
-    chartDataCategoria.value = {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: vibrantPalette,
-        hoverOffset: 12,
-        borderRadius: 4
-      }]
-    }
-  } catch (e) {
-    console.error('Error Chart Cat:', e)
-  } finally {
-    loadingChartCat.value = false
+onMounted(() => {
+  // Theme init
+  const saved = localStorage.getItem('gpos-theme')
+  if (saved) {
+    isDark.value = saved === 'dark'
+  } else {
+    isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
   }
-}
+  document.documentElement.classList.toggle('dark', isDark.value)
 
-async function fetchVentasPorDia() {
-  loadingChartDia.value = true
-  try {
-    const ahora = new Date()
-    // Normalizamos el fin del rango a hoy a las 23:59:59
-    const finRango = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59)
-    
-    let inicio = new Date()
-    if (filtroDiario.value === '7d') {
-      // Últimos 7 días (incluyendo hoy)
-      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 6, 0, 0, 0)
+  // Navbar scroll effect
+  const navbar = document.getElementById('navbar')
+  const onScroll = () => {
+    if (window.scrollY > 20) {
+      navbar?.classList.add('scrolled')
     } else {
-      // Mes actual completo
-      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0)
+      navbar?.classList.remove('scrolled')
     }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true })
 
-    // Paginar para superar el límite de 1000 filas del servidor
-    const PAGE_SIZE = 1000
-    let allData: { created_at: string | null; total: number }[] = []
-    let from = 0
-    let hasMore = true
+  // Fade-in on scroll (IntersectionObserver)
+  const fadeEls = document.querySelectorAll(
+    '.feature-card, .step, .price-card, .testimonial-card, .sp-cat, .contact-card'
+  )
+  fadeEls.forEach((el, i) => {
+    el.classList.add('fade-in')
+    const col = i % 3
+    if (col === 1) el.classList.add('fade-in-delay-1')
+    if (col === 2) el.classList.add('fade-in-delay-2')
+  })
 
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('created_at, total')
-        .eq('empresa_id', authStore.empresaId)
-        .or('estado.is.null,estado.neq.cancelada')
-        .gte('created_at', inicio.toISOString())
-        .lte('created_at', finRango.toISOString())
-        .order('created_at', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1)
-
-      if (error) throw error
-
-      allData = allData.concat(data || [])
-      hasMore = (data?.length ?? 0) === PAGE_SIZE
-      from += PAGE_SIZE
-    }
-
-    // 1. Generar el mapa de fechas vacío para asegurar continuidad (usando fecha local)
-    const agrupado: Record<string, number> = {}
-    const etiquetas: string[] = []
-    
-    let iterador = new Date(inicio)
-    while (iterador <= finRango) {
-      // Key local robusta: "YYYY-MM-DD"
-      const y = iterador.getFullYear()
-      const m = String(iterador.getMonth() + 1).padStart(2, '0')
-      const d = String(iterador.getDate()).padStart(2, '0')
-      const key = `${y}-${m}-${d}`
-      
-      const label = iterador.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }).replace('.', '')
-      agrupado[key] = 0
-      etiquetas.push(label)
-      iterador.setDate(iterador.getDate() + 1)
-    }
-
-    // 2. Llenar con datos reales
-    allData.forEach(v => {
-      const d = new Date(v.created_at!)
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const key = `${y}-${m}-${day}`
-      
-      if (agrupado[key] !== undefined) {
-        agrupado[key] += Number(v.total || 0)
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible')
+        observer.unobserve(entry.target)
       }
     })
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' })
+  fadeEls.forEach(el => observer.observe(el))
 
-    chartDataDiario.value = {
-      labels: etiquetas,
-      datasets: [{
-        label: 'Ventas',
-        data: Object.values(agrupado),
-        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-        borderColor: '#6366f1',
-        borderWidth: 1,
-        borderRadius: 6,
-        barPercentage: 0.6
-      }]
-    }
-  } catch (e) {
-    console.error('Error Chart Dia:', e)
-  } finally {
-    loadingChartDia.value = false
+  // Mockup interactions
+  const checkoutBtn = document.getElementById('mockup-checkout')
+  if (checkoutBtn) {
+    checkoutBtn.addEventListener('click', () => {
+      checkoutBtn.textContent = '✓ ¡Venta Procesada!'
+      checkoutBtn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)'
+      setTimeout(() => {
+        checkoutBtn.textContent = '✓ Cobrar $5.400'
+        checkoutBtn.style.background = ''
+      }, 1800)
+    })
   }
-}
 
-async function fetchVentasMensuales() {
-  loadingChartMes.value = true
-  try {
-    const ahora = new Date()
-    const inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 5, 1)
-    
-    // Paginar para superar el límite de 1000 filas
-    const PAGE_SIZE = 1000
-    let allData: { created_at: string | null; total: number }[] = []
-    let from = 0
-    let hasMore = true
+  const payBtns = document.querySelectorAll('.pay-btn')
+  payBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      payBtns.forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+    })
+  })
 
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('created_at, total')
-        .eq('empresa_id', authStore.empresaId)
-        .or('estado.is.null,estado.neq.cancelada')
-        .gte('created_at', inicio.toISOString())
-        .order('created_at', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1)
+  function parseCLP(str: string) { return parseInt(str.replace(/\D/g, '')) || 0 }
+  function formatCLP(n: number) { return '$' + n.toLocaleString('es-CL') }
+  function updateCartTotal() {
+    let total = 0
+    document.querySelectorAll('.ci-total').forEach(t => { total += parseCLP(t.textContent || '') })
+    const el = document.querySelector('.cart-total-amount')
+    if (el) el.textContent = formatCLP(total)
+    const btn = document.querySelector('.checkout-btn span')
+    if (btn) btn.textContent = `✓ Cobrar ${formatCLP(total)}`
+  }
 
-      if (error) throw error
+  document.querySelectorAll('.cart-item').forEach(item => {
+    const qty = item.querySelector('.qty-num')
+    const total = item.querySelector('.ci-total')
+    if (!qty || !total) return
+    const basePrice = parseCLP(total.textContent || '') / parseInt(qty.textContent || '1')
 
-      allData = allData.concat(data || [])
-      hasMore = (data?.length ?? 0) === PAGE_SIZE
-      from += PAGE_SIZE
-    }
-
-    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    const dataMeses: { key: string, label: string, total: number }[] = []
-    
-    // Inicializar últimos 6 meses (garantizando orden)
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      dataMeses.push({
-        key,
-        label: `${meses[d.getMonth()]} ${d.getFullYear()}`,
-        total: 0
+    item.querySelectorAll('.qty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        let current = parseInt(qty.textContent || '1')
+        if (btn.textContent === '+') current = Math.min(current + 1, 99)
+        if (btn.textContent === '−') current = Math.max(current - 1, 1)
+        qty.textContent = current.toString()
+        total.textContent = formatCLP(basePrice * current)
+        updateCartTotal()
       })
-    }
+    })
+  })
 
-    allData.forEach(v => {
-      const d = new Date(v.created_at!)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      const item = dataMeses.find(m => m.key === key)
-      if (item) {
-        item.total += Number(v.total || 0)
+  // Smooth scroll links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const href = a.getAttribute('href')
+      if (!href) return
+      const target = document.querySelector(href)
+      if (target) {
+        e.preventDefault()
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     })
+  })
 
-    const labels = dataMeses.map(m => m.label)
-    const values = dataMeses.map(m => m.total)
-    const colors = dataMeses.map((_, index) => 
-      index === dataMeses.length - 1 ? '#3b82f6' : 'rgba(148, 163, 184, 0.5)'
-    )
-
-    chartDataMensual.value = {
-      labels,
-      datasets: [{
-        label: 'Ventas Mensuales',
-        data: values,
-        backgroundColor: colors,
-        borderColor: colors.map(c => c === '#3b82f6' ? '#2563eb' : '#94a3b8'),
-        borderWidth: 1,
-        borderRadius: 8,
-        barPercentage: 0.6
-      }]
+  // Number counter animation
+  function animateCounter(el: Element, target: number, suffix = '', duration = 1200) {
+    const start = performance.now()
+    const isDecimal = String(target).includes('.')
+    function update(now: number) {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      const value = eased * target
+      if (isDecimal) {
+        el.textContent = value.toFixed(1) + suffix
+      } else {
+        el.textContent = Math.floor(value) + suffix
+      }
+      if (progress < 1) requestAnimationFrame(update)
+      else el.textContent = target + suffix
     }
-  } catch (e) {
-    console.error('Error Chart Mes:', e)
-  } finally {
-    loadingChartMes.value = false
+    requestAnimationFrame(update)
   }
-}
 
-async function fetchUltimasVentas() {
-  loadingVentas.value = true
-  try {
-    const { data } = await supabase
-      .from('ventas')
-      .select('*')
-      .eq('empresa_id', authStore.empresaId)
-      .order('created_at', { ascending: false })
-      .limit(5)
-    ultimasVentas.value = data || []
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loadingVentas.value = false
-  }
-}
+  const statsObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const statNumbers = entry.target.querySelectorAll('.stat-number')
+        statNumbers.forEach(el => {
+          const text = el.textContent || ''
+          if (text.includes('seg')) animateCounter(el, 3, ' seg')
+          else if (text.includes('%')) animateCounter(el, 100, '%')
+          else if (text.includes('/7')) {
+            (el as HTMLElement).style.animation = 'fadeInScale 0.5s ease forwards'
+          }
+        })
+        statsObserver.unobserve(entry.target)
+      }
+    })
+  }, { threshold: 0.5 })
+
+  const heroStats = document.querySelector('.hero-stats')
+  if (heroStats) statsObserver.observe(heroStats)
+
+  // Cleanup on unmount
+  onUnmounted(() => {
+    window.removeEventListener('scroll', onScroll)
+    observer.disconnect()
+    statsObserver.disconnect()
+  })
+})
 </script>
-
-<style scoped>
-.dashboard-page {
-  padding: 1.4rem 1.6rem;
-  color: var(--text-app);
-}
-
-.dashboard-header {
-  margin-bottom: 1.4rem;
-}
-
-.dashboard-header h1 {
-  font-size: 1.82rem;
-  font-weight: 800;
-  margin: 0;
-  letter-spacing: -0.03em;
-}
-
-.dashboard-header p {
-  color: var(--text-muted);
-  margin: 0.25rem 0 0;
-  font-size: 0.88rem;
-  text-transform: capitalize;
-}
-
-/* ─── KPI Grid ─── */
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 0.9rem;
-  margin-bottom: 1.4rem;
-}
-
-.kpi-card {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 1rem 1.05rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
-}
-
-.kpi-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
-.kpi-card--ventas .kpi-icon { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-.kpi-card--productos .kpi-icon { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
-.kpi-card--caja .kpi-icon { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-.kpi-card--ventas-mes .kpi-icon { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.kpi-card--tendencia .kpi-icon { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
-.kpi-card--ticket .kpi-icon { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
-.kpi-card--deuda .kpi-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-.kpi-card--tendencia .kpi-value {
-  color: var(--text-app);
-}
-
-.kpi-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.kpi-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.kpi-value {
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.kpi-sub {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.kpi-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 0.25rem;
-  gap: 0.5rem;
-}
-
-:deep(.kpi-trend-tag) {
-  font-size: 0.68rem !important;
-  font-weight: 700 !important;
-  padding: 0.1rem 0.4rem !important;
-  border-radius: 6px !important;
-}
-
-/* ─── Dashboard sections ─── */
-.dashboard-section {
-  margin-bottom: 1.4rem;
-}
-
-.dashboard-section h2 {
-  font-size: 1.02rem;
-  font-weight: 700;
-  margin: 0 0 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.precio-cell {
-  font-weight: 700;
-  color: #4ade80;
-}
-
-/* ─── DataTable override ─── */
-:deep(.p-datatable) {
-  background: var(--bg-surface);
-  border-radius: 1rem;
-  border: 1px solid var(--border-sidebar);
-  overflow: hidden;
-}
-
-:deep(.p-datatable-thead > tr > th) {
-  background: var(--bg-app) !important;
-  color: var(--text-muted) !important;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.65rem 0.85rem;
-  border: none !important;
-}
-
-:deep(.p-datatable-tbody > tr) {
-  background: transparent !important;
-  color: var(--text-app);
-}
-
-:deep(.p-datatable-tbody > tr > td) {
-  border-color: var(--border-subtle) !important;
-  padding: 0.65rem 0.85rem;
-}
-
-/* ─── NavCard Grid ─── */
-.navcard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.65rem;
-}
-
-.navcard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.42rem;
-  padding: 0.75rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.75rem;
-  text-decoration: none;
-  color: var(--text-app);
-  transition: all 0.2s ease;
-}
-
-.navcard:hover {
-  border-color: var(--color-brand-primary);
-  background: rgba(99, 102, 241, 0.08);
-  transform: translateY(-2px);
-}
-
-.navcard-icon {
-  font-size: 1.12rem;
-  color: var(--color-brand-primary);
-}
-
-.navcard-label {
-  font-size: 0.76rem;
-  font-weight: 600;
-  text-align: center;
-}
-
-@media (max-width: 768px) {
-  .dashboard-page {
-    padding: 0.8rem 0.8rem 1rem;
-  }
-
-  .dashboard-header {
-    margin-bottom: 1.25rem;
-  }
-
-  .dashboard-header h1 {
-    font-size: 1.78rem;
-  }
-
-  .dashboard-header p {
-    font-size: 0.78rem;
-    margin-top: 0.2rem;
-  }
-
-  .kpi-grid {
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-    grid-template-columns: 1fr;
-  }
-
-  .kpi-card {
-    padding: 0.72rem 0.78rem;
-    gap: 0.75rem;
-    border-radius: 0.85rem;
-  }
-
-  .kpi-icon {
-    width: 38px;
-    height: 38px;
-    font-size: 0.95rem;
-    border-radius: 0.7rem;
-  }
-
-  .kpi-label {
-    font-size: 0.72rem;
-  }
-
-  .kpi-value {
-    font-size: 1.62rem;
-    line-height: 1;
-  }
-
-  .kpi-sub {
-    font-size: 0.72rem;
-  }
-
-  .dashboard-section {
-    margin-bottom: 1.25rem;
-  }
-
-  .dashboard-section h2 {
-    font-size: 0.94rem;
-    margin-bottom: 0.65rem;
-  }
-
-  :deep(.p-datatable-thead > tr > th),
-  :deep(.p-datatable-tbody > tr > td) {
-    padding: 0.55rem 0.6rem !important;
-    font-size: 0.78rem;
-  }
-
-  .navcard-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.45rem;
-  }
-
-  .navcard {
-    padding: 0.58rem 0.28rem;
-    border-radius: 0.7rem;
-    min-height: 68px;
-    gap: 0.3rem;
-  }
-
-  .navcard-icon {
-    font-size: 1.05rem;
-  }
-
-  .navcard-label {
-    font-size: 0.7rem;
-    line-height: 1.15;
-  }
-}
-
-/* ─── Dashboard Charts ─── */
-.dashboard-charts {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 1.25rem;
-  margin-bottom: 2rem;
-}
-
-.chart-container {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 1.25rem;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
-}
-
-.chart-header h2 {
-  font-size: 1rem;
-  font-weight: 700;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.chart-content {
-  position: relative;
-  flex: 1;
-  min-height: 300px;
-}
-
-.chart-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(var(--bg-app-rgb), 0.5);
-  backdrop-filter: blur(2px);
-  border-radius: 1rem;
-  z-index: 10;
-}
-
-.chart-content--mensual {
-  min-height: 200px;
-}
-
-@media (max-width: 1024px) {
-  .dashboard-charts {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .chart-container {
-    padding: 1rem;
-  }
-  .chart-header h2 {
-    font-size: 0.9rem;
-  }
-  .chart-content {
-    min-height: 250px;
-  }
-}
-
-:deep(.p-selectbutton .p-button) {
-  font-size: 0.7rem;
-  padding: 0.4rem 0.6rem;
-}
-</style>

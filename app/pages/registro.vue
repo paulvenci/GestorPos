@@ -164,7 +164,7 @@ async function handleRegistro() {
     // 2. Intentar login automático
     await authStore.signIn(form.value.email, form.value.password)
     
-    await navigateTo('/', { replace: true })
+    await navigateTo('/dashboard', { replace: true })
   } catch (err: any) {
     console.error('Error en registro:', err)
     errorMsg.value = err.data?.statusMessage || 'No se pudo completar el registro. Intenta con otro correo.'
