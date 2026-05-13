@@ -17,8 +17,14 @@
           <span class="theme-icon theme-icon-dark">🌙</span>
           <span class="theme-icon theme-icon-light">☀️</span>
         </button>
-        <NuxtLink to="/login" class="nav-login">Iniciar Sesión</NuxtLink>
-        <NuxtLink to="/registro" class="nav-cta">Prueba Gratuita</NuxtLink>
+        <NuxtLink to="/login" class="nav-login">
+          <span class="hidden md:inline">Iniciar Sesión</span>
+          <span class="md:hidden">Ingresar</span>
+        </NuxtLink>
+        <NuxtLink to="/registro" class="nav-cta">
+          <span class="hidden md:inline">Prueba Gratuita</span>
+          <span class="md:hidden">Probar</span>
+        </NuxtLink>
       </div>
     </nav>
 

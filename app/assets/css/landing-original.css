@@ -196,6 +196,7 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   transition: var(--transition-fast);
+  white-space: nowrap;
 }
 
 .nav-login:hover {
@@ -230,7 +231,7 @@ body {
   min-height: 100vh;
   padding: 140px 24px 80px;
   position: relative;
-  overflow: hidden;
+  overflow-x: clip;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
@@ -1592,6 +1593,33 @@ body {
 
 @media (max-width: 768px) {
   .nav-links { display: none; }
+  
+  .nav-inner {
+    gap: 8px;
+  }
+  
+  .nav-logo {
+    font-size: 1.1rem;
+    gap: 4px;
+  }
+  
+  .nav-logo .logo-icon {
+    width: 22px; height: 22px;
+  }
+
+  .theme-toggle {
+    width: 34px; height: 34px;
+  }
+
+  .nav-login {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .nav-cta {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
 
   .hero { padding: 100px 20px 60px; gap: 48px; }
 
