@@ -63,7 +63,7 @@ export function normalizeRolePermissions(input: unknown): RolePermissionsMap {
 
 export function getSectionFromPath(path: string): SectionKey | null {
   if (path.startsWith('/superadmin/empresas')) return 'empresas'
-  if (path === '/') return 'dashboard'
+  if (path === '/dashboard') return 'dashboard'
   if (path.startsWith('/pos')) return 'pos'
   if (path.startsWith('/caja')) return 'caja'
   if (path.startsWith('/admin/productos')) return 'inventario'
@@ -91,7 +91,7 @@ export function getFallbackRouteForRole(role: string | null | undefined, permiss
   if (role === 'super_admin') return '/superadmin/empresas'
   const r = (role || 'cajero') as RoleKey
   const allowed = permissions[r] || permissions.cajero
-  if (allowed.includes('dashboard')) return '/'
+  if (allowed.includes('dashboard')) return '/dashboard'
   if (allowed.includes('pos')) return '/pos'
   if (allowed.includes('caja')) return '/caja'
   return '/login'

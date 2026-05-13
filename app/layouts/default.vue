@@ -34,7 +34,7 @@
           <i class="pi pi-building" />
           <span>Negocios</span>
         </NuxtLink>
-        <NuxtLink v-if="canAccess('dashboard')" to="/" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+        <NuxtLink v-if="canAccess('dashboard')" to="/dashboard" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-home" />
           <span>Dashboard</span>
         </NuxtLink>
