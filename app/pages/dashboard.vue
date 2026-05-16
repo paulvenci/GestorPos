@@ -1,130 +1,182 @@
 <template>
   <div class="dashboard-page">
     <div class="dashboard-header">
-      <h1>Dashboard</h1>
-      <p>{{ formattedDate }}</p>
+      <p>{{ fechaHoy }}</p>
     </div>
 
-    <!-- KPI Grid -->
+    <!-- KPI Cards -->
     <div class="kpi-grid">
-      <!-- Ventas Hoy -->
+      <!-- Grupo 1: Hoy y Estado -->
       <div class="kpi-card kpi-card--ventas">
-        <div class="kpi-icon">
-          <i class="pi pi-shopping-cart" />
-        </div>
+        <div class="kpi-icon"><i class="pi pi-shopping-cart" /></div>
         <div class="kpi-content">
           <span class="kpi-label">Ventas Hoy</span>
-          <span class="kpi-value">{{ formatCurrency(statsHoy.total) }}</span>
-          <span class="kpi-sub">{{ statsHoy.cantidad }} transacciones</span>
+          <span class="kpi-value">{{ formatMonto(kpi.ventasHoy) }}</span>
+          <span class="kpi-sub">{{ kpi.cantVentasHoy }} transacciones</span>
         </div>
       </div>
-
-      <!-- Ventas Mes -->
-      <div class="kpi-card kpi-card--ventas-mes">
-        <div class="kpi-icon">
-          <i class="pi pi-calendar" />
-        </div>
-        <div class="kpi-content">
-          <span class="kpi-label">Este Mes</span>
-          <span class="kpi-value">{{ formatCurrency(statsMes.total) }}</span>
-          <span class="kpi-sub">vs mes anterior</span>
-        </div>
-      </div>
-
-      <!-- Ticket Promedio -->
       <div class="kpi-card kpi-card--ticket">
-        <div class="kpi-icon">
-          <i class="pi pi-ticket" />
-        </div>
+        <div class="kpi-icon"><i class="pi pi-ticket" /></div>
         <div class="kpi-content">
           <span class="kpi-label">Ticket Promedio</span>
-          <span class="kpi-value">{{ formatCurrency(statsMes.ticketPromedio) }}</span>
-          <span class="kpi-sub">Basado en {{ statsMes.cantidad }} ventas</span>
+          <span class="kpi-value">{{ formatMonto(kpi.ticketPromedio) }}</span>
+          <span class="kpi-sub">Gasto por cliente</span>
         </div>
       </div>
 
-      <!-- Deuda Pendiente -->
-      <div class="kpi-card kpi-card--deuda">
-        <div class="kpi-icon">
-          <i class="pi pi-exclamation-circle" />
-        </div>
+      <!-- Grupo 2: Mes y Tendencia -->
+      <div class="kpi-card kpi-card--ventas-mes">
+        <div class="kpi-icon"><i class="pi pi-chart-line" /></div>
         <div class="kpi-content">
-          <span class="kpi-label">Por Cobrar</span>
-          <span class="kpi-value">{{ formatCurrency(statsDeuda.total) }}</span>
-          <span class="kpi-sub">{{ statsDeuda.clientes }} clientes con deuda</span>
+          <span class="kpi-label">Ventas del Mes</span>
+          <span class="kpi-value">{{ formatMonto(kpi.ventasMes) }}</span>
+          <div class="kpi-footer">
+            <span class="kpi-sub">{{ kpi.cantVentasMes }} ventas</span>
+            <Tag 
+              v-if="porcentajeComparacionMes !== null" 
+              :severity="porcentajeComparacionMes >= 0 ? 'success' : 'danger'" 
+              :icon="porcentajeComparacionMes >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+              :value="`${Math.abs(porcentajeComparacionMes).toFixed(1)}%`"
+              class="kpi-trend-tag"
+              v-tooltip.top="'vs total mes pasado'"
+            />
+          </div>
         </div>
       </div>
-
-      <!-- Tendencia (Chart placeholder logic) -->
       <div class="kpi-card kpi-card--tendencia">
-        <div class="kpi-icon">
-          <i class="pi pi-chart-line" />
-        </div>
+        <div class="kpi-icon"><i class="pi pi-compass" /></div>
         <div class="kpi-content">
           <span class="kpi-label">Tendencia MTD</span>
-          <span class="kpi-value" :class="statsMes.tendencia >= 0 ? 'text-green-500' : 'text-red-500'">
-            {{ statsMes.tendencia >= 0 ? '+' : '' }}{{ statsMes.tendencia }}%
-          </span>
-          <span class="kpi-sub">Crecimiento mensual</span>
+          <span class="kpi-value">{{ porcentajeTendencia !== null ? (porcentajeTendencia >= 0 ? '+' : '-') : '' }}{{ Math.abs(porcentajeTendencia || 0).toFixed(1) }}%</span>
+          <div class="kpi-footer">
+            <span class="kpi-sub">vs mismo día mes pasado</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grupo 3: Riesgo y Stock -->
+      <div class="kpi-card kpi-card--deuda">
+        <div class="kpi-icon"><i class="pi pi-money-bill" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Por Cobrar</span>
+          <span class="kpi-value text-red-500">{{ formatMonto(kpi.totalPorCobrar) }}</span>
+          <span class="kpi-sub">Deuda total clientes</span>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--productos">
+        <div class="kpi-icon"><i class="pi pi-box" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Inventario</span>
+          <span class="kpi-value">{{ kpi.totalProductos }}</span>
+          <span class="kpi-sub">{{ kpi.productosLowStock }} bajo stock</span>
         </div>
       </div>
     </div>
 
-    <!-- Charts Section -->
+    <!-- Gráficos de Análisis -->
     <div class="dashboard-charts">
-      <!-- Ventas Mensuales -->
-      <div class="chart-container">
+      <div class="chart-container chart-container--pie">
         <div class="chart-header">
-          <h2><i class="pi pi-chart-bar" /> Desempeño Mensual</h2>
-          <SelectButton v-model="chartTimeframe" :options="['6M', '12M']" aria-labelledby="basic" />
+          <h2><i class="pi pi-chart-pie" /> Ventas por Categoría</h2>
+          <div class="flex gap-2">
+            <Button size="small" label="30 Días" :severity="filtroCategoria === '30d' ? 'primary' : 'secondary'" :text="filtroCategoria !== '30d'" @click="filtroCategoria = '30d'; fetchVentasPorCategoria()" />
+            <Button size="small" label="Mes Actual" :severity="filtroCategoria === 'mes' ? 'primary' : 'secondary'" :text="filtroCategoria !== 'mes'" @click="filtroCategoria = 'mes'; fetchVentasPorCategoria()" />
+          </div>
+        </div>
+        <div class="chart-content">
+          <Chart type="pie" :data="chartDataCategoria" :options="chartOptionsPie" class="h-[300px]" />
+          <div v-if="loadingChartCat" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartCat && (!chartDataCategoria.labels || chartDataCategoria.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+
+      <div class="chart-container chart-container--bar">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-bar" /> Rendimiento Diario</h2>
+          <div class="flex gap-2">
+            <Button size="small" label="7 Días" :severity="filtroDiario === '7d' ? 'primary' : 'secondary'" :text="filtroDiario !== '7d'" @click="filtroDiario = '7d'; fetchVentasPorDia()" />
+            <Button size="small" label="Este Mes" :severity="filtroDiario === 'mes' ? 'primary' : 'secondary'" :text="filtroDiario !== 'mes'" @click="filtroDiario = 'mes'; fetchVentasPorDia()" />
+          </div>
+        </div>
+        <div class="chart-content">
+          <Chart type="bar" :data="chartDataDiario" :options="chartOptionsBar" class="h-[300px]" />
+          <div v-if="loadingChartDia" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartDia && (!chartDataDiario.labels || chartDataDiario.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico de Ventas Mensuales (Tendencia) -->
+    <div class="dashboard-section mt-4">
+      <div class="chart-container chart-container--line">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-line" /> Tendencia Mensual (Últimos 6 meses)</h2>
         </div>
         <div class="chart-content chart-content--mensual">
-          <div v-if="loadingChartMes" class="chart-overlay">
-            <ProgressSpinner style="width: 40px; height: 40px" />
-          </div>
-          <Chart type="bar" :data="chartDataMensual" :options="chartOptionsMensual" class="h-full w-full" />
+          <Chart type="bar" :data="chartDataMensual" :options="chartOptionsBarMensual" class="h-[300px]" />
+          <div v-if="loadingChartMes" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartMes && (!chartDataMensual.labels || chartDataMensual.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
         </div>
-      </div>
-
-      <!-- Ultimas Ventas -->
-      <div class="dashboard-section">
-        <h2><i class="pi pi-history" /> Últimas Ventas</h2>
-        <DataTable :value="ultimasVentas" :loading="loadingVentas" class="p-datatable-sm">
-          <Column field="created_at" header="Hora">
-            <template #body="{ data }">
-              {{ formatTime(data.created_at) }}
-            </template>
-          </Column>
-          <Column field="cliente_nombre" header="Cliente" />
-          <Column field="total" header="Total">
-            <template #body="{ data }">
-              <span class="precio-cell">{{ formatCurrency(data.total) }}</span>
-            </template>
-          </Column>
-          <Column field="metodo_pago" header="Pago" />
-        </DataTable>
       </div>
     </div>
 
-    <!-- Quick Actions -->
+    <!-- Últimas ventas -->
+    <div class="dashboard-section mt-4">
+      <h2><i class="pi pi-history" /> Últimas ventas</h2>
+      <DataTable :value="ultimasVentas" :loading="loadingVentas" class="p-datatable-sm" :rows="5" responsiveLayout="scroll">
+        <Column header="Fecha">
+          <template #body="slotProps">
+            <span class="text-sm" style="color: var(--text-muted)">{{ formatFecha(slotProps.data.created_at) }}</span>
+          </template>
+        </Column>
+        <Column field="total" header="Total">
+          <template #body="slotProps">
+            <span class="precio-cell">{{ formatMonto(slotProps.data.total) }}</span>
+          </template>
+        </Column>
+        <Column field="metodo_pago" header="Método" />
+        <Column header="Turno">
+          <template #body="slotProps">
+            <Tag :value="slotProps.data.id_turno ? 'En turno' : 'Fuera'" :severity="slotProps.data.id_turno ? 'success' : 'warn'" />
+          </template>
+        </Column>
+        <template #empty>
+          <div class="p-4 text-center" style="color: var(--text-muted)">No hay ventas registradas aún.</div>
+        </template>
+      </DataTable>
+    </div>
+
+    <!-- Accesos rápidos (tarjetas compactas) -->
     <div class="dashboard-section">
-      <h2>Acceso Rápido</h2>
+      <h2><i class="pi pi-th-large" /> Acceso Rápido</h2>
       <div class="navcard-grid">
         <NuxtLink to="/pos" class="navcard">
           <i class="pi pi-shopping-cart navcard-icon" />
-          <span class="navcard-label">Nueva Venta</span>
+          <span class="navcard-label">Punto de Venta</span>
+        </NuxtLink>
+        <NuxtLink to="/caja" class="navcard">
+          <i class="pi pi-wallet navcard-icon" />
+          <span class="navcard-label">Caja</span>
         </NuxtLink>
         <NuxtLink to="/admin/productos" class="navcard">
           <i class="pi pi-box navcard-icon" />
           <span class="navcard-label">Inventario</span>
         </NuxtLink>
+        <NuxtLink to="/admin/ajuste-stock" class="navcard">
+          <i class="pi pi-sync navcard-icon" />
+          <span class="navcard-label">Ajuste Stock</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/categorias" class="navcard">
+          <i class="pi pi-tags navcard-icon" />
+          <span class="navcard-label">Categorías</span>
+        </NuxtLink>
         <NuxtLink to="/admin/reportes" class="navcard">
-          <i class="pi pi-chart-line navcard-icon" />
+          <i class="pi pi-chart-bar navcard-icon" />
           <span class="navcard-label">Reportes</span>
         </NuxtLink>
-        <NuxtLink to="/caja" class="navcard">
-          <i class="pi pi-wallet navcard-icon" />
-          <span class="navcard-label">Caja</span>
+        <NuxtLink to="/admin/configuracion" class="navcard">
+          <i class="pi pi-cog navcard-icon" />
+          <span class="navcard-label">Configuración</span>
         </NuxtLink>
       </div>
     </div>
@@ -132,146 +184,457 @@
 </template>
 
 <script setup lang="ts">
+import { useFormatMonto } from '~/composables/useFormatMonto'
+import { useCajaStore } from '~/stores/caja'
+import type { Database } from '~/types/database.types'
+
 import { useAuthStore } from '~/stores/auth'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 
+const supabase = useSupabaseClient<Database>()
 const authStore = useAuthStore()
-const supabase = useSupabaseClient()
+const cajaStore = useCajaStore()
+const { formatMonto, formatFecha } = useFormatMonto()
 
-const formattedDate = format(new Date(), "EEEE, d 'de' MMMM", { locale: es })
-
-const statsHoy = ref({ total: 0, cantidad: 0 })
-const statsMes = ref({ total: 0, cantidad: 0, ticketPromedio: 0, tendencia: 0 })
-const statsDeuda = ref({ total: 0, clientes: 0 })
-const ultimasVentas = ref<any[]>([])
 const loadingVentas = ref(false)
-const loadingChartMes = ref(false)
-const chartTimeframe = ref('6M')
+const ultimasVentas = ref<any[]>([])
 
-const chartDataMensual = ref<any>(null)
-const chartOptionsMensual = {
-  maintainAspectRatio: false,
+const kpi = ref({
+  ventasHoy: 0,
+  cantVentasHoy: 0,
+  ventasMes: 0,
+  cantVentasMes: 0,
+  totalProductos: 0,
+  productosLowStock: 0,
+  turnoActivo: false,
+  turnoHora: '',
+  ventasMesPasado: 0,
+  ventasPMTD: 0,
+  ticketPromedio: 0,
+  totalPorCobrar: 0
+})
+
+const porcentajeComparacionMes = computed(() => {
+  if (kpi.value.ventasMesPasado === 0) return null
+  return ((kpi.value.ventasMes / kpi.value.ventasMesPasado) - 1) * 100
+})
+
+const porcentajeTendencia = computed(() => {
+  if (kpi.value.ventasPMTD === 0) return null
+  return ((kpi.value.ventasMes / kpi.value.ventasPMTD) - 1) * 100
+})
+
+// Gráficos
+const loadingChartCat = ref(false)
+const loadingChartDia = ref(false)
+const loadingChartMes = ref(false)
+const filtroCategoria = ref('30d')
+const filtroDiario = ref('7d')
+
+const opcionesFiltro = [
+  { label: '30 Días', value: '30d' },
+  { label: 'Mes Actual', value: 'mes' }
+]
+
+const opcionesFiltroDiario = [
+  { label: '7 Días', value: '7d' },
+  { label: 'Este Mes', value: 'mes' }
+]
+
+const chartDataCategoria = ref<any>({ labels: [], datasets: [] })
+const chartDataDiario = ref<any>({ labels: [], datasets: [] })
+const chartDataMensual = ref<any>({ labels: [], datasets: [] })
+
+const vibrantPalette = [
+  '#6366f1', '#10b981', '#f59e0b', '#ef4444', 
+  '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4',
+  '#f97316', '#14b8a6', '#4f46e5', '#d946ef'
+]
+
+const chartOptionsPie = ref({
   plugins: {
-    legend: { display: false }
+    legend: {
+      position: 'right',
+      labels: {
+        usePointStyle: true,
+        font: { size: 11 },
+        color: '#64748b'
+      }
+    },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` ${context.label}: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
+
+const chartOptionsBar = ref({
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
+      }
+    }
   },
   scales: {
     y: {
       beginAtZero: true,
-      grid: { color: 'rgba(148, 163, 184, 0.1)' },
+      grid: { color: 'rgba(0,0,0,0.05)' },
       ticks: {
-        callback: (value: any) => '$' + value.toLocaleString(),
-        color: '#94a3b8'
+        font: { size: 10 },
+        callback: (value: any) => formatMonto(value).substring(0, 10)
       }
     },
     x: {
       grid: { display: false },
-      ticks: { color: '#94a3b8' }
+      ticks: { font: { size: 10 } }
     }
-  }
-}
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
 
-function formatCurrency(val: number) {
-  return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val)
-}
+const chartOptionsBarMensual = ref({
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(0,0,0,0.05)' },
+      ticks: {
+        font: { size: 10 },
+        callback: (value: any) => formatMonto(value).substring(0, 10)
+      }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { 
+        font: { size: 10 },
+        autoSkip: false // Asegura que se vean todos los meses
+      }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
 
-function formatTime(date: string) {
-  return format(new Date(date), 'HH:mm')
-}
+const fechaHoy = computed(() =>
+  new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+)
 
 onMounted(async () => {
+  await cajaStore.fetchTurnoActivo()
   await Promise.all([
-    fetchStatsHoy(),
-    fetchStatsMes(),
-    fetchStatsDeuda(),
+    fetchKPIs(), 
     fetchUltimasVentas(),
-    fetchChartData()
+    fetchVentasPorCategoria(),
+    fetchVentasPorDia(),
+    fetchVentasMensuales()
   ])
 })
 
-async function fetchStatsHoy() {
-  const hoy = new Date().toISOString().split('T')[0]
+async function fetchKPIs() {
   try {
-    const { data } = await supabase
-      .from('ventas')
-      .select('total')
-      .eq('empresa_id', authStore.empresaId)
-      .gte('created_at', hoy)
-    
-    if (data) {
-      statsHoy.value.total = data.reduce((acc, v) => acc + Number(v.total || 0), 0)
-      statsHoy.value.cantidad = data.length
-    }
-  } catch (e) { console.error(e) }
-}
+    const ahora = new Date()
+    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString()
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
 
-async function fetchStatsMes() {
-  const inicioMes = new Date()
-  inicioMes.setDate(1)
-  const inicioMesIso = inicioMes.toISOString().split('T')[0]
-  
-  try {
-    const { data } = await supabase
-      .from('ventas')
-      .select('total')
-      .eq('empresa_id', authStore.empresaId)
-      .gte('created_at', inicioMesIso)
-    
-    if (data) {
-      const total = data.reduce((acc, v) => acc + Number(v.total || 0), 0)
-      statsMes.value.total = total
-      statsMes.value.cantidad = data.length
-      statsMes.value.ticketPromedio = data.length > 0 ? Math.round(total / data.length) : 0
+    // Helper para paginar consultas de ventas
+    async function fetchAllVentas(desde: string, hasta?: string) {
+      const PAGE_SIZE = 1000
+      let all: { total: number }[] = []
+      let from = 0
+      let hasMore = true
+      while (hasMore) {
+        let query = supabase
+          .from('ventas')
+          .select('total')
+          .eq('empresa_id', authStore.empresaId)
+          .or('estado.is.null,estado.neq.cancelada')
+          .gte('created_at', desde)
+        
+        if (hasta) {
+          query = query.lt('created_at', hasta)
+        }
+
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
+        if (error) throw error
+        all = all.concat(data || [])
+        hasMore = (data?.length ?? 0) === PAGE_SIZE
+        from += PAGE_SIZE
+      }
+      return all
+    }
+
+    // Ventas de hoy
+    const ventasHoy = await fetchAllVentas(inicioHoy)
+    kpi.value.cantVentasHoy = ventasHoy.length
+    kpi.value.ventasHoy = ventasHoy.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ventas del mes
+    const ventasMes = await fetchAllVentas(inicioMes)
+    kpi.value.cantVentasMes = ventasMes.length
+    kpi.value.ventasMes = ventasMes.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ventas del mes pasado (para comparación)
+    const inicioMesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString()
+    const ventasMesPasado = await fetchAllVentas(inicioMesPasado, inicioMes)
+    kpi.value.ventasMesPasado = ventasMesPasado.reduce((s, v) => s + (v.total || 0), 0)
+
+    const dAnterior = new Date(ahora)
+    dAnterior.setMonth(ahora.getMonth() - 1)
+    const ventasPMTD = await fetchAllVentas(inicioMesPasado, dAnterior.toISOString())
+    kpi.value.ventasPMTD = ventasPMTD.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ticket Promedio Hoy
+    kpi.value.ticketPromedio = kpi.value.cantVentasHoy > 0 
+      ? kpi.value.ventasHoy / kpi.value.cantVentasHoy 
+      : 0
       
-      // Tendencia mock (comparando con algo fijo por ahora o calculando mes anterior)
-      statsMes.value.tendencia = 12.5 
-    }
-  } catch (e) { console.error(e) }
-}
-
-async function fetchStatsDeuda() {
-  try {
-    const { data } = await supabase
+    // Total por cobrar (Deuda de clientes)
+    const { data: deudas } = await supabase
       .from('clientes')
       .select('saldo_pendiente')
       .eq('empresa_id', authStore.empresaId)
       .gt('saldo_pendiente', 0)
     
-    if (data) {
-      statsDeuda.value.total = data.reduce((acc, c) => acc + Number(c.saldo_pendiente || 0), 0)
-      statsDeuda.value.clientes = data.length
+    kpi.value.totalPorCobrar = deudas?.reduce((s, c) => s + (c.saldo_pendiente || 0), 0) || 0
+
+    // Productos
+    const { count: totalProds } = await supabase.from('productos')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', authStore.empresaId)
+    kpi.value.totalProductos = totalProds ?? 0
+
+    const { count: lowStock } = await supabase.from('productos')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', authStore.empresaId)
+      .lte('stock', 5)
+    kpi.value.productosLowStock = lowStock ?? 0
+
+    // Turno activo
+    kpi.value.turnoActivo = !!cajaStore.turnoActivo
+    if (cajaStore.turnoActivo) {
+      kpi.value.turnoHora = new Date(cajaStore.turnoActivo.fecha_apertura).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
     }
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error('Error KPIs:', e)
+  }
 }
 
-async function fetchChartData() {
+async function fetchVentasPorCategoria() {
+  loadingChartCat.value = true
+  try {
+    const ahora = new Date()
+    let inicio = new Date(ahora.setDate(ahora.getDate() - 30))
+    if (filtroCategoria.value === 'mes') {
+      const hoy = new Date()
+      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    }
+
+    const PAGE_SIZE = 1000
+    let allData: any[] = []
+    let from = 0
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('detalle_ventas')
+        .select(`
+          subtotal,
+          productos:id_producto (categoria),
+          ventas!inner (created_at, estado)
+        `)
+        .eq('empresa_id', authStore.empresaId)
+        .gte('ventas.created_at', inicio.toISOString())
+        .order('id', { ascending: true }) // Using id for stable pagination
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
+
+    const agrupado: Record<string, number> = {}
+    allData.forEach((dv: any) => {
+      // Filtrar ventas canceladas aquí para asegurar soporte de NULLs en DB
+      if (dv.ventas?.estado === 'cancelada') return
+
+      // Formatear categoría capitalizada para evitar duplicados como "bebidas" y "Bebidas"
+      let catNombre = dv.productos?.categoria?.trim() || 'Sin Categoría'
+      if (catNombre !== 'Sin Categoría') {
+        catNombre = catNombre.charAt(0).toUpperCase() + catNombre.slice(1).toLowerCase()
+      }
+
+      agrupado[catNombre] = (agrupado[catNombre] || 0) + (dv.subtotal || 0)
+    })
+
+    // Ordenar de mayor a menor subtotal (para que el gráfico se vea consistente)
+    const sortedEntries = Object.entries(agrupado).sort((a, b) => b[1] - a[1])
+    const labels = sortedEntries.map(e => e[0])
+    const values = sortedEntries.map(e => e[1])
+
+    chartDataCategoria.value = {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: vibrantPalette,
+        hoverOffset: 12,
+        borderRadius: 4
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Cat:', e)
+  } finally {
+    loadingChartCat.value = false
+  }
+}
+
+async function fetchVentasPorDia() {
+  loadingChartDia.value = true
+  try {
+    const ahora = new Date()
+    // Normalizamos el fin del rango a hoy a las 23:59:59
+    const finRango = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59)
+    
+    let inicio = new Date()
+    if (filtroDiario.value === '7d') {
+      // Últimos 7 días (incluyendo hoy)
+      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 6, 0, 0, 0)
+    } else {
+      // Mes actual completo
+      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0)
+    }
+
+    // Paginar para superar el límite de 1000 filas del servidor
+    const PAGE_SIZE = 1000
+    let allData: { created_at: string | null; total: number }[] = []
+    let from = 0
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('created_at, total')
+        .eq('empresa_id', authStore.empresaId)
+        .or('estado.is.null,estado.neq.cancelada')
+        .gte('created_at', inicio.toISOString())
+        .lte('created_at', finRango.toISOString())
+        .order('created_at', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
+
+    // 1. Generar el mapa de fechas vacío para asegurar continuidad (usando fecha local)
+    const agrupado: Record<string, number> = {}
+    const etiquetas: string[] = []
+    
+    let iterador = new Date(inicio)
+    while (iterador <= finRango) {
+      // Key local robusta: "YYYY-MM-DD"
+      const y = iterador.getFullYear()
+      const m = String(iterador.getMonth() + 1).padStart(2, '0')
+      const d = String(iterador.getDate()).padStart(2, '0')
+      const key = `${y}-${m}-${d}`
+      
+      const label = iterador.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }).replace('.', '')
+      agrupado[key] = 0
+      etiquetas.push(label)
+      iterador.setDate(iterador.getDate() + 1)
+    }
+
+    // 2. Llenar con datos reales
+    allData.forEach(v => {
+      const d = new Date(v.created_at!)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const key = `${y}-${m}-${day}`
+      
+      if (agrupado[key] !== undefined) {
+        agrupado[key] += Number(v.total || 0)
+      }
+    })
+
+    chartDataDiario.value = {
+      labels: etiquetas,
+      datasets: [{
+        label: 'Ventas',
+        data: Object.values(agrupado),
+        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+        borderRadius: 6,
+        barPercentage: 0.6
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Dia:', e)
+  } finally {
+    loadingChartDia.value = false
+  }
+}
+
+async function fetchVentasMensuales() {
   loadingChartMes.value = true
   try {
-    const mesesAtras = chartTimeframe.value === '6M' ? 6 : 12
-    const fechaInicio = new Date()
-    fechaInicio.setMonth(fechaInicio.getMonth() - mesesAtras)
-    fechaInicio.setDate(1)
+    const ahora = new Date()
+    const inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 5, 1)
+    
+    // Paginar para superar el límite de 1000 filas
+    const PAGE_SIZE = 1000
+    let allData: { created_at: string | null; total: number }[] = []
+    let from = 0
+    let hasMore = true
 
-    const { data: allData } = await supabase
-      .from('ventas')
-      .select('total, created_at')
-      .eq('empresa_id', authStore.empresaId)
-      .gte('created_at', fechaInicio.toISOString())
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('created_at, total')
+        .eq('empresa_id', authStore.empresaId)
+        .or('estado.is.null,estado.neq.cancelada')
+        .gte('created_at', inicio.toISOString())
+        .order('created_at', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1)
 
-    const dataMeses: any[] = []
-    for (let i = mesesAtras - 1; i >= 0; i--) {
-      const d = new Date()
-      d.setMonth(d.getMonth() - i)
-      const label = format(d, 'MMM', { locale: es })
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
+
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    const dataMeses: { key: string, label: string, total: number }[] = []
+    
+    // Inicializar últimos 6 meses (garantizando orden)
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       dataMeses.push({
         key,
-        label,
+        label: `${meses[d.getMonth()]} ${d.getFullYear()}`,
         total: 0
       })
     }
 
-    allData?.forEach(v => {
+    allData.forEach(v => {
       const d = new Date(v.created_at!)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const item = dataMeses.find(m => m.key === key)
