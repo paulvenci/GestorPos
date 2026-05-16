@@ -326,29 +326,29 @@
             <Skeleton height="8rem" borderRadius="16px" v-for="i in 3" :key="i"/>
           </div>
 
-          <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <!-- Ingresos -->
-            <div class="metric-card bg-surface rounded-xl p-6 border-l-4 border-emerald-500 shadow-sm relative overflow-hidden">
+            <div class="metric-card flex flex-col justify-center bg-surface rounded py-10 px-8 border-l-4 border-emerald-500 shadow-sm relative overflow-hidden">
               <div class="absolute -right-4 -bottom-4 opacity-5"><i class="pi pi-arrow-up-right text-8xl"></i></div>
-              <h4 class="text-slate-500 text-sm font-medium uppercase tracking-wider mb-2">Ingresos Totales</h4>
-              <div class="text-3xl font-black text-emerald-500">{{ formatMonto(rentabilidad.total_ventas || 0) }}</div>
+              <h4 class="text-slate-500 text-sm font-medium uppercase tracking-wider mb-6">Ingresos Totales</h4>
+              <div class="text-2xl font-bold text-emerald-500">{{ formatMonto(rentabilidad.total_ventas || 0) }}</div>
             </div>
             
             <!-- Costos -->
-            <div class="metric-card bg-surface rounded-xl p-6 border-l-4 border-red-500 shadow-sm relative overflow-hidden">
+            <div class="metric-card flex flex-col justify-center bg-surface rounded py-10 px-8 border-l-4 border-red-500 shadow-sm relative overflow-hidden">
               <div class="absolute -right-4 -bottom-4 opacity-5"><i class="pi pi-arrow-down-right text-8xl"></i></div>
-              <h4 class="text-slate-500 text-sm font-medium uppercase tracking-wider mb-2">Costo de Ventas</h4>
-              <div class="text-3xl font-black text-red-500">{{ formatMonto(rentabilidad.total_costos || 0) }}</div>
+              <h4 class="text-slate-500 text-sm font-medium uppercase tracking-wider mb-6">Costo de Ventas</h4>
+              <div class="text-2xl font-bold text-red-500">{{ formatMonto(rentabilidad.total_costos || 0) }}</div>
             </div>
             
             <!-- Ganancia Limpia -->
-            <div class="metric-card bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-6 border-l-4 border-indigo-500 shadow-sm relative overflow-hidden">
+            <div class="metric-card flex flex-col justify-center bg-indigo-50 dark:bg-indigo-900/20 rounded py-10 px-8 border-l-4 border-indigo-500 shadow-sm relative overflow-hidden">
               <div class="absolute -right-4 -bottom-4 opacity-10"><i class="pi pi-wallet text-8xl text-indigo-500"></i></div>
-              <div class="flex justify-between items-start">
-                <h4 class="text-indigo-600 dark:text-indigo-400 text-sm font-medium uppercase tracking-wider mb-2">Ganancia Bruta</h4>
+              <div class="flex justify-between items-start mb-6">
+                <h4 class="text-indigo-600 dark:text-indigo-400 text-sm font-medium uppercase tracking-wider">Ganancia Bruta</h4>
                 <Tag :value="'+' + (rentabilidad.margen_porcentaje || 0) + '%'" severity="info" />
               </div>
-              <div class="text-3xl font-black text-indigo-600 dark:text-indigo-400">{{ formatMonto(rentabilidad.utilidad_bruta || 0) }}</div>
+              <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ formatMonto(rentabilidad.utilidad_bruta || 0) }}</div>
             </div>
           </div>
           

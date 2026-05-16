@@ -1,0 +1,1050 @@
+﻿<template>
+  <div class="dashboard-page">
+    <div class="dashboard-header">
+      <p>{{ fechaHoy }}</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <!-- Grupo 1: Hoy y Estado -->
+      <div class="kpi-card kpi-card--ventas">
+        <div class="kpi-icon"><i class="pi pi-shopping-cart" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Ventas Hoy</span>
+          <span class="kpi-value">{{ formatMonto(kpi.ventasHoy) }}</span>
+          <span class="kpi-sub">{{ kpi.cantVentasHoy }} transacciones</span>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--ticket">
+        <div class="kpi-icon"><i class="pi pi-ticket" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Ticket Promedio</span>
+          <span class="kpi-value">{{ formatMonto(kpi.ticketPromedio) }}</span>
+          <span class="kpi-sub">Gasto por cliente</span>
+        </div>
+      </div>
+
+      <!-- Grupo 2: Mes y Tendencia -->
+      <div class="kpi-card kpi-card--ventas-mes">
+        <div class="kpi-icon"><i class="pi pi-chart-line" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Ventas del Mes</span>
+          <span class="kpi-value">{{ formatMonto(kpi.ventasMes) }}</span>
+          <div class="kpi-footer">
+            <span class="kpi-sub">{{ kpi.cantVentasMes }} ventas</span>
+            <Tag 
+              v-if="porcentajeComparacionMes !== null" 
+              :severity="porcentajeComparacionMes >= 0 ? 'success' : 'danger'" 
+              :icon="porcentajeComparacionMes >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
+              :value="`${Math.abs(porcentajeComparacionMes).toFixed(1)}%`"
+              class="kpi-trend-tag"
+              v-tooltip.top="'vs total mes pasado'"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--tendencia">
+        <div class="kpi-icon"><i class="pi pi-compass" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Tendencia MTD</span>
+          <span class="kpi-value">{{ porcentajeTendencia !== null ? (porcentajeTendencia >= 0 ? '+' : '-') : '' }}{{ Math.abs(porcentajeTendencia || 0).toFixed(1) }}%</span>
+          <div class="kpi-footer">
+            <span class="kpi-sub">vs mismo d├¡a mes pasado</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grupo 3: Riesgo y Stock -->
+      <div class="kpi-card kpi-card--deuda">
+        <div class="kpi-icon"><i class="pi pi-money-bill" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Por Cobrar</span>
+          <span class="kpi-value text-red-500">{{ formatMonto(kpi.totalPorCobrar) }}</span>
+          <span class="kpi-sub">Deuda total clientes</span>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--productos">
+        <div class="kpi-icon"><i class="pi pi-box" /></div>
+        <div class="kpi-content">
+          <span class="kpi-label">Inventario</span>
+          <span class="kpi-value">{{ kpi.totalProductos }}</span>
+          <span class="kpi-sub">{{ kpi.productosLowStock }} bajo stock</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gr├íficos de An├ílisis -->
+    <div class="dashboard-charts">
+      <div class="chart-container chart-container--pie">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-pie" /> Ventas por Categor├¡a</h2>
+          <div class="flex gap-2">
+            <Button size="small" label="30 D├¡as" :severity="filtroCategoria === '30d' ? 'primary' : 'secondary'" :text="filtroCategoria !== '30d'" @click="filtroCategoria = '30d'; fetchVentasPorCategoria()" />
+            <Button size="small" label="Mes Actual" :severity="filtroCategoria === 'mes' ? 'primary' : 'secondary'" :text="filtroCategoria !== 'mes'" @click="filtroCategoria = 'mes'; fetchVentasPorCategoria()" />
+          </div>
+        </div>
+        <div class="chart-content">
+          <Chart type="pie" :data="chartDataCategoria" :options="chartOptionsPie" class="h-[300px]" />
+          <div v-if="loadingChartCat" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartCat && (!chartDataCategoria.labels || chartDataCategoria.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+
+      <div class="chart-container chart-container--bar">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-bar" /> Rendimiento Diario</h2>
+          <div class="flex gap-2">
+            <Button size="small" label="7 D├¡as" :severity="filtroDiario === '7d' ? 'primary' : 'secondary'" :text="filtroDiario !== '7d'" @click="filtroDiario = '7d'; fetchVentasPorDia()" />
+            <Button size="small" label="Este Mes" :severity="filtroDiario === 'mes' ? 'primary' : 'secondary'" :text="filtroDiario !== 'mes'" @click="filtroDiario = 'mes'; fetchVentasPorDia()" />
+          </div>
+        </div>
+        <div class="chart-content">
+          <Chart type="bar" :data="chartDataDiario" :options="chartOptionsBar" class="h-[300px]" />
+          <div v-if="loadingChartDia" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartDia && (!chartDataDiario.labels || chartDataDiario.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gr├ífico de Ventas Mensuales (Tendencia) -->
+    <div class="dashboard-section mt-4">
+      <div class="chart-container chart-container--line">
+        <div class="chart-header">
+          <h2><i class="pi pi-chart-line" /> Tendencia Mensual (├Ültimos 6 meses)</h2>
+        </div>
+        <div class="chart-content chart-content--mensual">
+          <Chart type="bar" :data="chartDataMensual" :options="chartOptionsBarMensual" class="h-[300px]" />
+          <div v-if="loadingChartMes" class="chart-overlay"><i class="pi pi-spinner pi-spin" /></div>
+          <div v-if="!loadingChartMes && (!chartDataMensual.labels || chartDataMensual.labels.length === 0)" class="chart-overlay text-sm text-slate-400">Sin datos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ├Ültimas ventas -->
+    <div class="dashboard-section mt-4">
+      <h2><i class="pi pi-history" /> ├Ültimas ventas</h2>
+      <DataTable :value="ultimasVentas" :loading="loadingVentas" class="p-datatable-sm" :rows="5" responsiveLayout="scroll">
+        <Column header="Fecha">
+          <template #body="slotProps">
+            <span class="text-sm" style="color: var(--text-muted)">{{ formatFecha(slotProps.data.created_at) }}</span>
+          </template>
+        </Column>
+        <Column field="total" header="Total">
+          <template #body="slotProps">
+            <span class="precio-cell">{{ formatMonto(slotProps.data.total) }}</span>
+          </template>
+        </Column>
+        <Column field="metodo_pago" header="M├®todo" />
+        <Column header="Turno">
+          <template #body="slotProps">
+            <Tag :value="slotProps.data.id_turno ? 'En turno' : 'Fuera'" :severity="slotProps.data.id_turno ? 'success' : 'warn'" />
+          </template>
+        </Column>
+        <template #empty>
+          <div class="p-4 text-center" style="color: var(--text-muted)">No hay ventas registradas a├║n.</div>
+        </template>
+      </DataTable>
+    </div>
+
+    <!-- Accesos r├ípidos (tarjetas compactas) -->
+    <div class="dashboard-section">
+      <h2><i class="pi pi-th-large" /> Acceso R├ípido</h2>
+      <div class="navcard-grid">
+        <NuxtLink to="/pos" class="navcard">
+          <i class="pi pi-shopping-cart navcard-icon" />
+          <span class="navcard-label">Punto de Venta</span>
+        </NuxtLink>
+        <NuxtLink to="/caja" class="navcard">
+          <i class="pi pi-wallet navcard-icon" />
+          <span class="navcard-label">Caja</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/productos" class="navcard">
+          <i class="pi pi-box navcard-icon" />
+          <span class="navcard-label">Inventario</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/ajuste-stock" class="navcard">
+          <i class="pi pi-sync navcard-icon" />
+          <span class="navcard-label">Ajuste Stock</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/categorias" class="navcard">
+          <i class="pi pi-tags navcard-icon" />
+          <span class="navcard-label">Categor├¡as</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/reportes" class="navcard">
+          <i class="pi pi-chart-bar navcard-icon" />
+          <span class="navcard-label">Reportes</span>
+        </NuxtLink>
+        <NuxtLink to="/admin/configuracion" class="navcard">
+          <i class="pi pi-cog navcard-icon" />
+          <span class="navcard-label">Configuraci├│n</span>
+        </NuxtLink>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useFormatMonto } from '~/composables/useFormatMonto'
+import { useCajaStore } from '~/stores/caja'
+import type { Database } from '~/types/database.types'
+
+import { useAuthStore } from '~/stores/auth'
+
+const supabase = useSupabaseClient<Database>()
+const authStore = useAuthStore()
+const cajaStore = useCajaStore()
+const { formatMonto, formatFecha } = useFormatMonto()
+
+const loadingVentas = ref(false)
+const ultimasVentas = ref<any[]>([])
+
+const kpi = ref({
+  ventasHoy: 0,
+  cantVentasHoy: 0,
+  ventasMes: 0,
+  cantVentasMes: 0,
+  totalProductos: 0,
+  productosLowStock: 0,
+  turnoActivo: false,
+  turnoHora: '',
+  ventasMesPasado: 0,
+  ventasPMTD: 0,
+  ticketPromedio: 0,
+  totalPorCobrar: 0
+})
+
+const porcentajeComparacionMes = computed(() => {
+  if (kpi.value.ventasMesPasado === 0) return null
+  return ((kpi.value.ventasMes / kpi.value.ventasMesPasado) - 1) * 100
+})
+
+const porcentajeTendencia = computed(() => {
+  if (kpi.value.ventasPMTD === 0) return null
+  return ((kpi.value.ventasMes / kpi.value.ventasPMTD) - 1) * 100
+})
+
+// Gr├íficos
+const loadingChartCat = ref(false)
+const loadingChartDia = ref(false)
+const loadingChartMes = ref(false)
+const filtroCategoria = ref('30d')
+const filtroDiario = ref('7d')
+
+const opcionesFiltro = [
+  { label: '30 D├¡as', value: '30d' },
+  { label: 'Mes Actual', value: 'mes' }
+]
+
+const opcionesFiltroDiario = [
+  { label: '7 D├¡as', value: '7d' },
+  { label: 'Este Mes', value: 'mes' }
+]
+
+const chartDataCategoria = ref<any>({ labels: [], datasets: [] })
+const chartDataDiario = ref<any>({ labels: [], datasets: [] })
+const chartDataMensual = ref<any>({ labels: [], datasets: [] })
+
+const vibrantPalette = [
+  '#6366f1', '#10b981', '#f59e0b', '#ef4444', 
+  '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4',
+  '#f97316', '#14b8a6', '#4f46e5', '#d946ef'
+]
+
+const chartOptionsPie = ref({
+  plugins: {
+    legend: {
+      position: 'right',
+      labels: {
+        usePointStyle: true,
+        font: { size: 11 },
+        color: '#64748b'
+      }
+    },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` ${context.label}: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
+
+const chartOptionsBar = ref({
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(0,0,0,0.05)' },
+      ticks: {
+        font: { size: 10 },
+        callback: (value: any) => formatMonto(value).substring(0, 10)
+      }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 10 } }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
+
+const chartOptionsBarMensual = ref({
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => ` Total: ${formatMonto(context.raw)}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(0,0,0,0.05)' },
+      ticks: {
+        font: { size: 10 },
+        callback: (value: any) => formatMonto(value).substring(0, 10)
+      }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { 
+        font: { size: 10 },
+        autoSkip: false // Asegura que se vean todos los meses
+      }
+    }
+  },
+  maintainAspectRatio: false,
+  responsive: true
+})
+
+const fechaHoy = computed(() =>
+  new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+)
+
+onMounted(async () => {
+  await cajaStore.fetchTurnoActivo()
+  await Promise.all([
+    fetchKPIs(), 
+    fetchUltimasVentas(),
+    fetchVentasPorCategoria(),
+    fetchVentasPorDia(),
+    fetchVentasMensuales()
+  ])
+})
+
+async function fetchKPIs() {
+  try {
+    const ahora = new Date()
+    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString()
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
+
+    // Helper para paginar consultas de ventas
+    async function fetchAllVentas(desde: string, hasta?: string) {
+      const PAGE_SIZE = 1000
+      let all: { total: number }[] = []
+      let from = 0
+      let hasMore = true
+      while (hasMore) {
+        let query = supabase
+          .from('ventas')
+          .select('total')
+          .eq('empresa_id', authStore.empresaId)
+          .or('estado.is.null,estado.neq.cancelada')
+          .gte('created_at', desde)
+        
+        if (hasta) {
+          query = query.lt('created_at', hasta)
+        }
+
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
+        if (error) throw error
+        all = all.concat(data || [])
+        hasMore = (data?.length ?? 0) === PAGE_SIZE
+        from += PAGE_SIZE
+      }
+      return all
+    }
+
+    // Ventas de hoy
+    const ventasHoy = await fetchAllVentas(inicioHoy)
+    kpi.value.cantVentasHoy = ventasHoy.length
+    kpi.value.ventasHoy = ventasHoy.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ventas del mes
+    const ventasMes = await fetchAllVentas(inicioMes)
+    kpi.value.cantVentasMes = ventasMes.length
+    kpi.value.ventasMes = ventasMes.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ventas del mes pasado (para comparaci├│n)
+    const inicioMesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString()
+    const ventasMesPasado = await fetchAllVentas(inicioMesPasado, inicioMes)
+    kpi.value.ventasMesPasado = ventasMesPasado.reduce((s, v) => s + (v.total || 0), 0)
+
+    const dAnterior = new Date(ahora)
+    dAnterior.setMonth(ahora.getMonth() - 1)
+    const ventasPMTD = await fetchAllVentas(inicioMesPasado, dAnterior.toISOString())
+    kpi.value.ventasPMTD = ventasPMTD.reduce((s, v) => s + (v.total || 0), 0)
+
+    // Ticket Promedio Hoy
+    kpi.value.ticketPromedio = kpi.value.cantVentasHoy > 0 
+      ? kpi.value.ventasHoy / kpi.value.cantVentasHoy 
+      : 0
+      
+    // Total por cobrar (Deuda de clientes)
+    const { data: deudas } = await supabase
+      .from('clientes')
+      .select('saldo_pendiente')
+      .eq('empresa_id', authStore.empresaId)
+      .gt('saldo_pendiente', 0)
+    
+    kpi.value.totalPorCobrar = deudas?.reduce((s, c) => s + (c.saldo_pendiente || 0), 0) || 0
+
+    // Productos
+    const { count: totalProds } = await supabase.from('productos')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', authStore.empresaId)
+    kpi.value.totalProductos = totalProds ?? 0
+
+    const { count: lowStock } = await supabase.from('productos')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', authStore.empresaId)
+      .lte('stock', 5)
+    kpi.value.productosLowStock = lowStock ?? 0
+
+    // Turno activo
+    kpi.value.turnoActivo = !!cajaStore.turnoActivo
+    if (cajaStore.turnoActivo) {
+      kpi.value.turnoHora = new Date(cajaStore.turnoActivo.fecha_apertura).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+    }
+  } catch (e) {
+    console.error('Error KPIs:', e)
+  }
+}
+
+async function fetchVentasPorCategoria() {
+  loadingChartCat.value = true
+  try {
+    const ahora = new Date()
+    let inicio = new Date(ahora.setDate(ahora.getDate() - 30))
+    if (filtroCategoria.value === 'mes') {
+      const hoy = new Date()
+      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    }
+
+    const PAGE_SIZE = 1000
+    let allData: any[] = []
+    let from = 0
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('detalle_ventas')
+        .select(`
+          subtotal,
+          productos:id_producto (categoria),
+          ventas!inner (created_at, estado)
+        `)
+        .eq('empresa_id', authStore.empresaId)
+        .gte('ventas.created_at', inicio.toISOString())
+        .order('id', { ascending: true }) // Using id for stable pagination
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
+
+    const agrupado: Record<string, number> = {}
+    allData.forEach((dv: any) => {
+      // Filtrar ventas canceladas aqu├¡ para asegurar soporte de NULLs en DB
+      if (dv.ventas?.estado === 'cancelada') return
+
+      // Formatear categor├¡a capitalizada para evitar duplicados como "bebidas" y "Bebidas"
+      let catNombre = dv.productos?.categoria?.trim() || 'Sin Categor├¡a'
+      if (catNombre !== 'Sin Categor├¡a') {
+        catNombre = catNombre.charAt(0).toUpperCase() + catNombre.slice(1).toLowerCase()
+      }
+
+      agrupado[catNombre] = (agrupado[catNombre] || 0) + (dv.subtotal || 0)
+    })
+
+    // Ordenar de mayor a menor subtotal (para que el gr├ífico se vea consistente)
+    const sortedEntries = Object.entries(agrupado).sort((a, b) => b[1] - a[1])
+    const labels = sortedEntries.map(e => e[0])
+    const values = sortedEntries.map(e => e[1])
+
+    chartDataCategoria.value = {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: vibrantPalette,
+        hoverOffset: 12,
+        borderRadius: 4
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Cat:', e)
+  } finally {
+    loadingChartCat.value = false
+  }
+}
+
+async function fetchVentasPorDia() {
+  loadingChartDia.value = true
+  try {
+    const ahora = new Date()
+    // Normalizamos el fin del rango a hoy a las 23:59:59
+    const finRango = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59)
+    
+    let inicio = new Date()
+    if (filtroDiario.value === '7d') {
+      // ├Ültimos 7 d├¡as (incluyendo hoy)
+      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 6, 0, 0, 0)
+    } else {
+      // Mes actual completo
+      inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0)
+    }
+
+    // Paginar para superar el l├¡mite de 1000 filas del servidor
+    const PAGE_SIZE = 1000
+    let allData: { created_at: string | null; total: number }[] = []
+    let from = 0
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('created_at, total')
+        .eq('empresa_id', authStore.empresaId)
+        .or('estado.is.null,estado.neq.cancelada')
+        .gte('created_at', inicio.toISOString())
+        .lte('created_at', finRango.toISOString())
+        .order('created_at', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
+
+    // 1. Generar el mapa de fechas vac├¡o para asegurar continuidad (usando fecha local)
+    const agrupado: Record<string, number> = {}
+    const etiquetas: string[] = []
+    
+    let iterador = new Date(inicio)
+    while (iterador <= finRango) {
+      // Key local robusta: "YYYY-MM-DD"
+      const y = iterador.getFullYear()
+      const m = String(iterador.getMonth() + 1).padStart(2, '0')
+      const d = String(iterador.getDate()).padStart(2, '0')
+      const key = `${y}-${m}-${d}`
+      
+      const label = iterador.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }).replace('.', '')
+      agrupado[key] = 0
+      etiquetas.push(label)
+      iterador.setDate(iterador.getDate() + 1)
+    }
+
+    // 2. Llenar con datos reales
+    allData.forEach(v => {
+      const d = new Date(v.created_at!)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const key = `${y}-${m}-${day}`
+      
+      if (agrupado[key] !== undefined) {
+        agrupado[key] += Number(v.total || 0)
+      }
+    })
+
+    chartDataDiario.value = {
+      labels: etiquetas,
+      datasets: [{
+        label: 'Ventas',
+        data: Object.values(agrupado),
+        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+        borderRadius: 6,
+        barPercentage: 0.6
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Dia:', e)
+  } finally {
+    loadingChartDia.value = false
+  }
+}
+
+async function fetchVentasMensuales() {
+  loadingChartMes.value = true
+  try {
+    const ahora = new Date()
+    const inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 5, 1)
+    
+    // Paginar para superar el l├¡mite de 1000 filas
+    const PAGE_SIZE = 1000
+    let allData: { created_at: string | null; total: number }[] = []
+    let from = 0
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('created_at, total')
+        .eq('empresa_id', authStore.empresaId)
+        .or('estado.is.null,estado.neq.cancelada')
+        .gte('created_at', inicio.toISOString())
+        .order('created_at', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (error) throw error
+
+      allData = allData.concat(data || [])
+      hasMore = (data?.length ?? 0) === PAGE_SIZE
+      from += PAGE_SIZE
+    }
+
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    const dataMeses: { key: string, label: string, total: number }[] = []
+    
+    // Inicializar ├║ltimos 6 meses (garantizando orden)
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      dataMeses.push({
+        key,
+        label: `${meses[d.getMonth()]} ${d.getFullYear()}`,
+        total: 0
+      })
+    }
+
+    allData.forEach(v => {
+      const d = new Date(v.created_at!)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const item = dataMeses.find(m => m.key === key)
+      if (item) {
+        item.total += Number(v.total || 0)
+      }
+    })
+
+    const labels = dataMeses.map(m => m.label)
+    const values = dataMeses.map(m => m.total)
+    const colors = dataMeses.map((_, index) => 
+      index === dataMeses.length - 1 ? '#3b82f6' : 'rgba(148, 163, 184, 0.5)'
+    )
+
+    chartDataMensual.value = {
+      labels,
+      datasets: [{
+        label: 'Ventas Mensuales',
+        data: values,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c === '#3b82f6' ? '#2563eb' : '#94a3b8'),
+        borderWidth: 1,
+        borderRadius: 8,
+        barPercentage: 0.6
+      }]
+    }
+  } catch (e) {
+    console.error('Error Chart Mes:', e)
+  } finally {
+    loadingChartMes.value = false
+  }
+}
+
+async function fetchUltimasVentas() {
+  loadingVentas.value = true
+  try {
+    const { data } = await supabase
+      .from('ventas')
+      .select('*')
+      .eq('empresa_id', authStore.empresaId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+    ultimasVentas.value = data || []
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loadingVentas.value = false
+  }
+}
+</script>
+
+<style scoped>
+.dashboard-page {
+  padding: 1.4rem 1.6rem;
+  color: var(--text-app);
+}
+
+.dashboard-header {
+  margin-bottom: 1.4rem;
+}
+
+.dashboard-header h1 {
+  font-size: 1.82rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.dashboard-header p {
+  color: var(--text-muted);
+  margin: 0.25rem 0 0;
+  font-size: 0.88rem;
+  text-transform: capitalize;
+}
+
+/* ÔöÇÔöÇÔöÇ KPI Grid ÔöÇÔöÇÔöÇ */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.4rem;
+}
+
+.kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1.05rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+}
+
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.kpi-card--ventas .kpi-icon { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.kpi-card--productos .kpi-icon { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
+.kpi-card--caja .kpi-icon { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.kpi-card--ventas-mes .kpi-icon { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.kpi-card--tendencia .kpi-icon { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+.kpi-card--ticket .kpi-icon { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+.kpi-card--deuda .kpi-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+.kpi-card--tendencia .kpi-value {
+  color: var(--text-app);
+}
+
+.kpi-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.kpi-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.kpi-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  gap: 0.5rem;
+}
+
+:deep(.kpi-trend-tag) {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  padding: 0.1rem 0.4rem !important;
+  border-radius: 6px !important;
+}
+
+/* ÔöÇÔöÇÔöÇ Dashboard sections ÔöÇÔöÇÔöÇ */
+.dashboard-section {
+  margin-bottom: 1.4rem;
+}
+
+.dashboard-section h2 {
+  font-size: 1.02rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.precio-cell {
+  font-weight: 700;
+  color: #4ade80;
+}
+
+/* ÔöÇÔöÇÔöÇ DataTable override ÔöÇÔöÇÔöÇ */
+:deep(.p-datatable) {
+  background: var(--bg-surface);
+  border-radius: 1rem;
+  border: 1px solid var(--border-sidebar);
+  overflow: hidden;
+}
+
+:deep(.p-datatable-thead > tr > th) {
+  background: var(--bg-app) !important;
+  color: var(--text-muted) !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.65rem 0.85rem;
+  border: none !important;
+}
+
+:deep(.p-datatable-tbody > tr) {
+  background: transparent !important;
+  color: var(--text-app);
+}
+
+:deep(.p-datatable-tbody > tr > td) {
+  border-color: var(--border-subtle) !important;
+  padding: 0.65rem 0.85rem;
+}
+
+/* ÔöÇÔöÇÔöÇ NavCard Grid ÔöÇÔöÇÔöÇ */
+.navcard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.65rem;
+}
+
+.navcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  padding: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  text-decoration: none;
+  color: var(--text-app);
+  transition: all 0.2s ease;
+}
+
+.navcard:hover {
+  border-color: var(--color-brand-primary);
+  background: rgba(99, 102, 241, 0.08);
+  transform: translateY(-2px);
+}
+
+.navcard-icon {
+  font-size: 1.12rem;
+  color: var(--color-brand-primary);
+}
+
+.navcard-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 0.8rem 0.8rem 1rem;
+  }
+
+  .dashboard-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.78rem;
+  }
+
+  .dashboard-header p {
+    font-size: 0.78rem;
+    margin-top: 0.2rem;
+  }
+
+  .kpi-grid {
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-card {
+    padding: 0.72rem 0.78rem;
+    gap: 0.75rem;
+    border-radius: 0.85rem;
+  }
+
+  .kpi-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+    border-radius: 0.7rem;
+  }
+
+  .kpi-label {
+    font-size: 0.72rem;
+  }
+
+  .kpi-value {
+    font-size: 1.62rem;
+    line-height: 1;
+  }
+
+  .kpi-sub {
+    font-size: 0.72rem;
+  }
+
+  .dashboard-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .dashboard-section h2 {
+    font-size: 0.94rem;
+    margin-bottom: 0.65rem;
+  }
+
+  :deep(.p-datatable-thead > tr > th),
+  :deep(.p-datatable-tbody > tr > td) {
+    padding: 0.55rem 0.6rem !important;
+    font-size: 0.78rem;
+  }
+
+  .navcard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .navcard {
+    padding: 0.58rem 0.28rem;
+    border-radius: 0.7rem;
+    min-height: 68px;
+    gap: 0.3rem;
+  }
+
+  .navcard-icon {
+    font-size: 1.05rem;
+  }
+
+  .navcard-label {
+    font-size: 0.7rem;
+    line-height: 1.15;
+  }
+}
+
+/* ÔöÇÔöÇÔöÇ Dashboard Charts ÔöÇÔöÇÔöÇ */
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.chart-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.chart-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chart-content {
+  position: relative;
+  flex: 1;
+  min-height: 300px;
+}
+
+.chart-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--bg-app-rgb), 0.5);
+  backdrop-filter: blur(2px);
+  border-radius: 1rem;
+  z-index: 10;
+}
+
+.chart-content--mensual {
+  min-height: 200px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-container {
+    padding: 1rem;
+  }
+  .chart-header h2 {
+    font-size: 0.9rem;
+  }
+  .chart-content {
+    min-height: 250px;
+  }
+}
+
+:deep(.p-selectbutton .p-button) {
+  font-size: 0.7rem;
+  padding: 0.4rem 0.6rem;
+}
+</style>
