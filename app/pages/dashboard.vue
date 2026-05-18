@@ -331,15 +331,29 @@ const fechaHoy = computed(() =>
   new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 )
 
-onMounted(async () => {
-  await cajaStore.fetchTurnoActivo()
-  await Promise.all([
-    fetchKPIs(), 
-    fetchUltimasVentas(),
-    fetchVentasPorCategoria(),
-    fetchVentasPorDia(),
-    fetchVentasMensuales()
-  ])
+onMounted(() => {
+  const initDashboard = async () => {
+    if (!authStore.empresaId) return
+    await cajaStore.fetchTurnoActivo()
+    await Promise.all([
+      fetchKPIs(), 
+      fetchUltimasVentas(),
+      fetchVentasPorCategoria(),
+      fetchVentasPorDia(),
+      fetchVentasMensuales()
+    ])
+  }
+
+  if (authStore.empresaId) {
+    initDashboard()
+  } else {
+    const unwatch = watch(() => authStore.empresaId, (newVal) => {
+      if (newVal) {
+        initDashboard()
+        unwatch()
+      }
+    })
+  }
 })
 
 async function fetchKPIs() {

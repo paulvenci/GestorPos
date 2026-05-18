@@ -26,7 +26,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchPerfil(userId: string) {
-    perfil.value = null
     try {
       const { data } = await supabase
         .from('perfiles')
