@@ -1154,6 +1154,13 @@ onMounted(async () => {
   window.addEventListener('offline', onDesconectado)
 })
 
+// Sincronización automática al cambiar o cargar empresaId
+watch(() => authStore.empresaId, async (newEmpresaId) => {
+  if (newEmpresaId && isOnline.value) {
+    await sincronizarColaOffline()
+  }
+}, { immediate: true })
+
 onUnmounted(() => {
   window.removeEventListener('online', onConectado)
   window.removeEventListener('offline', onDesconectado)
@@ -2020,35 +2027,14 @@ function confirmarVaciar() {
   posStore.vaciarCarrito()
 }
 
-// ─── Sincronización offline ───────────────────────────────
 async function sincronizarColaOffline() {
-  const pendientes = await db.ventas_offline
-    .where({ sync_status: 'pending' })
-    .and(v => v.empresa_id === authStore.empresaId)
-    .toArray()
-  if (pendientes.length === 0) return
-
-  const supabase = useSupabaseClient<Database>()
-  for (const venta of pendientes) {
-    try {
-      const { error } = await supabase.rpc('registrar_venta', {
-        p_id_turno: venta.turno_id,
-        p_subtotal: venta.subtotal,
-        p_impuestos: 0,
-        p_descuentos: 0,
-        p_total: venta.total,
-        p_metodo_pago: venta.metodo_pago || 'efectivo',
-        p_items: venta.detalles
-      })
-      if (!error) {
-        await db.ventas_offline.update(venta.id!, { sync_status: 'synced' })
-      }
-    } catch (_) {}
-  }
-
-  const sincronizadas = pendientes.filter(v => v.sync_status === 'synced').length
-  if (sincronizadas > 0) {
-    toast.add({ severity: 'info', summary: 'Ventas sincronizadas', detail: `${sincronizadas} venta(s) offline enviadas al servidor`, life: 5000 })
+  try {
+    const sincronizadas = await posStore.sincronizarColaOffline()
+    if (sincronizadas > 0) {
+      toast.add({ severity: 'info', summary: 'Ventas sincronizadas', detail: `${sincronizadas} venta(s) offline enviadas al servidor`, life: 5000 })
+    }
+  } catch (err) {
+    console.error('Error al sincronizar cola offline desde componente:', err)
   }
 }
 

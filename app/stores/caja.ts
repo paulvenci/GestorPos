@@ -23,46 +23,86 @@ export const useCajaStore = defineStore('caja', () => {
   const loading = ref(false)
 
   async function fetchTurnoActivo() {
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser) return
-    
-    loading.value = true
     try {
-      const { data, error } = await supabase
-        .from('turnos_caja')
-        .select('*')
-        .eq('id_usuario', currentUser.id)
-        .eq('empresa_id', authStore.empresaId)
-        .eq('estado', 'abierto')
-        .maybeSingle()
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) return
+      
+      loading.value = true
+      try {
+        const { data, error } = await supabase
+          .from('turnos_caja')
+          .select('*')
+          .eq('id_usuario', currentUser.id)
+          .eq('empresa_id', authStore.empresaId)
+          .eq('estado', 'abierto')
+          .maybeSingle()
 
-      if (!error) turnoActivo.value = data
-    } finally {
-      loading.value = false
+        if (error) {
+          console.warn('Error fetching active shift:', error.message)
+          // Fallback a localStorage en caso de error de red
+          if (import.meta.client) {
+            const cached = localStorage.getItem(`gestorpos_turno_activo_${currentUser.id}`)
+            if (cached) {
+              turnoActivo.value = JSON.parse(cached)
+            }
+          }
+        } else {
+          turnoActivo.value = data
+          if (import.meta.client) {
+            if (data) {
+              localStorage.setItem(`gestorpos_turno_activo_${currentUser.id}`, JSON.stringify(data))
+            } else {
+              localStorage.removeItem(`gestorpos_turno_activo_${currentUser.id}`)
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Network error while fetching shift, trying cache:', err)
+        if (import.meta.client) {
+          const cached = localStorage.getItem(`gestorpos_turno_activo_${currentUser.id}`)
+          if (cached) {
+            turnoActivo.value = JSON.parse(cached)
+          }
+        }
+      } finally {
+        loading.value = false
+      }
+    } catch (globalErr) {
+      console.error('Error global in fetchTurnoActivo:', globalErr)
     }
   }
 
   async function checkPuedeAbrirTurno() {
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser) return true
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) return true
 
-    const d = new Date()
-    const inicio = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString()
-    const fin = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString()
+      const d = new Date()
+      const inicio = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString()
+      const fin = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString()
 
-    const { data } = await supabase.from('turnos_caja')
-      .select('id, estado')
-      .eq('id_usuario', currentUser.id)
-      .eq('empresa_id', authStore.empresaId)
-      .gte('fecha_apertura', inicio)
-      .lt('fecha_apertura', fin)
-      .in('estado', ['cerrado', 'cerrado_pendiente_revision'])
-      .limit(1)
+      const { data, error } = await supabase.from('turnos_caja')
+        .select('id, estado')
+        .eq('id_usuario', currentUser.id)
+        .eq('empresa_id', authStore.empresaId)
+        .gte('fecha_apertura', inicio)
+        .lt('fecha_apertura', fin)
+        .in('estado', ['cerrado', 'cerrado_pendiente_revision'])
+        .limit(1)
 
-    if (data && data.length > 0) {
-      return false
+      if (error) {
+        console.warn('Error checking if shift can be opened:', error.message)
+        return true
+      }
+
+      if (data && data.length > 0) {
+        return false
+      }
+      return true
+    } catch (err) {
+      console.warn('Network error while checking if shift can be opened:', err)
+      return true
     }
-    return true
   }
 
   async function abrirTurno(montoInicial: number) {
@@ -82,9 +122,18 @@ export const useCajaStore = defineStore('caja', () => {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        throw new Error(error.message || 'No se pudo abrir el turno. Por favor verifica tu conexión.')
+      }
+      
       turnoActivo.value = data
+      if (import.meta.client && data) {
+        localStorage.setItem(`gestorpos_turno_activo_${currentUser.id}`, JSON.stringify(data))
+      }
       return data
+    } catch (err: any) {
+      console.error('Error opening shift:', err)
+      throw new Error(err.message || 'Error de red al abrir el turno.')
     } finally {
       loading.value = false
     }
@@ -108,6 +157,15 @@ export const useCajaStore = defineStore('caja', () => {
 
       if (error) throw error
       turnoActivo.value = null
+      
+      // Limpiar cache local al cerrar
+      if (import.meta.client) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        if (currentUser) {
+          localStorage.removeItem(`gestorpos_turno_activo_${currentUser.id}`)
+        }
+      }
+      
       return data
     } finally {
       loading.value = false
@@ -117,34 +175,46 @@ export const useCajaStore = defineStore('caja', () => {
   const hayTurnoActivo = computed(() => !!turnoActivo.value)
 
   async function asegurarTurnoActivo() {
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser) return
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) return
 
-    // 1. Obtener turno activo (si existe)
-    await fetchTurnoActivo()
+      // 1. Obtener turno activo (si existe)
+      await fetchTurnoActivo()
 
-    if (turnoActivo.value) {
-      // 2. Verificar si es de un día distinto al actual
-      const fechaApertura = new Date(turnoActivo.value.fecha_apertura)
-      const hoy = new Date()
+      if (turnoActivo.value) {
+        // 2. Verificar si es de un día distinto al actual
+        const fechaApertura = new Date(turnoActivo.value.fecha_apertura)
+        const hoy = new Date()
 
-      const esMismoDia = fechaApertura.getFullYear() === hoy.getFullYear() &&
-                        fechaApertura.getMonth() === hoy.getMonth() &&
-                        fechaApertura.getDate() === hoy.getDate()
+        const esMismoDia = fechaApertura.getFullYear() === hoy.getFullYear() &&
+                          fechaApertura.getMonth() === hoy.getMonth() &&
+                          fechaApertura.getDate() === hoy.getDate()
 
-      if (!esMismoDia) {
-        // Cierre automático de turno antiguo
-        await cerrarTurno(0, 'Cierre automático por inicio de sesión en nuevo día (turno pendiente del ' + fechaApertura.toLocaleDateString() + ')')
-      } else {
-        // Turno ya activo hoy, no hace falta hacer nada
-        return
+        if (!esMismoDia) {
+          // Cierre automático de turno antiguo
+          try {
+            await cerrarTurno(0, 'Cierre automático por inicio de sesión en nuevo día (turno pendiente del ' + fechaApertura.toLocaleDateString() + ')')
+          } catch (err) {
+            console.warn('No se pudo cerrar el turno antiguo automáticamente:', err)
+          }
+        } else {
+          // Turno ya activo hoy, no hace falta hacer nada
+          return
+        }
       }
-    }
 
-    // 3. Abrir nuevo turno si no hay uno (o si cerramos el antiguo)
-    const puedeAbrir = await checkPuedeAbrirTurno()
-    if (puedeAbrir) {
-      await abrirTurno(0)
+      // 3. Abrir nuevo turno si no hay uno (o si cerramos el antiguo)
+      const puedeAbrir = await checkPuedeAbrirTurno()
+      if (puedeAbrir) {
+        try {
+          await abrirTurno(0)
+        } catch (err) {
+          console.warn('No se pudo abrir un nuevo turno de caja en modo offline:', err)
+        }
+      }
+    } catch (globalErr) {
+      console.error('Error en asegurarTurnoActivo:', globalErr)
     }
   }
 

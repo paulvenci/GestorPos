@@ -25,6 +25,10 @@ export interface VentaOffline {
   subtotal: number;
   total: number;
   metodo_pago?: string;
+  id_usuario?: string;
+  pago_efectivo?: number;
+  pago_tarjeta?: number;
+  pago_transferencia?: number;
   detalles: any[]; // Se tipificará mejor más adelante
   sync_status: 'pending' | 'synced' | 'error';
   created_at: string;
@@ -65,6 +69,11 @@ export class GestorPOSDatabase extends Dexie {
     this.version(3).stores({
       productos: 'id, sku, nombre',
       ventas_offline: '++id, sync_status, created_at',
+      ventas_reservadas: '++id'
+    });
+    this.version(4).stores({
+      productos: 'id, sku, nombre',
+      ventas_offline: '++id, sync_status, created_at, empresa_id',
       ventas_reservadas: '++id'
     });
   }

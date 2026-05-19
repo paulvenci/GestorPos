@@ -39,6 +39,28 @@ export const usePosStore = defineStore('pos', () => {
   const notificacionesRealtime = useLocalStorage<any[]>('gestorpos_notificaciones_rt', [])
   const triggerRealtime = ref(0)
   const triggerNotificacion = ref(0)
+  const ventasOffline = ref<any[]>([])
+
+  async function cargarVentasOffline() {
+    try {
+      ventasOffline.value = await db.ventas_offline
+        .where('empresa_id')
+        .equals(authStore.empresaId || '')
+        .toArray()
+      
+      // Ordenar por fecha descendente
+      ventasOffline.value.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    } catch (_) {
+      ventasOffline.value = []
+    }
+  }
+
+  watch(() => authStore.empresaId, (newId) => {
+    if (newId) {
+      cargarVentasOffline()
+    }
+  }, { immediate: true })
+
   let canalRealtime: any = null
   let canalAjustes: any = null
 
@@ -290,9 +312,10 @@ export const usePosStore = defineStore('pos', () => {
 
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const realUserId = currentUser?.id ?? authStore.user?.id ?? null
       const { data, error } = await (supabase.rpc as any)('registrar_venta', {
         p_id_turno: idTurno,
-        p_id_usuario: currentUser?.id ?? null,
+        p_id_usuario: realUserId,
         p_subtotal: subtotal.value,
         p_impuestos: 0,
         p_descuentos: 0,
@@ -310,13 +333,18 @@ export const usePosStore = defineStore('pos', () => {
           await db.ventas_offline.add({
             empresa_id: authStore.empresaId,
             turno_id: idTurno as string,
+            id_usuario: realUserId || undefined,
             subtotal: subtotal.value,
             total: total.value,
             metodo_pago: metodoPago,
+            pago_efectivo: pagoEfectivo,
+            pago_tarjeta: pagoTarjeta,
+            pago_transferencia: pagoTransferencia,
             detalles: items,
             sync_status: 'pending',
             created_at: new Date().toISOString()
           })
+          await cargarVentasOffline()
           vaciarCarrito()
           throw new Error('OFFLINE')
         }
@@ -330,6 +358,53 @@ export const usePosStore = defineStore('pos', () => {
     } finally {
       procesando.value = false
     }
+  }
+
+  async function sincronizarColaOffline(): Promise<number> {
+    if (import.meta.client && !navigator.onLine) return 0
+
+    const pendientes = await db.ventas_offline
+      .filter(v => (v.sync_status === 'pending' || v.sync_status === 'error') && v.empresa_id === authStore.empresaId)
+      .toArray()
+    if (pendientes.length === 0) return 0
+
+    let sincronizadas = 0
+    for (const venta of pendientes) {
+      try {
+        const metodo = venta.metodo_pago || 'efectivo'
+        const pagoEfectivo = venta.pago_efectivo ?? (metodo === 'efectivo' ? venta.total : 0)
+        const pagoTarjeta = venta.pago_tarjeta ?? (metodo === 'tarjeta' ? venta.total : 0)
+        const pagoTransferencia = venta.pago_transferencia ?? (metodo === 'transferencia' ? venta.total : 0)
+
+        const { error } = await supabase.rpc('registrar_venta', {
+          p_id_turno: venta.turno_id,
+          p_id_usuario: venta.id_usuario ?? authStore.user?.id ?? null,
+          p_subtotal: venta.subtotal,
+          p_impuestos: 0,
+          p_descuentos: 0,
+          p_total: venta.total,
+          p_metodo_pago: metodo,
+          p_items: venta.detalles,
+          p_pago_efectivo: pagoEfectivo,
+          p_pago_tarjeta: pagoTarjeta,
+          p_pago_transferencia: pagoTransferencia
+        })
+
+        if (!error) {
+          await db.ventas_offline.update(venta.id!, { sync_status: 'synced' })
+          sincronizadas++
+        } else {
+          console.error('Error sincronizando venta offline:', error)
+          await db.ventas_offline.update(venta.id!, { sync_status: 'error' })
+        }
+      } catch (err) {
+        console.error('Excepción sincronizando venta offline:', err)
+        await db.ventas_offline.update(venta.id!, { sync_status: 'error' })
+      }
+    }
+
+    await cargarVentasOffline()
+    return sincronizadas
   }
 
   // ─── Reserva de Ventas (Dexie) ────────────────────────
@@ -420,6 +495,7 @@ export const usePosStore = defineStore('pos', () => {
     redondearCLP,
     setupRealtime, cleanupRealtime,
     notificacionesRealtime, triggerRealtime, triggerNotificacion,
+    ventasOffline, cargarVentasOffline, sincronizarColaOffline,
     limpiarNotificacionesRealtime: () => { notificacionesRealtime.value = [] }
   }
 })

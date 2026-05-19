@@ -210,18 +210,25 @@
              <div v-if="mostrarNotificaciones" class="pos-notif-panel absolute right-0 top-10 w-80 z-50 overflow-hidden">
                 <div class="flex border-b">
                   <button 
-                    class="flex-1 p-3 text-xs font-bold transition-colors" 
+                    class="flex-1 p-3 text-[10px] font-bold transition-colors text-center" 
                     :class="tabNotif === 'stock' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-b-2 border-indigo-500' : 'text-slate-500'"
                     @click="tabNotif = 'stock'"
                   >
                     Alertas ({{ productosBajoStock.length }})
                   </button>
                   <button 
-                    class="flex-1 p-3 text-xs font-bold transition-colors" 
+                    class="flex-1 p-3 text-[10px] font-bold transition-colors text-center" 
                     :class="tabNotif === 'sync' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-b-2 border-indigo-500' : 'text-slate-500'"
                     @click="tabNotif = 'sync'"
                   >
                     Sincro ({{ posStore.notificacionesRealtime.length }})
+                  </button>
+                  <button 
+                    class="flex-1 p-3 text-[10px] font-bold transition-colors text-center" 
+                    :class="tabNotif === 'offline' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-b-2 border-indigo-500' : 'text-slate-500'"
+                    @click="tabNotif = 'offline'"
+                  >
+                    Offline ({{ posStore.ventasOffline.length }})
                   </button>
                 </div>
 
@@ -248,7 +255,7 @@
                   </template>
 
                   <!-- Pestaña SINCRO -->
-                  <template v-else>
+                  <template v-else-if="tabNotif === 'sync'">
                     <div v-if="posStore.notificacionesRealtime.length === 0" class="p-8 text-center text-sm pos-notif-empty">
                       <i class="pi pi-sync text-3xl mb-2 text-indigo-500/30 block" />
                       Sin actividad reciente.<br>Los cambios se verán aquí.
@@ -269,6 +276,47 @@
                       </div>
                     </div>
                   </template>
+
+                  <!-- Pestaña OFFLINE -->
+                  <template v-else>
+                    <div v-if="posStore.ventasOffline.length === 0" class="p-8 text-center text-sm pos-notif-empty">
+                      <i class="pi pi-cloud-upload text-3xl mb-2 text-indigo-500/30 block" />
+                      No hay ventas locales.<br>Las ventas offline se verán aquí.
+                    </div>
+                    <div
+                      v-for="venta in posStore.ventasOffline"
+                      :key="venta.id"
+                      class="pos-notif-item p-3 border-b flex flex-col gap-1"
+                    >
+                      <div class="flex justify-between items-start">
+                        <span class="text-[10px] font-bold uppercase tracking-wider">
+                          Venta Local #{{ venta.id }}
+                        </span>
+                        <span 
+                          class="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                          :class="{
+                            'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400': venta.sync_status === 'pending',
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400': venta.sync_status === 'error',
+                            'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400': venta.sync_status === 'synced'
+                          }"
+                        >
+                          {{ venta.sync_status === 'pending' ? 'Pendiente' : venta.sync_status === 'error' ? 'Error' : 'Sincronizada' }}
+                        </span>
+                      </div>
+                      <div class="flex justify-between items-center text-xs mt-1">
+                        <span class="font-bold text-slate-700 dark:text-slate-300">
+                          {{ formatMonto(venta.total) }}
+                        </span>
+                        <span class="text-[10px] text-slate-400">
+                          {{ tiempoAtras(venta.created_at) }}
+                        </span>
+                      </div>
+                      <div class="text-[10px] text-slate-400 flex justify-between">
+                        <span>Pago: {{ venta.metodo_pago }}</span>
+                        <span>{{ venta.detalles?.length || 0 }} art.</span>
+                      </div>
+                    </div>
+                  </template>
                 </div>
 
                 <div class="p-2 flex justify-between items-center pos-notif-footer border-t">
@@ -283,6 +331,16 @@
                     size="small" 
                     class="!text-[10px] py-1"
                     @click="posStore.limpiarNotificacionesRealtime()"
+                  />
+                  <Button 
+                    v-if="tabNotif === 'offline' && posStore.ventasOffline.some(v => v.sync_status !== 'synced')"
+                    :label="sincronizandoManual ? 'Sincronizando...' : 'Sincronizar ahora'" 
+                    :icon="sincronizandoManual ? 'pi pi-spin pi-sync' : 'pi pi-sync'" 
+                    text 
+                    size="small" 
+                    class="!text-[10px] py-1"
+                    :disabled="sincronizandoManual"
+                    @click="forzarSincroOffline"
                   />
                 </div>
               </div>
@@ -356,13 +414,32 @@ function canAccess(section: SectionKey) {
 }
 // Notificaciones
 const mostrarNotificaciones = ref(false)
-const tabNotif = ref<'stock' | 'sync'>('stock')
+const tabNotif = ref<'stock' | 'sync' | 'offline'>('stock')
 const productosBajoStock = computed(() => {
   return productosStore.productos.filter(p => p.stock <= (p.stock_minimo || 5))
 })
 const totalNotificaciones = computed(() => {
-  return productosBajoStock.value.length + posStore.notificacionesRealtime.length
+  const pendingOffline = posStore.ventasOffline.filter(v => v.sync_status === 'pending' || v.sync_status === 'error').length
+  return productosBajoStock.value.length + posStore.notificacionesRealtime.length + pendingOffline
 })
+
+const sincronizandoManual = ref(false)
+async function forzarSincroOffline() {
+  if (sincronizandoManual.value) return
+  sincronizandoManual.value = true
+  try {
+    const qty = await posStore.sincronizarColaOffline()
+    if (qty > 0) {
+      toast.add({ severity: 'success', summary: 'Sincronización manual', detail: `${qty} venta(s) offline sincronizada(s) con éxito.`, life: 3000 })
+    } else {
+      toast.add({ severity: 'info', summary: 'Sincronización manual', detail: 'No hay ventas pendientes por sincronizar o no hay conexión.', life: 3000 })
+    }
+  } catch (err: any) {
+    toast.add({ severity: 'error', summary: 'Sincronización fallida', detail: err.message || 'Error al conectar con la base de datos.', life: 5000 })
+  } finally {
+    sincronizandoManual.value = false
+  }
+}
 
 function formatMonto(v: number) {
   return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(v)
@@ -380,6 +457,9 @@ function tiempoAtras(date: string) {
 
 function toggleNotificaciones() {
   mostrarNotificaciones.value = !mostrarNotificaciones.value
+  if (mostrarNotificaciones.value) {
+    posStore.cargarVentasOffline()
+  }
 }
 
 function irAInventario(_productoId?: string) {
@@ -474,6 +554,7 @@ onMounted(async () => {
   
   productosStore.fetchProductos()
   configStore.fetchConfig()
+  posStore.cargarVentasOffline()
   
   window.addEventListener('online', onConectado)
   window.addEventListener('offline', onDesconectado)
