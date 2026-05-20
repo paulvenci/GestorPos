@@ -1,33 +1,36 @@
 <template>
   <div>
-    <!-- ─── CONVERSION: Banner de Urgencia (AIDA: Attention) ─── -->
-    <div class="alt-urgency">
-      🔥 <strong>Oferta de lanzamiento:</strong> 30 días gratis + configuración incluida · Quedan pocos cupos este mes
-    </div>
-
-    <!-- ─── NAVBAR ─── -->
-    <nav class="alt-nav" id="alt-navbar">
-      <div class="alt-nav-inner">
-        <NuxtLink to="/" class="alt-nav-logo">
-          <img src="/landing/logo1.svg" alt="ZumaPos" width="28" height="28" />
-          <span class="alt-nav-logo-text">Zuma<span class="alt-nav-logo-accent">Pos</span></span>
-        </NuxtLink>
-        <ul class="alt-nav-links">
-          <li><a href="#beneficios">Beneficios</a></li>
-          <li><a href="#como-funciona">Cómo Funciona</a></li>
-          <li><a href="#planes">Planes</a></li>
-          <li><a href="#contacto">Contacto</a></li>
-          <li><NuxtLink to="/blog">Blog</NuxtLink></li>
-        </ul>
-        <div class="alt-nav-actions">
-          <button class="alt-theme-toggle" @click="toggleTheme" :aria-label="isDark ? 'Modo claro' : 'Modo oscuro'">
-            {{ isDark ? '☀️' : '🌙' }}
-          </button>
-          <NuxtLink to="/login" class="alt-nav-login"><span class="desktop">Iniciar Sesión</span><span class="mobile" style="display:none">Ingresar</span></NuxtLink>
-          <NuxtLink to="/registro" class="alt-nav-cta">Prueba Gratis</NuxtLink>
-        </div>
+    <!-- ─── HEADER FIJO (Contenedor común para evitar superposición) ─── -->
+    <header class="alt-header-wrapper">
+      <!-- ─── CONVERSION: Banner de Urgencia (AIDA: Attention) ─── -->
+      <div class="alt-urgency">
+        🔥 <strong>Oferta de lanzamiento:</strong> 30 días gratis + configuración incluida · Quedan pocos cupos este mes
       </div>
-    </nav>
+
+      <!-- ─── NAVBAR ─── -->
+      <nav class="alt-nav" id="alt-navbar">
+        <div class="alt-nav-inner">
+          <NuxtLink to="/" class="alt-nav-logo">
+            <img src="/landing/logo1.svg" alt="ZumaPos" width="28" height="28" />
+            <span class="alt-nav-logo-text">Zuma<span class="alt-nav-logo-accent">Pos</span></span>
+          </NuxtLink>
+          <ul class="alt-nav-links">
+            <li><a href="#beneficios">Beneficios</a></li>
+            <li><a href="#como-funciona">Cómo Funciona</a></li>
+            <li><a href="#planes">Planes</a></li>
+            <li><a href="#contacto">Contacto</a></li>
+            <li><NuxtLink to="/blog">Blog</NuxtLink></li>
+          </ul>
+          <div class="alt-nav-actions">
+            <button class="alt-theme-toggle" @click="toggleTheme" :aria-label="isDark ? 'Modo claro' : 'Modo oscuro'">
+              {{ isDark ? '☀️' : '🌙' }}
+            </button>
+            <NuxtLink to="/login" class="alt-nav-login"><span class="desktop">Iniciar Sesión</span><span class="mobile" style="display:none">Ingresar</span></NuxtLink>
+            <NuxtLink to="/registro" class="alt-nav-cta">Prueba Gratis</NuxtLink>
+          </div>
+        </div>
+      </nav>
+    </header>
 
     <!-- ─── HERO con Slider de Fotos ─── -->
     <section class="alt-hero" id="hero">
