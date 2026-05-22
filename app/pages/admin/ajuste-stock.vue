@@ -330,13 +330,36 @@ onMounted(async () => {
 async function fetchProductos() {
   loadingProductos.value = true
   try {
-    const { data } = await supabase
-      .from('productos')
-      .select('id, nombre, sku, stock, costo')
-      .eq('empresa_id', authStore.empresaId)
-      .eq('activo', true)
-      .order('nombre')
-    productos.value = data || []
+    let todosLosProductos: any[] = []
+    let desde = 0
+    const cantidadPorPagina = 1000
+    let huboMas = true
+
+    while (huboMas) {
+      const { data, error } = await supabase
+        .from('productos')
+        .select('id, nombre, sku, stock, costo')
+        .eq('empresa_id', authStore.empresaId)
+        .eq('activo', true)
+        .order('nombre')
+        .range(desde, desde + cantidadPorPagina - 1)
+
+      if (error) throw error
+      if (data && data.length > 0) {
+        todosLosProductos = todosLosProductos.concat(data)
+        if (data.length < cantidadPorPagina) {
+          huboMas = false
+        } else {
+          desde += cantidadPorPagina
+        }
+      } else {
+        huboMas = false
+      }
+    }
+
+    productos.value = todosLosProductos
+  } catch (error: any) {
+    console.error('Error al cargar productos para ajustes:', error)
   } finally {
     loadingProductos.value = false
   }

@@ -42,20 +42,36 @@ export const useProductosStore = defineStore('productos', () => {
     if (!authStore.empresaId) return
     loading.value = true
     try {
-      const { data, error } = await supabase
-        .from('productos')
-        .select('*')
-        .eq('empresa_id', authStore.empresaId)
-        .order('nombre')
-      
-      if (error) throw error
-      if (data) {
-        const prodData = data as any as ProductoLocal[]
-        productos.value = prodData
-        // Sincronizar catálogo local
-        await db.productos.clear()
-        await db.productos.bulkPut(data as unknown as ProductoLocal[])
+      let todosLosProductos: ProductoLocal[] = []
+      let desde = 0
+      const cantidadPorPagina = 1000
+      let huboMas = true
+
+      while (huboMas) {
+        const { data, error } = await supabase
+          .from('productos')
+          .select('*')
+          .eq('empresa_id', authStore.empresaId)
+          .order('nombre')
+          .range(desde, desde + cantidadPorPagina - 1)
+
+        if (error) throw error
+        if (data && data.length > 0) {
+          todosLosProductos = todosLosProductos.concat(data as any as ProductoLocal[])
+          if (data.length < cantidadPorPagina) {
+            huboMas = false
+          } else {
+            desde += cantidadPorPagina
+          }
+        } else {
+          huboMas = false
+        }
       }
+
+      productos.value = todosLosProductos
+      // Sincronizar catálogo local
+      await db.productos.clear()
+      await db.productos.bulkPut(todosLosProductos)
     } catch (e) {
       console.warn('Cargando productos desde base de datos local (Offline)', e)
       productos.value = await db.productos.toArray()

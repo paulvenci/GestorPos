@@ -80,16 +80,37 @@ export const usePosStore = defineStore('pos', () => {
   // ─── Catálogo Local (Dexie) ───────────────────────────
   async function sincronizarCatalogo() {
     try {
-      const { data, error } = await supabase
-        .from('productos')
-        .select('id, empresa_id, nombre, sku, precio, costo, categoria, activo, stock, imagen_url, es_pesable, stock_minimo, margen_ganancia, updated_at')
-        .eq('empresa_id', authStore.empresaId)
-        .eq('activo', true)
-      if (error) return // Puede estar offline, no pasa nada
-      if (data) {
+      let todosLosProductos: ProductoLocal[] = []
+      let desde = 0
+      const cantidadPorPagina = 1000
+      let huboMas = true
+
+      while (huboMas) {
+        const { data, error } = await supabase
+          .from('productos')
+          .select('id, empresa_id, nombre, sku, precio, costo, categoria, activo, stock, imagen_url, es_pesable, stock_minimo, margen_ganancia, updated_at')
+          .eq('empresa_id', authStore.empresaId)
+          .eq('activo', true)
+          .order('nombre')
+          .range(desde, desde + cantidadPorPagina - 1)
+
+        if (error) throw error
+        if (data && data.length > 0) {
+          todosLosProductos = todosLosProductos.concat(data as any as ProductoLocal[])
+          if (data.length < cantidadPorPagina) {
+            huboMas = false
+          } else {
+            desde += cantidadPorPagina
+          }
+        } else {
+          huboMas = false
+        }
+      }
+
+      if (todosLosProductos.length > 0) {
         // Limpiar caché local para remover productos desactivados
         await db.productos.clear()
-        await db.productos.bulkPut(data as unknown as ProductoLocal[])
+        await db.productos.bulkPut(todosLosProductos)
       }
 
       // Iniciar sincronización en tiempo real después de la carga inicial
