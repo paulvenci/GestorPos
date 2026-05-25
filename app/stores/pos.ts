@@ -63,6 +63,7 @@ export const usePosStore = defineStore('pos', () => {
 
   let canalRealtime: any = null
   let canalAjustes: any = null
+  let authSubscription: any = null
 
   function esErrorDeRed(error: any) {
     if (import.meta.client && !navigator.onLine) return true
@@ -120,6 +121,20 @@ export const usePosStore = defineStore('pos', () => {
 
   function setupRealtime() {
     if (canalRealtime || !authStore.empresaId) return
+
+    // Escuchar cambios de autenticación para mantener el token de Realtime al día
+    if (!authSubscription) {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          console.log('Token de autenticación refrescado, reiniciando canales Realtime')
+          cleanupRealtime()
+          setTimeout(() => {
+            setupRealtime()
+          }, 500)
+        }
+      })
+      authSubscription = data.subscription
+    }
 
     canalRealtime = supabase
       .channel('pos-productos-realtime')
@@ -195,9 +210,15 @@ export const usePosStore = defineStore('pos', () => {
           triggerRealtime.value++
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log('Sincronización en tiempo real activa para productos')
+        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          console.warn(`Canal productos Realtime con estado: ${status}. Reintentando...`, err)
+          cleanupRealtime()
+          setTimeout(() => {
+            setupRealtime()
+          }, 5000)
         }
       })
 
@@ -223,17 +244,40 @@ export const usePosStore = defineStore('pos', () => {
           triggerNotificacion.value++
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          console.warn(`Canal ajustes Realtime con estado: ${status}. Reintentando...`, err)
+          if (canalAjustes) {
+            try {
+              supabase.removeChannel(canalAjustes)
+            } catch (_) {}
+            canalAjustes = null
+          }
+          setTimeout(() => {
+            setupRealtimeAjustes()
+          }, 5000)
+        }
+      })
   }
 
   function cleanupRealtime() {
     if (canalRealtime) {
-      supabase.removeChannel(canalRealtime)
+      try {
+        supabase.removeChannel(canalRealtime)
+      } catch (_) {}
       canalRealtime = null
     }
     if (canalAjustes) {
-      supabase.removeChannel(canalAjustes)
+      try {
+        supabase.removeChannel(canalAjustes)
+      } catch (_) {}
       canalAjustes = null
+    }
+    if (authSubscription) {
+      try {
+        authSubscription.unsubscribe()
+      } catch (_) {}
+      authSubscription = null
     }
   }
 
