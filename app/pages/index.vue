@@ -270,7 +270,7 @@
         </div>
         <div class="alt-cta-contacts">
           <a href="tel:+56961337579" class="alt-cta-contact">📞 +56 9 6133 7579</a>
-          <span class="alt-cta-contact">✉️ paulvenci@gmail.com</span>
+          <span class="alt-cta-contact">✉️ contacto@zumapos.cl</span>
         </div>
         <div class="alt-cta-guarantee">🛡️ 30 días gratis · Sin tarjeta de crédito · Soporte en español</div>
       </div>

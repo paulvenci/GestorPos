@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZumaPos - Creador de Afiches para Facebook</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- html2canvas para exportar a PNG -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0b0f19;
+      color: #f3f4f6;
+    }
+    .font-title {
+      font-family: 'Outfit', sans-serif;
+    }
+    /* Estilos para el área de exportación a 1080x1080 exactos */
+    .afiche-canvas {
+      width: 1080px;
+      height: 1080px;
+      transform: scale(0.45);
+      transform-origin: top left;
+      flex-shrink: 0;
+    }
+    .afiche-container {
+      width: 486px;
+      height: 486px;
+      overflow: hidden;
+      border: 1px solid #1f2937;
+      border-radius: 1rem;
+      background-color: #111827;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .badge-gradient {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    }
+  </style>
+</head>
+<body class="min-h-screen py-10 px-4 md:px-8">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <header class="mb-10 text-center md:text-left flex flex-col md:flex-row justify-between items-center border-b border-gray-800 pb-6">
+      <div>
+        <div class="flex items-center justify-center md:justify-start gap-2 mb-2">
+          <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Marketing Digital</span>
+          <span class="text-xs text-gray-500">v1.0.0</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold font-title tracking-tight text-white">
+          ZumaPos <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Promo Hub</span>
+        </h1>
+        <p class="text-gray-400 mt-2 text-sm md:text-base">Genera y descarga afiches publicitarios listos para Facebook con capturas reales de la aplicación.</p>
+      </div>
+      <div class="mt-6 md:mt-0 flex gap-3">
+        <a href="/pos" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm font-semibold text-gray-300 border border-gray-700 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver al POS
+        </a>
+      </div>
+    </header>
+
+    <!-- Instrucciones -->
+    <div class="bg-gradient-to-r from-indigo-950/40 to-purple-950/40 border border-indigo-500/20 rounded-2xl p-6 mb-12 flex flex-col md:flex-row gap-6 items-center">
+      <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 flex-shrink-0">
+        <i data-lucide="sparkles" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-white mb-1">¡Listo para publicar!</h3>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Haz clic en el botón <strong class="text-indigo-400">"Descargar PNG"</strong> debajo de cualquiera de las 4 opciones de afiches para exportarla automáticamente en calidad profesional <strong class="text-white">1080x1080 px</strong> (formato recomendado para publicaciones en Facebook e Instagram).
+        </p>
+      </div>
+    </div>
+
+    <!-- Grid de Afiches -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-12">
+
+      <!-- AFICHE 1: CONTROL TOTAL (DASHBOARD) -->
+      <div class="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">Tipo 1: Corporativo / Administrativo</span>
+            <span class="text-xs text-gray-500">Enfoque: Dashboard & KPIs</span>
+          </div>
+          <!-- Canvas Container -->
+          <div class="flex justify-center mb-6">
+            <div class="afiche-container">
+              <!-- El Afiche Real (1080x1080) -->
+              <div id="afiche-1" class="afiche-canvas bg-[#0b0f19] flex flex-col justify-between p-16 relative overflow-hidden select-none">
+                <!-- Background Decorativo -->
+                <div class="absolute -top-40 -right-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px]"></div>
+                <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px]"></div>
+                <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-10"></div>
+                
+                <!-- Logo & Marca -->
+                <div class="flex justify-between items-center z-10">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-600/30">Z</div>
+                    <span class="text-3xl font-black font-title tracking-tight text-white">ZumaPos</span>
+                  </div>
+                  <span class="px-4 py-1.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-sm font-semibold tracking-wider uppercase">SaaS POS System</span>
+                </div>
+
+                <!-- Textos Principales -->
+                <div class="my-auto z-10 flex flex-col gap-6">
+                  <h2 class="text-5xl font-black font-title tracking-tight text-white leading-tight">
+                    ¡Toma el <span class="text-indigo-400">control absoluto</span> de tu negocio!
+                  </h2>
+                  <p class="text-xl text-gray-300 leading-relaxed max-w-xl">
+                    Visualiza tus ventas de hoy, los márgenes de ganancia reales y el ticket promedio en tiempo real desde cualquier dispositivo.
+                  </p>
+                  <!-- Mockup de la app -->
+                  <div class="mt-4 rounded-2xl border border-gray-800 bg-gray-950 p-2 shadow-2xl relative">
+                    <div class="absolute top-4 left-4 flex gap-1.5 z-20">
+                      <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                    </div>
+                    <img src="/images/demo/dashboard_overview.png" class="w-full h-80 object-cover rounded-lg opacity-90" alt="Dashboard ZumaPos">
+                  </div>
+                </div>
+
+                <!-- Footer del Afiche -->
+                <div class="flex justify-between items-center pt-8 border-t border-gray-800/80 z-10">
+                  <div>
+                    <span class="text-gray-500 text-sm uppercase font-bold tracking-wider">Comienza hoy</span>
+                    <span class="block text-2xl font-black text-white mt-1">Prueba Demo Gratis</span>
+                  </div>
+                  <div class="px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-600/30">
+                    www.zumapos.com
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button onclick="descargarAfiche('afiche-1', 'ZumaPos-Control-Total.png')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+            <i data-lucide="download" class="w-5 h-5"></i> Descargar PNG
+          </button>
+          <p class="text-xs text-gray-500 text-center">Ideal para captar dueños de negocios preocupados por las métricas y la rentabilidad.</p>
+        </div>
+      </div>
+
+      <!-- AFICHE 2: PUNTO DE VENTA RÁPIDO (POS) -->
+      <div class="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <span class="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold">Tipo 2: Operativo / Ventas</span>
+            <span class="text-xs text-gray-500">Enfoque: POS de Alta Velocidad</span>
+          </div>
+          <!-- Canvas Container -->
+          <div class="flex justify-center mb-6">
+            <div class="afiche-container">
+              <!-- El Afiche Real (1080x1080) -->
+              <div id="afiche-2" class="afiche-canvas bg-[#0b0f19] flex flex-col justify-between p-16 relative overflow-hidden select-none">
+                <!-- Background Decorativo -->
+                <div class="absolute top-1/2 -translate-y-1/2 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-[140px]"></div>
+                <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-pink-500/10 rounded-full blur-[140px]"></div>
+                
+                <!-- Logo & Marca -->
+                <div class="flex justify-between items-center z-10">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-600/30">Z</div>
+                    <span class="text-3xl font-black font-title tracking-tight text-white">ZumaPos</span>
+                  </div>
+                  <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm font-bold">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Offline First
+                  </div>
+                </div>
+
+                <!-- Textos Principales -->
+                <div class="my-auto z-10 flex flex-col gap-6">
+                  <h2 class="text-5xl font-black font-title tracking-tight text-white leading-tight">
+                    ¡Vende en segundos y <span class="text-emerald-400">agiliza tus filas</span>! ⚡
+                  </h2>
+                  <p class="text-xl text-gray-300 leading-relaxed max-w-xl">
+                    Un punto de venta táctil, rápido y fácil de usar. Funciona incluso si se corta internet. ¡No detengas tus ventas jamás!
+                  </p>
+                  <!-- Mockup de la app -->
+                  <div class="mt-4 rounded-2xl border border-gray-800 bg-gray-950 p-2 shadow-2xl relative">
+                    <div class="absolute top-4 left-4 flex gap-1.5 z-20">
+                      <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                    </div>
+                    <img src="/images/demo/pos_interface.png" class="w-full h-80 object-cover rounded-lg opacity-95" alt="POS Interface ZumaPos">
+                  </div>
+                </div>
+
+                <!-- Footer del Afiche -->
+                <div class="flex justify-between items-center pt-8 border-t border-gray-800/80 z-10">
+                  <div>
+                    <span class="text-gray-500 text-sm uppercase font-bold tracking-wider">Rapidez comprobada</span>
+                    <span class="block text-2xl font-black text-white mt-1">POS Táctil & Offline</span>
+                  </div>
+                  <div class="px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg shadow-lg shadow-emerald-600/30 transition">
+                    Ver Demo Gratis
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button onclick="descargarAfiche('afiche-2', 'ZumaPos-Punto-De-Venta.png')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+            <i data-lucide="download" class="w-5 h-5"></i> Descargar PNG
+          </button>
+          <p class="text-xs text-gray-500 text-center">Perfecto para negocios minoristas con alto flujo diario que necesitan rapidez en caja.</p>
+        </div>
+      </div>
+
+      <!-- AFICHE 3: CONTROL DE STOCK E INVENTARIO -->
+      <div class="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <span class="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold">Tipo 3: Gestión e Inventario</span>
+            <span class="text-xs text-gray-500">Enfoque: Control de Stock y Proveedores</span>
+          </div>
+          <!-- Canvas Container -->
+          <div class="flex justify-center mb-6">
+            <div class="afiche-container">
+              <!-- El Afiche Real (1080x1080) -->
+              <div id="afiche-3" class="afiche-canvas bg-[#0b0f19] flex flex-col justify-between p-16 relative overflow-hidden select-none">
+                <!-- Background Decorativo -->
+                <div class="absolute -top-40 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-[140px]"></div>
+                <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-pink-500/10 rounded-full blur-[140px]"></div>
+                
+                <!-- Logo & Marca -->
+                <div class="flex justify-between items-center z-10">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-600/30">Z</div>
+                    <span class="text-3xl font-black font-title tracking-tight text-white">ZumaPos</span>
+                  </div>
+                  <span class="px-4 py-1.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25 text-sm font-semibold">Inventario Inteligente</span>
+                </div>
+
+                <!-- Textos Principales -->
+                <div class="my-auto z-10 flex flex-col gap-6">
+                  <h2 class="text-5xl font-black font-title tracking-tight text-white leading-tight">
+                    Dile adiós a las <span class="text-purple-400">pérdidas hormiga</span> y desorden
+                  </h2>
+                  <p class="text-xl text-gray-300 leading-relaxed max-w-xl">
+                    Monitorea existencias, alertas automáticas de stock mínimo, costos y márgenes de utilidad en una sola pantalla integrada.
+                  </p>
+                  <!-- Mockup de la app -->
+                  <div class="mt-4 rounded-2xl border border-gray-800 bg-gray-950 p-2 shadow-2xl relative">
+                    <div class="absolute top-4 left-4 flex gap-1.5 z-20">
+                      <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                    </div>
+                    <img src="/images/demo/inventory_management.png" class="w-full h-80 object-cover rounded-lg opacity-90" alt="Gestión de Inventario">
+                  </div>
+                </div>
+
+                <!-- Footer del Afiche -->
+                <div class="flex justify-between items-center pt-8 border-t border-gray-800/80 z-10">
+                  <div>
+                    <span class="text-gray-500 text-sm uppercase font-bold tracking-wider">Control de almacén</span>
+                    <span class="block text-2xl font-black text-white mt-1">Alertas de Stock Crítico</span>
+                  </div>
+                  <div class="px-8 py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg shadow-lg shadow-purple-600/30 transition">
+                    Prueba Gratis
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button onclick="descargarAfiche('afiche-3', 'ZumaPos-Inventario.png')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+            <i data-lucide="download" class="w-5 h-5"></i> Descargar PNG
+          </button>
+          <p class="text-xs text-gray-500 text-center">Excelente para capturar dueños preocupados por las mermas o el desabastecimiento de bodegas.</p>
+        </div>
+      </div>
+
+      <!-- AFICHE 4: REPORTES DE VENTAS Y CAJA -->
+      <div class="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <span class="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold">Tipo 4: Auditoría y Flujo</span>
+            <span class="text-xs text-gray-500">Enfoque: Cierres de Caja Transparentes</span>
+          </div>
+          <!-- Canvas Container -->
+          <div class="flex justify-center mb-6">
+            <div class="afiche-container">
+              <!-- El Afiche Real (1080x1080) -->
+              <div id="afiche-4" class="afiche-canvas bg-[#0b0f19] flex flex-col justify-between p-16 relative overflow-hidden select-none">
+                <!-- Background Decorativo -->
+                <div class="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/15 rounded-full blur-[140px]"></div>
+                <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-500/10 rounded-full blur-[140px]"></div>
+                
+                <!-- Logo & Marca -->
+                <div class="flex justify-between items-center z-10">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-600/30">Z</div>
+                    <span class="text-3xl font-black font-title tracking-tight text-white">ZumaPos</span>
+                  </div>
+                  <span class="px-4 py-1.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/25 text-sm font-semibold">Reportes Avanzados</span>
+                </div>
+
+                <!-- Textos Principales -->
+                <div class="my-auto z-10 flex flex-col gap-6">
+                  <h2 class="text-5xl font-black font-title tracking-tight text-white leading-tight">
+                    Cierres de caja transparentes, <span class="text-blue-400">sin sorpresas</span>
+                  </h2>
+                  <p class="text-xl text-gray-300 leading-relaxed max-w-xl">
+                    Cada boleta registrada por cajero, hora y medio de pago (efectivo, tarjeta o transferencia). Auditorías sin esfuerzo ni descuadres.
+                  </p>
+                  <!-- Mockup de la app -->
+                  <div class="mt-4 rounded-2xl border border-gray-800 bg-gray-950 p-2 shadow-2xl relative">
+                    <div class="absolute top-4 left-4 flex gap-1.5 z-20">
+                      <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                    </div>
+                    <img src="/images/demo/sales_reports.png" class="w-full h-80 object-cover rounded-lg opacity-90" alt="Reporte de Ventas">
+                  </div>
+                </div>
+
+                <!-- Footer del Afiche -->
+                <div class="flex justify-between items-center pt-8 border-t border-gray-800/80 z-10">
+                  <div>
+                    <span class="text-gray-500 text-sm uppercase font-bold tracking-wider">Flujo de dinero</span>
+                    <span class="block text-2xl font-black text-white mt-1">Medios de Pago Claros</span>
+                  </div>
+                  <div class="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-lg shadow-blue-600/30 transition">
+                    Crear Cuenta
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button onclick="descargarAfiche('afiche-4', 'ZumaPos-Reportes.png')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+            <i data-lucide="download" class="w-5 h-5"></i> Descargar PNG
+          </button>
+          <p class="text-xs text-gray-500 text-center">Perfecto para dueños que no están presentes en su tienda y necesitan auditar cajeros.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer General -->
+    <footer class="mt-20 border-t border-gray-800 pt-8 text-center text-gray-500 text-sm pb-10">
+      <p>&copy; 2026 ZumaPos. Todos los derechos reservados. Creado automáticamente para campañas en redes sociales.</p>
+    </footer>
+  </div>
+
+  <script>
+    // Inicializar iconos
+    lucide.createIcons();
+
+    // Función para descargar el afiche en 1080x1080px usando html2canvas
+    function descargarAfiche(idElemento, nombreArchivo) {
+      const elemento = document.getElementById(idElemento);
+      
+      // Mostrar indicador de carga / deshabilitar botones temporalmente
+      const boton = event.currentTarget;
+      const originalText = boton.innerHTML;
+      boton.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Generando PNG...`;
+      lucide.createIcons();
+      boton.disabled = true;
+
+      // Opciones para garantizar la mejor calidad (scale: 1 para respetar 1080x1080 nativo)
+      const opciones = {
+        width: 1080,
+        height: 1080,
+        scale: 1, // Escala nativa sin zoom del navegador
+        useCORS: true, // Permitir imágenes CORS
+        backgroundColor: '#0b0f19',
+        logging: false
+      };
+
+      // Guardamos la transformación CSS original para resetearla temporalmente
+      const originalStyleTransform = elemento.style.transform;
+      
+      // Removemos temporalmente el escalado para que html2canvas dibuje a 1080x1080 reales
+      elemento.style.transform = 'none';
+
+      html2canvas(elemento, opciones).then(canvas => {
+        // Restauramos el estilo original
+        elemento.style.transform = originalStyleTransform;
+
+        // Crear link de descarga
+        const link = document.createElement('a');
+        link.download = nombreArchivo;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        // Restaurar estado del botón
+        boton.innerHTML = originalText;
+        lucide.createIcons();
+        boton.disabled = false;
+      }).catch(err => {
+        console.error("Error al generar el afiche:", err);
+        alert("Ocurrió un error al generar la imagen. Inténtalo de nuevo.");
+        elemento.style.transform = originalStyleTransform;
+        boton.innerHTML = originalText;
+        lucide.createIcons();
+        boton.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
