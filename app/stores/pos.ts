@@ -13,6 +13,7 @@ export interface ItemCarrito {
   cantidad: number
   descuento: number // % de descuento
   es_pesable?: boolean
+  imagen_url?: string
 }
 
 /**
@@ -304,21 +305,42 @@ export const usePosStore = defineStore('pos', () => {
   }
 
   // ─── Carrito ──────────────────────────────────────────
+  async function buscarImagenEnInternet(item: ItemCarrito) {
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${item.sku}.json`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.status === 1 && data.product && data.product.image_url) {
+        item.imagen_url = data.product.image_url
+        // Opcional pero recomendado: guardar la imagen en la base de datos local para la próxima vez
+        await db.productos.update(item.id_producto, { imagen_url: data.product.image_url })
+      }
+    } catch (e) {
+      // Ignorar errores de red silenciosamente
+    }
+  }
+
   function agregarItem(producto: ProductoLocal, cantidadEspecial: number = 1, overridePrecio?: number) {
     const pPrecio = overridePrecio !== undefined ? overridePrecio : producto.precio;
     const existente = carrito.value.find(i => i.id_producto === producto.id && i.precio === pPrecio)
     if (existente && !producto.es_pesable) {
       existente.cantidad += cantidadEspecial
     } else {
-      carrito.value.push({
+      const nuevoItem: ItemCarrito = {
         id_producto: producto.id,
         nombre: producto.nombre,
         sku: producto.sku,
         precio: pPrecio,
         cantidad: cantidadEspecial,
         descuento: 0,
-        es_pesable: producto.es_pesable
-      })
+        es_pesable: producto.es_pesable,
+        imagen_url: producto.imagen_url
+      }
+      carrito.value.push(nuevoItem)
+      
+      if (!nuevoItem.imagen_url && nuevoItem.sku && nuevoItem.sku.length >= 8 && /^\d+$/.test(nuevoItem.sku)) {
+        buscarImagenEnInternet(nuevoItem)
+      }
     }
     ultimoModificadoId.value = producto.id
     resultados.value = []

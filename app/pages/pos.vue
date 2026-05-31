@@ -202,7 +202,11 @@
               :key="item.id_producto"
               class="pos-item"
             >
-              <div class="pos-item-info">
+              <img v-if="item.imagen_url" :src="item.imagen_url" class="pos-resultado-thumb" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover;" alt="" />
+              <div v-else class="pos-resultado-thumb pos-resultado-thumb--empty" style="width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background-color: #f1f5f9;">
+                <i class="pi pi-box" style="color: #94a3b8;"/>
+              </div>
+              <div class="pos-item-info" v-tooltip.bottom="item.nombre">
                 <span class="pos-item-nombre">{{ item.nombre }}</span>
                 <span class="pos-item-sku">{{ item.sku }}</span>
               </div>
@@ -2588,7 +2592,7 @@ function tiempoDesde(isoDate: string): string {
 
 /* ─── Panel derecho: Carrito ─── */
 .pos-panel-right {
-  width: 350px;
+  width: 420px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -2661,7 +2665,7 @@ function tiempoDesde(isoDate: string): string {
 
 .pos-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   column-gap: 0.75rem;
   padding: 0.75rem 0.875rem;

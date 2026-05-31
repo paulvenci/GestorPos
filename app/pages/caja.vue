@@ -381,13 +381,14 @@ async function fetchHistorial() {
       
       const { data: ventasRango } = await supabase
         .from('ventas')
-        .select('id_turno, total, fecha')
+        .select('id_turno, total, fecha, estado')
         .eq('empresa_id', authStore.empresaId)
         .gte('fecha', minFecha)
         
       const mapInternas = new Map()
       if (ventasRango) {
         ventasRango.forEach(v => {
+          if (v.estado === 'cancelada') return
           if (v.id_turno) {
             mapInternas.set(v.id_turno, (mapInternas.get(v.id_turno) || 0) + Number(v.total))
           }
@@ -397,7 +398,7 @@ async function fetchHistorial() {
       // 1. Obtener VENTAS FUERA DE TURNO para este rango
       const { data: ventasAfuera } = await supabase
         .from('ventas')
-        .select('id, id_usuario, total, fecha, metodo_pago, pago_efectivo')
+        .select('id, id_usuario, total, fecha, metodo_pago, pago_efectivo, estado')
         .eq('empresa_id', authStore.empresaId)
         .is('id_turno', null)
         .gte('fecha', minFecha)
@@ -406,6 +407,7 @@ async function fetchHistorial() {
       if (ventasAfuera && ventasAfuera.length > 0) {
         const grupos: Record<string, any> = {}
         ventasAfuera.forEach(v => {
+          if (v.estado === 'cancelada') return
           // Si el usuario no es admin/super, solo ve sus propias ventas fuera de turno
           if (authStore.rolUsuario !== 'admin' && authStore.rolUsuario !== 'supervisor') {
             if (v.id_usuario !== authStore.user?.id) return
@@ -573,7 +575,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       
       ventasTurno = await fetchVentas(supabase
         .from('ventas')
-        .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+        .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia, estado')
         .eq('empresa_id', authStore.empresaId)
         .is('id_turno', null)
         .eq('id_usuario', turno.id_usuario)
@@ -583,7 +585,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
       // TURNO REAL: Ventas asociadas al UUID
       ventasTurno = await fetchVentas(supabase
         .from('ventas')
-        .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+        .select('id, fecha, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia, estado')
         .eq('empresa_id', authStore.empresaId)
         .eq('id_turno', turnoId))
     }
@@ -601,7 +603,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
     
     const { data } = await supabase
       .from('ventas')
-      .select('id, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia')
+      .select('id, total, metodo_pago, pago_efectivo, pago_tarjeta, pago_transferencia, estado')
       .eq('empresa_id', authStore.empresaId)
       .is('id_turno', null)
       .eq('id_usuario', turno.id_usuario)
@@ -612,6 +614,7 @@ async function imprimirDetalleTurno80mm(turnoId: string) {
 
   const calcResumen = (ventas: any[]) => {
     return ventas.reduce((acc, venta) => {
+      if (venta.estado === 'cancelada') return acc
       const metodo = String(venta.metodo_pago || '').toLowerCase()
       const total = Number(venta.total || 0)
       if (metodo === 'mixto') {

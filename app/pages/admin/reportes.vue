@@ -441,45 +441,51 @@
             responsiveLayout="scroll"
             class="p-datatable-sm modern-table border border-slate-200 rounded"
           >
-            <Column field="nombre" header="Cajero" class="font-bold"></Column>
+            <Column field="nombre" header="Cajero" class="font-bold">
+              <template #footer>
+                <span class="font-bold text-lg">TOTAL GENERAL</span>
+              </template>
+            </Column>
             <Column field="efectivo" header="Efectivo">
               <template #body="p">
                 <span :class="{'text-emerald-600': p.data.efectivo > 0}">{{ formatMonto(p.data.efectivo) }}</span>
+              </template>
+              <template #footer>
+                <span class="font-bold text-emerald-700">{{ formatMonto(totalConsolidado.efectivo) }}</span>
               </template>
             </Column>
             <Column field="tarjeta" header="Tarjeta">
               <template #body="p">
                 <span :class="{'text-blue-600': p.data.tarjeta > 0}">{{ formatMonto(p.data.tarjeta) }}</span>
               </template>
+              <template #footer>
+                <span class="font-bold text-blue-700">{{ formatMonto(totalConsolidado.tarjeta) }}</span>
+              </template>
             </Column>
             <Column field="transferencia" header="Transferencia">
               <template #body="p">
                 <span :class="{'text-indigo-600': p.data.transferencia > 0}">{{ formatMonto(p.data.transferencia) }}</span>
+              </template>
+              <template #footer>
+                <span class="font-bold text-indigo-700">{{ formatMonto(totalConsolidado.transferencia) }}</span>
               </template>
             </Column>
             <Column field="credito" header="Crédito">
               <template #body="p">
                 <span :class="{'text-orange-600': p.data.credito > 0}">{{ formatMonto(p.data.credito) }}</span>
               </template>
+              <template #footer>
+                <span class="font-bold text-orange-700">{{ formatMonto(totalConsolidado.credito) }}</span>
+              </template>
             </Column>
             <Column field="total" header="Total Recaudado">
               <template #body="p">
                 <span class="font-bold text-slate-800">{{ formatMonto(p.data.total) }}</span>
               </template>
+              <template #footer>
+                <span class="font-bold text-slate-900 text-lg">{{ formatMonto(totalConsolidado.total) }}</span>
+              </template>
             </Column>
-            
-            <template #footer>
-              <div class="flex justify-between items-center w-full px-2">
-                <span class="font-bold text-lg">TOTAL GENERAL:</span>
-                <div class="flex gap-4 font-bold text-base">
-                  <span class="text-emerald-700" title="Tot. Efec">EF: {{ formatMonto(totalConsolidado.efectivo) }}</span>
-                  <span class="text-blue-700" title="Tot. Tarj">TJ: {{ formatMonto(totalConsolidado.tarjeta) }}</span>
-                  <span class="text-indigo-700" title="Tot. Tran">TR: {{ formatMonto(totalConsolidado.transferencia) }}</span>
-                  <span class="text-orange-700" title="Tot. Cred">CR: {{ formatMonto(totalConsolidado.credito) }}</span>
-                  <span class="text-slate-900 border-l border-slate-300 pl-4">TOTAL RECAUDADO: {{ formatMonto(totalConsolidado.total) }}</span>
-                </div>
-              </div>
-            </template>
             <template #empty>
               <div class="empty-state">No hay ventas en la fecha seleccionada.</div>
             </template>
