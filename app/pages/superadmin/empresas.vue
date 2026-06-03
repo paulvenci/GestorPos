@@ -21,7 +21,15 @@
         <strong>{{ empresasActivas }}</strong>
       </div>
       <div class="superadmin-kpi">
-        <span>Con plan Pro</span>
+        <span>Plan Gratis</span>
+        <strong>{{ empresasGratis }}</strong>
+      </div>
+      <div class="superadmin-kpi">
+        <span>Plan Básico</span>
+        <strong>{{ empresasBasico }}</strong>
+      </div>
+      <div class="superadmin-kpi">
+        <span>Plan Pro</span>
         <strong>{{ empresasPro }}</strong>
       </div>
     </div>
@@ -45,7 +53,7 @@
 
       <Column header="Plan" style="min-width: 8rem">
         <template #body="slotProps">
-          <Tag :value="slotProps.data.plan" :severity="slotProps.data.plan === 'pro' ? 'success' : 'info'" />
+          <Tag :value="slotProps.data.plan.toUpperCase()" :severity="slotProps.data.plan === 'pro' ? 'success' : slotProps.data.plan === 'basico' ? 'info' : 'secondary'" />
         </template>
       </Column>
 
@@ -195,7 +203,7 @@ import { useAuthStore } from '~/stores/auth'
 interface EmpresaResumen {
   id: string
   nombre: string
-  plan: 'basico' | 'pro'
+  plan: 'gratis' | 'basico' | 'pro'
   activo: boolean
   fecha_vencimiento: string | null
   total_usuarios: number
@@ -244,13 +252,14 @@ function rowClass(data: any) {
 }
 
 const planes = [
+  { label: 'Gratis', value: 'gratis' },
   { label: 'Básico', value: 'basico' },
   { label: 'Pro', value: 'pro' }
 ]
 
 const empresaForm = ref({
   nombre: '',
-  plan: 'basico' as 'basico' | 'pro',
+  plan: 'gratis' as 'gratis' | 'basico' | 'pro',
   activo: true,
   fecha_vencimiento: null as Date | null,
   admin_nombre: '',
@@ -259,6 +268,8 @@ const empresaForm = ref({
 })
 
 const empresasActivas = computed(() => empresas.value.filter((empresa) => empresa.activo).length)
+const empresasGratis = computed(() => empresas.value.filter((empresa) => empresa.plan === 'gratis').length)
+const empresasBasico = computed(() => empresas.value.filter((empresa) => empresa.plan === 'basico').length)
 const empresasPro = computed(() => empresas.value.filter((empresa) => empresa.plan === 'pro').length)
 
 onMounted(async () => {
@@ -340,7 +351,7 @@ function abrirNuevaEmpresa() {
   empresaEditandoId.value = null
   empresaForm.value = {
     nombre: '',
-    plan: 'basico',
+    plan: 'gratis',
     activo: true,
     fecha_vencimiento: null,
     admin_nombre: '',

@@ -37,7 +37,26 @@ export const usePosStore = defineStore('pos', () => {
   const ventasReservadas = ref<VentaReservadaLocal[]>([])
   const ultimoModificadoId = ref<string | null>(null)
   const ultimaVentaRealizada = useLocalStorage<any | null>('gestorpos_ultima_venta', null)
-  const notificacionesRealtime = useLocalStorage<any[]>('gestorpos_notificaciones_rt', [])
+  const notificacionesPorEmpresa = useLocalStorage<Record<string, any[]>>('gestorpos_notificaciones_rt_map', {})
+  const notificacionesRealtime = computed<any[]>({
+    get() {
+      const id = authStore.empresaId || 'anon'
+      if (!notificacionesPorEmpresa.value[id]) {
+        notificacionesPorEmpresa.value = {
+          ...notificacionesPorEmpresa.value,
+          [id]: []
+        }
+      }
+      return notificacionesPorEmpresa.value[id]
+    },
+    set(val) {
+      const id = authStore.empresaId || 'anon'
+      notificacionesPorEmpresa.value = {
+        ...notificacionesPorEmpresa.value,
+        [id]: val
+      }
+    }
+  })
   const triggerRealtime = ref(0)
   const triggerNotificacion = ref(0)
   const ventasOffline = ref<any[]>([])
@@ -183,7 +202,8 @@ export const usePosStore = defineStore('pos', () => {
 
               if (esEdicionRelevante) {
                 // Añadir a notificaciones persistentes (campanita)
-                notificacionesRealtime.value.unshift({
+                const listaActual = [...notificacionesRealtime.value]
+                listaActual.unshift({
                   id: producto.id,
                   nombre: producto.nombre,
                   stock: producto.stock,
@@ -192,10 +212,7 @@ export const usePosStore = defineStore('pos', () => {
                   timestamp: new Date().toISOString(),
                   leido: false
                 })
-                // Limitar a los últimos 20
-                if (notificacionesRealtime.value.length > 20) {
-                  notificacionesRealtime.value = notificacionesRealtime.value.slice(0, 20)
-                }
+                notificacionesRealtime.value = listaActual.slice(0, 20)
                 // Disparar trigger de aviso (toast)
                 triggerNotificacion.value++
               }

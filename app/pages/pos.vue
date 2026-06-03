@@ -688,6 +688,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useCajaStore } from '~/stores/caja'
 import { usePosStore, redondearCLP } from '~/stores/pos'
 import { useFormatMonto } from '~/composables/useFormatMonto'
+import { usePlanLimits } from '~/composables/usePlanLimits'
 import { db } from '~/db'
 import type { ProductoLocal } from '~/db'
 import type { Database } from '~/types/database.types'
@@ -698,6 +699,7 @@ const authStore = useAuthStore()
 const cajaStore = useCajaStore()
 const posStore = usePosStore()
 const configStore = useConfigStore()
+const planLimits = usePlanLimits()
 const toast = useToast()
 const { formatMonto } = useFormatMonto()
 const supabase = useSupabaseClient<Database>()
@@ -1149,6 +1151,7 @@ onMounted(async () => {
   await posStore.sincronizarCatalogo()
   await posStore.cargarReservas()
   await cargarTopVendidos()
+  planLimits.fetchVentasDelMes()
 
   // Auto-focus en el input de búsqueda
   enfocarBusqueda()
@@ -1715,6 +1718,18 @@ async function confirmarCobro(imprimir = true) {
   }
   if (!pagoValido.value) return
 
+  // Validar límite de ventas mensuales según el plan
+  const tieneCupo = await planLimits.checkVentasLimit()
+  if (!tieneCupo) {
+    toast.add({
+      severity: 'error',
+      summary: 'Límite de ventas alcanzado',
+      detail: planLimits.getLimitMessage('max_ventas_mes'),
+      life: 6000
+    })
+    return
+  }
+
   // Validar que haya un turno activo antes de cobrar (Solo para CAJEROS - Opción A)
   const esCajero = authStore.rolUsuario === 'cajero'
   if (esCajero && !cajaStore.hayTurnoActivo) {
@@ -1868,6 +1883,9 @@ async function confirmarCobro(imprimir = true) {
     }
   } finally {
     confirmandoCobro.value = false
+    if (ventaActualGuardada.value) {
+      planLimits.fetchVentasDelMes()
+    }
   }
 }
 

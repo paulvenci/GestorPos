@@ -537,6 +537,7 @@ watch(() => posStore.triggerNotificacion, () => {
 
 // Asegurar que si el ID de empresa llega, se inicie el Realtime globalmente
 watch(() => authStore.empresaId, (newId) => {
+  posStore.cleanupRealtime()
   if (newId) {
     posStore.setupRealtime()
   }

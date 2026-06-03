@@ -19,17 +19,14 @@ export default defineEventHandler(async (event) => {
     auth: { autoRefreshToken: false, persistSession: false }
   })
 
-  // 1. Crear Empresa (7 días de prueba)
-  const fechaVencimiento = new Date()
-  fechaVencimiento.setDate(fechaVencimiento.getDate() + 7)
-
+  // 1. Crear Empresa (Plan Gratis sin vencimiento)
   const { data: empresa, error: empresaError } = await adminClient
     .from('empresas')
     .insert({
       nombre: nombreNegocio,
-      plan: 'basico',
+      plan: 'gratis',
       activo: true,
-      fecha_vencimiento: fechaVencimiento.toISOString()
+      fecha_vencimiento: null
     })
     .select()
     .single()

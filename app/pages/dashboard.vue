@@ -27,7 +27,7 @@
       <!-- Grupo 2: Mes y Tendencia -->
       <div class="kpi-card kpi-card--ventas-mes">
         <div class="kpi-icon"><i class="pi pi-chart-line" /></div>
-        <div class="kpi-content">
+        <div class="kpi-content flex-1">
           <span class="kpi-label">Ventas del Mes</span>
           <span class="kpi-value">{{ formatMonto(kpi.ventasMes) }}</span>
           <div class="kpi-footer">
@@ -40,6 +40,27 @@
               class="kpi-trend-tag"
               v-tooltip.top="'vs total mes pasado'"
             />
+          </div>
+
+          <!-- Límite de ventas mensuales -->
+          <div v-if="planLimits.currentLimits.value.max_ventas_mes !== Infinity" class="kpi-plan-progress">
+            <div class="kpi-plan-header">
+              <span class="kpi-plan-badge" :class="planLimits.plan.value">Plan {{ planLimits.plan.value.toUpperCase() }}</span>
+              <span class="kpi-plan-counter" :class="{ 'kpi-plan-counter--exceeded': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes }">
+                {{ planLimits.ventasDelMes.value }} / {{ planLimits.currentLimits.value.max_ventas_mes }}
+              </span>
+            </div>
+            <div class="kpi-plan-progressbar">
+              <div 
+                class="kpi-plan-progress-fill" 
+                :class="{ 
+                  'bg-red-500': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes, 
+                  'bg-amber-500': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes * 0.8 && planLimits.ventasDelMes.value < planLimits.currentLimits.value.max_ventas_mes,
+                  'bg-blue-500': planLimits.ventasDelMes.value < planLimits.currentLimits.value.max_ventas_mes * 0.8 
+                }" 
+                :style="{ width: `${Math.min(100, Math.round((planLimits.ventasDelMes.value / planLimits.currentLimits.value.max_ventas_mes) * 100))}%` }"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -186,6 +207,7 @@
 <script setup lang="ts">
 import { useFormatMonto } from '~/composables/useFormatMonto'
 import { useCajaStore } from '~/stores/caja'
+import { usePlanLimits } from '~/composables/usePlanLimits'
 import type { Database } from '~/types/database.types'
 
 import { useAuthStore } from '~/stores/auth'
@@ -193,6 +215,7 @@ import { useAuthStore } from '~/stores/auth'
 const supabase = useSupabaseClient<Database>()
 const authStore = useAuthStore()
 const cajaStore = useCajaStore()
+const planLimits = usePlanLimits()
 const { formatMonto, formatFecha } = useFormatMonto()
 
 const loadingVentas = ref(false)
@@ -340,7 +363,8 @@ onMounted(() => {
       fetchUltimasVentas(),
       fetchVentasPorCategoria(),
       fetchVentasPorDia(),
-      fetchVentasMensuales()
+      fetchVentasMensuales(),
+      planLimits.fetchVentasDelMes()
     ])
   }
 
@@ -808,6 +832,63 @@ async function fetchUltimasVentas() {
   font-weight: 700 !important;
   padding: 0.1rem 0.4rem !important;
   border-radius: 6px !important;
+}
+
+.kpi-plan-progress {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.kpi-plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.kpi-plan-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.kpi-plan-badge.gratis {
+  background: rgba(100, 116, 139, 0.15);
+  color: #64748b;
+}
+
+.kpi-plan-badge.basico {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.kpi-plan-counter {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.kpi-plan-counter--exceeded {
+  color: #ef4444;
+}
+
+.kpi-plan-progressbar {
+  height: 6px;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.kpi-plan-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
 }
 
 /* ─── Dashboard sections ─── */

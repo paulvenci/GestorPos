@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
     rol: string
     activo?: boolean | null
     empresa_id: string | null
-    empresa?: { nombre: string | null; activo: boolean; plan: 'basico' | 'pro' } | null
+    empresa?: { nombre: string | null; activo: boolean; plan: 'gratis' | 'basico' | 'pro' } | null
   } | null>(null)
 
   const nombrePerfil = computed(() => perfil.value?.nombre?.trim() || '')

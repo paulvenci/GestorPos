@@ -9,7 +9,7 @@
         </div>
         <h1 class="login-tagline">Tu negocio,<br />modernizado.</h1>
         <p class="login-subtitle">
-          Inicia tu prueba gratuita de 7 días y descubre cómo ZumaPos puede transformar tu forma de vender.
+          Inicia tu prueba gratuita y descubre cómo ZumaPos puede transformar tu forma de vender, si te gusta y quieres seguir usándolo, solo elige un plan que se adapte a tu negocio. Sin compromisos, sin tarjetas de crédito.
         </p>
         <div class="login-features">
           <div class="login-feature">
@@ -99,7 +99,7 @@
 
           <Button
             type="submit"
-            label="Comenzar mi prueba de 7 días"
+            label="¡Comenzar gratis!"
             class="login-btn"
             :loading="loading"
             icon="pi pi-rocket"
