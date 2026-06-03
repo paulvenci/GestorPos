@@ -126,7 +126,7 @@
       <DataTable :value="ultimasVentas" :loading="loadingVentas" class="p-datatable-sm" :rows="5" responsiveLayout="scroll">
         <Column header="Fecha">
           <template #body="slotProps">
-            <span class="text-sm" style="color: var(--text-muted)">{{ formatFecha(slotProps.data.created_at) }}</span>
+            <span class="text-sm" style="color: var(--text-muted)">{{ formatFecha(slotProps.data.fecha) }}</span>
           </template>
         </Column>
         <Column field="total" header="Total">
@@ -374,10 +374,10 @@ async function fetchKPIs() {
           .select('total')
           .eq('empresa_id', authStore.empresaId)
           .or('estado.is.null,estado.neq.cancelada')
-          .gte('created_at', desde)
+          .gte('fecha', desde)
         
         if (hasta) {
-          query = query.lt('created_at', hasta)
+          query = query.lt('fecha', hasta)
         }
 
         const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
@@ -466,10 +466,10 @@ async function fetchVentasPorCategoria() {
         .select(`
           subtotal,
           productos:id_producto (categoria),
-          ventas!inner (created_at, estado)
+          ventas!inner (fecha, estado)
         `)
         .eq('empresa_id', authStore.empresaId)
-        .gte('ventas.created_at', inicio.toISOString())
+        .gte('ventas.fecha', inicio.toISOString())
         .order('id', { ascending: true }) // Using id for stable pagination
         .range(from, from + PAGE_SIZE - 1)
 
@@ -533,19 +533,19 @@ async function fetchVentasPorDia() {
 
     // Paginar para superar el límite de 1000 filas del servidor
     const PAGE_SIZE = 1000
-    let allData: { created_at: string | null; total: number }[] = []
+    let allData: { fecha: string | null; total: number }[] = []
     let from = 0
     let hasMore = true
 
     while (hasMore) {
       const { data, error } = await supabase
         .from('ventas')
-        .select('created_at, total')
+        .select('fecha, total')
         .eq('empresa_id', authStore.empresaId)
         .or('estado.is.null,estado.neq.cancelada')
-        .gte('created_at', inicio.toISOString())
-        .lte('created_at', finRango.toISOString())
-        .order('created_at', { ascending: true })
+        .gte('fecha', inicio.toISOString())
+        .lte('fecha', finRango.toISOString())
+        .order('fecha', { ascending: true })
         .range(from, from + PAGE_SIZE - 1)
 
       if (error) throw error
@@ -575,7 +575,7 @@ async function fetchVentasPorDia() {
 
     // 2. Llenar con datos reales
     allData.forEach(v => {
-      const d = new Date(v.created_at!)
+      const d = new Date(v.fecha!)
       const y = d.getFullYear()
       const m = String(d.getMonth() + 1).padStart(2, '0')
       const day = String(d.getDate()).padStart(2, '0')
@@ -613,18 +613,18 @@ async function fetchVentasMensuales() {
     
     // Paginar para superar el límite de 1000 filas
     const PAGE_SIZE = 1000
-    let allData: { created_at: string | null; total: number }[] = []
+    let allData: { fecha: string | null; total: number }[] = []
     let from = 0
     let hasMore = true
 
     while (hasMore) {
       const { data, error } = await supabase
         .from('ventas')
-        .select('created_at, total')
+        .select('fecha, total')
         .eq('empresa_id', authStore.empresaId)
         .or('estado.is.null,estado.neq.cancelada')
-        .gte('created_at', inicio.toISOString())
-        .order('created_at', { ascending: true })
+        .gte('fecha', inicio.toISOString())
+        .order('fecha', { ascending: true })
         .range(from, from + PAGE_SIZE - 1)
 
       if (error) throw error
@@ -649,7 +649,7 @@ async function fetchVentasMensuales() {
     }
 
     allData.forEach(v => {
-      const d = new Date(v.created_at!)
+      const d = new Date(v.fecha!)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const item = dataMeses.find(m => m.key === key)
       if (item) {
@@ -689,7 +689,7 @@ async function fetchUltimasVentas() {
       .from('ventas')
       .select('*')
       .eq('empresa_id', authStore.empresaId)
-      .order('created_at', { ascending: false })
+      .order('fecha', { ascending: false })
       .limit(5)
     ultimasVentas.value = data || []
   } catch (e) {

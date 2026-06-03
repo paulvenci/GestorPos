@@ -486,6 +486,14 @@
                 <span class="font-bold text-slate-900 text-lg">{{ formatMonto(totalConsolidado.total) }}</span>
               </template>
             </Column>
+            <Column header="Total Ventas">
+              <template #body="p">
+                <span class="font-bold text-indigo-600">{{ formatMonto(p.data.total + p.data.credito) }}</span>
+              </template>
+              <template #footer>
+                <span class="font-bold text-indigo-700 text-lg">{{ formatMonto(totalConsolidado.total + totalConsolidado.credito) }}</span>
+              </template>
+            </Column>
             <template #empty>
               <div class="empty-state">No hay ventas en la fecha seleccionada.</div>
             </template>
@@ -704,7 +712,6 @@ const resumenVentasHoy = computed(() => {
     if (venta.estado === 'cancelada') return acc
     const metodo = String(venta.metodo_pago || '').toLowerCase()
     const total = Number(venta.total || 0)
-    acc.total += total
     
     if (metodo === 'mixto') {
       acc.efectivo += Number(venta.pago_efectivo || 0)
@@ -1038,7 +1045,8 @@ function imprimirConsolidadoDiario() {
       <div class="row"><span>Tarjeta:</span><span>${formatMonto(c.tarjeta)}</span></div>
       <div class="row"><span>Transf.:</span><span>${formatMonto(c.transferencia)}</span></div>
       ${c.credito > 0 ? `<div class="row"><span>Crédito:</span><span>${formatMonto(c.credito)}</span></div>` : ''}
-      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL:</span><span>${formatMonto(c.total)}</span></div>
+      <div class="row strong" style="margin-top: 4px;"><span>SUBTOTAL RECAUDADO:</span><span>${formatMonto(c.total)}</span></div>
+      <div class="row strong" style="margin-top: 2px; color: #4f46e5;"><span>SUBTOTAL VENTAS:</span><span>${formatMonto(c.total + c.credito)}</span></div>
     </div>
   `).join('')
 
@@ -1082,7 +1090,8 @@ function imprimirConsolidadoDiario() {
         <div class="row"><span>Total Tarjeta:</span><span>${formatMonto(totalConsolidado.value.tarjeta)}</span></div>
         <div class="row"><span>Total Transf.:</span><span>${formatMonto(totalConsolidado.value.transferencia)}</span></div>
         ${totalConsolidado.value.credito > 0 ? `<div class="row"><span>Total Crédito:</span><span>${formatMonto(totalConsolidado.value.credito)}</span></div>` : ''}
-        <div class="row strong" style="font-size:15px; margin-top:8px;"><span>TOTAL RECAUDADO:</span><span>${formatMonto(totalConsolidado.value.total)}</span></div>
+        <div class="row strong" style="margin-top:8px;"><span>TOTAL RECAUDADO:</span><span>${formatMonto(totalConsolidado.value.total)}</span></div>
+        <div class="row strong" style="font-size:15px; margin-top:4px; color: #4f46e5;"><span>TOTAL VENTAS:</span><span>${formatMonto(totalConsolidado.value.total + totalConsolidado.value.credito)}</span></div>
       </div>
       
       <script>
