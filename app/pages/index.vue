@@ -313,7 +313,10 @@ definePageMeta({ layout: false })
 
 useHead({
   title: 'ZumaPos · Punto de Venta para tu Negocio',
-  meta: [{ name: 'description', content: 'Sistema de punto de venta moderno para minimarkets, verdulerías, panaderías y todo tipo de comercio en Chile. Funciona sin internet.' }],
+  meta: [
+    { name: 'description', content: 'Sistema de punto de venta moderno para minimarkets, verdulerías, panaderías y todo tipo de comercio en Chile. Funciona sin internet.' },
+    { name: 'keywords', content: 'punto de venta, POS, sistema POS, punto de venta Chile, software para minimarket, software para verdulería, software para panadería, sistema para kiosco, punto de venta sin internet, POS offline, caja registradora, control de inventario, reportes de ventas, control de fiados, caja ciega, cajero ciego, arqueo de caja, multi sucursal, impresión de etiquetas, lector de código de barras, balanza, ZUMA POS, ZUMAPOS, comercio chileno, pyme Chile, emprendedores Chile' }
+  ],
   link: [
     { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
     { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
