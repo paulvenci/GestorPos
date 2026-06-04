@@ -34,6 +34,10 @@
           <i class="pi pi-building" />
           <span>Negocios</span>
         </NuxtLink>
+        <NuxtLink v-if="authStore.rolUsuario === 'super_admin'" to="/superadmin/landing-stats" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
+          <i class="pi pi-chart-line" />
+          <span>Analítica Landing</span>
+        </NuxtLink>
         <NuxtLink v-if="authStore.rolUsuario === 'super_admin'" to="/superadmin/blog" class="pos-nav-item" active-class="pos-nav-item--active" @click="closeMobile">
           <i class="pi pi-pencil" />
           <span>Blog</span>
@@ -389,6 +393,8 @@ const mostrarEgresoRapido = ref(false)
 const seccionActual = computed(() => {
   const path = route.path
   if (path.startsWith('/superadmin/empresas')) return 'Negocios'
+  if (path.startsWith('/superadmin/landing-stats')) return 'Analítica Landing'
+  if (path.startsWith('/superadmin/blog')) return 'Blog'
   if (path === '/') return 'Dashboard'
   if (path.startsWith('/pos')) return 'Punto de Venta'
   if (path.startsWith('/caja')) return 'Caja'
