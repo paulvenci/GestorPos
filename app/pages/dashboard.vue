@@ -38,29 +38,7 @@
               :icon="porcentajeComparacionMes >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"
               :value="`${Math.abs(porcentajeComparacionMes).toFixed(1)}%`"
               class="kpi-trend-tag"
-              v-tooltip.top="'vs total mes pasado'"
             />
-          </div>
-
-          <!-- Límite de ventas mensuales -->
-          <div v-if="planLimits.currentLimits.value.max_ventas_mes !== Infinity" class="kpi-plan-progress">
-            <div class="kpi-plan-header">
-              <span class="kpi-plan-badge" :class="planLimits.plan.value">Plan {{ planLimits.plan.value.toUpperCase() }}</span>
-              <span class="kpi-plan-counter" :class="{ 'kpi-plan-counter--exceeded': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes }">
-                {{ planLimits.ventasDelMes.value }} / {{ planLimits.currentLimits.value.max_ventas_mes }}
-              </span>
-            </div>
-            <div class="kpi-plan-progressbar">
-              <div 
-                class="kpi-plan-progress-fill" 
-                :class="{ 
-                  'bg-red-500': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes, 
-                  'bg-amber-500': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes * 0.8 && planLimits.ventasDelMes.value < planLimits.currentLimits.value.max_ventas_mes,
-                  'bg-blue-500': planLimits.ventasDelMes.value < planLimits.currentLimits.value.max_ventas_mes * 0.8 
-                }" 
-                :style="{ width: `${Math.min(100, Math.round((planLimits.ventasDelMes.value / planLimits.currentLimits.value.max_ventas_mes) * 100))}%` }"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -94,7 +72,29 @@
       </div>
     </div>
 
-    <!-- Gráficos de Análisis -->
+    <!-- Plan Usage Section (Extraída de la tarjeta KPI) -->
+    <div v-if="planLimits.currentLimits.value.max_ventas_mes !== Infinity" class="plan-usage-section">
+      <div class="plan-usage-info">
+        <div class="flex items-center gap-3">
+          <Tag :value="`Plan ${planLimits.plan.value.toUpperCase()}`" :severity="planLimits.plan.value === 'pro' ? 'success' : 'info'" class="plan-tag" />
+          <span class="plan-text">Has usado <strong>{{ planLimits.ventasDelMes.value }}</strong> de <strong>{{ planLimits.currentLimits.value.max_ventas_mes }}</strong> ventas este mes</span>
+        </div>
+        <NuxtLink v-if="planLimits.plan.value !== 'pro'" to="/admin/configuracion" class="plan-upgrade-link">
+          Mejorar plan <i class="pi pi-arrow-right" />
+        </NuxtLink>
+      </div>
+      <div class="plan-usage-bar-wrapper">
+        <div 
+          class="plan-usage-bar-fill" 
+          :class="{ 
+            'is-critical': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes, 
+            'is-warning': planLimits.ventasDelMes.value >= planLimits.currentLimits.value.max_ventas_mes * 0.8 && planLimits.ventasDelMes.value < planLimits.currentLimits.value.max_ventas_mes,
+            'is-normal': planLimits.ventasDelMes.value < planLimits.currentLimits.value.max_ventas_mes * 0.8 
+          }" 
+          :style="{ width: `${Math.min(100, Math.round((planLimits.ventasDelMes.value / planLimits.currentLimits.value.max_ventas_mes) * 100))}%` }"
+        />
+      </div>
+    </div>
     <div class="dashboard-charts">
       <div class="chart-container chart-container--pie">
         <div class="chart-header">
@@ -838,13 +838,15 @@ async function fetchUltimasVentas() {
   margin-top: 0.6rem;
   padding-top: 0.5rem;
   border-top: 1px dashed var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .kpi-plan-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.25rem;
 }
 
 .kpi-plan-badge {
@@ -883,6 +885,7 @@ async function fetchUltimasVentas() {
   border-radius: 3px;
   overflow: hidden;
   position: relative;
+  width: 100%;
 }
 
 .kpi-plan-progress-fill {
@@ -908,6 +911,73 @@ async function fetchUltimasVentas() {
 .precio-cell {
   font-weight: 700;
   color: #4ade80;
+}
+
+/* ─── Plan Usage Layout ─── */
+.plan-usage-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.plan-usage-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.plan-text {
+  font-size: 0.95rem;
+  color: var(--text-app);
+}
+
+.plan-text strong {
+  color: #6366f1;
+}
+
+.plan-upgrade-link {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #3b82f6;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.plan-upgrade-link:hover {
+  text-decoration: underline;
+}
+
+.plan-usage-bar-wrapper {
+  height: 10px;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.plan-usage-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.plan-usage-bar-fill.is-normal { background: #3b82f6; }
+.plan-usage-bar-fill.is-warning { background: #f59e0b; }
+.plan-usage-bar-fill.is-critical { background: #ef4444; }
+
+@media (max-width: 768px) {
+  .plan-usage-section {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
 }
 
 /* ─── DataTable override ─── */
