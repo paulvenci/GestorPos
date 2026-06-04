@@ -38,28 +38,52 @@
         <div v-for="(slide, i) in slides" :key="i" class="alt-hero-slide" :class="{ active: currentSlide === i }">
           <img :src="slide.img" :alt="slide.alt" loading="eager" />
         </div>
+        <div class="alt-hero-overlay"></div>
       </div>
 
       <div class="alt-hero-content">
         <div class="alt-hero-tag">
           <span class="alt-hero-tag-dot"></span>
-          Punto de Venta Moderno · Hecho para Chile
+          Hecho para Comerciantes Chilenos · Soporte en Español
         </div>
         <h1>
-          Tu negocio merece<br />
-          un sistema <span class="accent">de verdad.</span>
+          Cobra en 3 segundos,<br />
+          <span class="accent">aunque se caiga el WiFi.</span>
         </h1>
         <p class="alt-hero-desc">
-          ZumaPos es el punto de venta que entiende a los comerciantes chilenos. 
-          Simple, rápido, funciona <strong>sin internet</strong> y te ayuda a vender más desde el primer día.
+          El sistema de punto de venta para minimarkets, verdulerías, panaderías y todo el comercio chileno. 
+          <strong>Funciona sin internet</strong>, te toma 1 minuto empezar y te ayudamos a cargar tus productos <strong>gratis</strong>.
         </p>
+
+        <!-- Social proof honesto -->
+        <div class="alt-hero-proof">
+          <div class="alt-hero-proof-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Sin tarjeta de crédito</span>
+          </div>
+          <div class="alt-hero-proof-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Migración asistida gratis</span>
+          </div>
+          <div class="alt-hero-proof-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Cancela cuando quieras</span>
+          </div>
+        </div>
+
         <div class="alt-hero-actions">
           <NuxtLink to="/registro" class="alt-btn-primary" data-track="hero-cta-comenzar" data-section="hero">
             Crear mi Cuenta Gratis
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
           </NuxtLink>
-          <a href="#beneficios" class="alt-btn-secondary" data-track="hero-btn-beneficios" data-section="hero">Ver beneficios</a>
+          <button type="button" class="alt-btn-secondary alt-btn-play" @click="openDemo" data-track="hero-btn-demo" data-section="hero" aria-label="Ver video demo">
+            <span class="alt-play-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+            Ver demo de 60 segundos
+          </button>
         </div>
+
         <div class="alt-hero-indicators">
           <button v-for="(_, i) in slides" :key="i" class="alt-hero-dot" :class="{ active: currentSlide === i }" @click="currentSlide = i" />
         </div>
@@ -302,6 +326,37 @@
     <div class="alt-sticky-cta">
       <NuxtLink to="/registro" data-track="sticky-cta-comenzar" data-section="sticky-mobile"><span>🚀 Crear mi Cuenta Gratis</span></NuxtLink>
     </div>
+
+    <!-- DEMO MODAL -->
+    <Teleport to="body">
+      <Transition name="demo-fade">
+        <div v-if="showDemo" class="demo-modal" role="dialog" aria-modal="true" aria-label="Demo ZumaPos" @click.self="closeDemo" @keydown.esc="closeDemo">
+          <div class="demo-modal-backdrop" @click="closeDemo"></div>
+          <div class="demo-modal-content">
+            <button class="demo-modal-close" @click="closeDemo" aria-label="Cerrar demo" data-track="demo-modal-close">×</button>
+            <div class="demo-modal-header">
+              <span class="demo-modal-badge">▶ DEMO</span>
+              <h3>Así se ve ZumaPos en tu negocio</h3>
+              <p>60 segundos · Sin registro · Conoce las funciones clave</p>
+            </div>
+            <div class="demo-modal-video">
+              <video ref="demoVideo" controls playsinline preload="metadata" poster="/landing/demo-poster.jpg">
+                <source src="/landing/demo.mp4" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+                <a href="/landing/demo.mp4">Descargar demo</a>
+              </video>
+            </div>
+            <div class="demo-modal-cta">
+              <NuxtLink to="/registro" class="alt-btn-primary" @click="closeDemo" data-track="demo-modal-cta">
+                Crear mi Cuenta Gratis
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+              </NuxtLink>
+              <span class="demo-modal-note">✓ Sin tarjeta de crédito · Cancela cuando quieras</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -326,7 +381,23 @@ useHead({
 
 const isDark = ref(true)
 const currentSlide = ref(0)
+const showDemo = ref(false)
+const demoVideo = ref<HTMLVideoElement | null>(null)
 let slideInterval: ReturnType<typeof setInterval> | null = null
+
+function openDemo() {
+  showDemo.value = true
+  document.body.style.overflow = 'hidden'
+}
+
+function closeDemo() {
+  showDemo.value = false
+  document.body.style.overflow = ''
+  if (demoVideo.value) {
+    demoVideo.value.pause()
+    demoVideo.value.currentTime = 0
+  }
+}
 
 const slides = [
   { img: '/landing/hero-verduleria.png', alt: 'Verdulería usando ZumaPos' },

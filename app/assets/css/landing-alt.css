@@ -627,3 +627,136 @@ body { font-family: var(--font); color: var(--text-dark); background: var(--bg-w
 .alt-fade-in.visible { opacity: 1; transform: translateY(0); }
 .alt-fade-delay-1 { transition-delay: 0.1s; }
 .alt-fade-delay-2 { transition-delay: 0.2s; }
+
+/* ═══════════════════════════════════════════
+   HERO — Proof row + Play button + overlay
+   ═══════════════════════════════════════════ */
+.alt-hero-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(105deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.2) 100%);
+  pointer-events: none;
+}
+
+.alt-hero-proof {
+  display: flex; flex-wrap: wrap; gap: 18px 24px;
+  margin-bottom: 32px; max-width: 560px;
+}
+.alt-hero-proof-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: rgba(255,255,255,0.92);
+  font-size: 0.95rem; font-weight: 500;
+}
+.alt-hero-proof-item svg { color: #4ade80; flex-shrink: 0; }
+
+.alt-btn-play {
+  background: rgba(255,255,255,0.95); color: #111;
+  border: 1px solid rgba(255,255,255,0.95);
+}
+.alt-btn-play:hover {
+  background: #fff; color: #111;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+.alt-play-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  margin-left: -4px;
+}
+
+/* ═══════════════════════════════════════════
+   DEMO MODAL
+   ═══════════════════════════════════════════ */
+.demo-modal {
+  position: fixed; inset: 0; z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.demo-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(10,10,20,0.85);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+.demo-modal-content {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 880px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+  max-height: 92vh; overflow-y: auto;
+}
+.demo-modal-close {
+  position: absolute; top: 12px; right: 16px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: none; color: var(--text-body);
+  font-size: 1.5rem; line-height: 1; cursor: pointer;
+  transition: var(--transition);
+  z-index: 2;
+}
+.demo-modal-close:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+.demo-modal-header { text-align: center; margin-bottom: 20px; padding: 0 20px; }
+.demo-modal-badge {
+  display: inline-block;
+  background: var(--primary); color: #fff;
+  font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 4px 12px; border-radius: 100px;
+  margin-bottom: 12px;
+}
+.demo-modal-header h3 {
+  font-size: 1.4rem; font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 6px;
+}
+.demo-modal-header p {
+  font-size: 0.9rem; color: var(--text-muted);
+  margin: 0;
+}
+
+.demo-modal-video {
+  position: relative;
+  width: 100%; aspect-ratio: 16 / 9;
+  background: #000; border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.demo-modal-video video {
+  width: 100%; height: 100%;
+  display: block; object-fit: contain;
+  background: #000;
+}
+
+.demo-modal-cta {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding-top: 4px;
+}
+.demo-modal-cta .alt-btn-primary { width: 100%; max-width: 320px; justify-content: center; }
+.demo-modal-note {
+  font-size: 0.82rem; color: var(--text-muted);
+  text-align: center;
+}
+
+/* Modal transitions */
+.demo-fade-enter-active, .demo-fade-leave-active { transition: opacity 0.25s ease; }
+.demo-fade-enter-active .demo-modal-content, .demo-fade-leave-active .demo-modal-content {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.demo-fade-enter-from, .demo-fade-leave-to { opacity: 0; }
+.demo-fade-enter-from .demo-modal-content, .demo-fade-leave-to .demo-modal-content {
+  transform: scale(0.92) translateY(20px);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .demo-modal-content { padding: 20px 16px; border-radius: 16px; }
+  .demo-modal-header h3 { font-size: 1.15rem; }
+  .demo-modal-header p { font-size: 0.82rem; }
+  .alt-hero-proof { gap: 10px 16px; margin-bottom: 24px; }
+  .alt-hero-proof-item { font-size: 0.85rem; }
+  .alt-hero-proof-item svg { width: 16px; height: 16px; }
+}
