@@ -534,6 +534,10 @@
             {{ reserva.items.length }} producto{{ reserva.items.length > 1 ? 's' : '' }}
           </span>
           <span class="pos-reserva-total">{{ formatMonto(reserva.total) }}</span>
+          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5 mb-0.5">
+            <i class="pi pi-user text-[10px] text-indigo-500 dark:text-indigo-400" />
+            <span>Reservado por: <strong class="pos-reserva-cajero-nombre">{{ reserva.cajero ? reserva.cajero : 'Cajero' }}</strong></span>
+          </div>
           <span class="pos-reserva-tiempo">{{ tiempoDesde(reserva.created_at) }}</span>
         </div>
         <div class="pos-reserva-acciones">
@@ -1052,14 +1056,14 @@ function seleccionarTextoPago(event: Event) {
 }
 
 function obtenerInputPagoPorCampo(campo: 'efectivo' | 'tarjeta' | 'transferencia') {
-  const id =
+  const idEl =
     campo === 'tarjeta'
       ? 'pos-pago-tarjeta'
       : campo === 'transferencia'
         ? 'pos-pago-transferencia'
         : 'pos-pago-efectivo'
 
-  return document.getElementById(id) as HTMLInputElement | null
+  return document.getElementById(idEl) as HTMLInputElement | null
 }
 
 function obtenerOrdenCampoPago() {
@@ -1781,13 +1785,15 @@ async function confirmarCobro(imprimir = true) {
 
   try {
     const turnoId = cajaStore.turnoActivo?.id ?? null
-    const ventaId = await posStore.registrarVenta(
+    const responseVenta = await posStore.registrarVenta(
       turnoId,
       metodoPagoFinal,
       esFiadoActual ? 0 : Math.round(Number(pagoEfectivo.value) || 0),
       esFiadoActual ? 0 : Math.round(Number(pagoTarjeta.value) || 0),
       esFiadoActual ? 0 : Math.round(Number(pagoTransferencia.value) || 0)
     )
+
+    const ventaId = responseVenta?.id || responseVenta // Manejar diferentes retornos del store
 
     // Si es fiado, crear registro de crédito
     if (esFiadoActual && clienteIdFiado && ventaId) {
@@ -1805,7 +1811,7 @@ async function confirmarCobro(imprimir = true) {
 
     ventaActualGuardada.value = true
     ventaActualId.value = String(ventaId || '')
-    ventaActualEstado.value = 'emitido'
+    ventaActualEstado.value = isOnline.value ? 'emitido' : 'pendiente'
     ventaActualFecha.value = fechaTicket
     ventaActualMetodoEtiqueta.value = metodoPagoEtiqueta
     ventaActualCajero.value = cajeroNombre
@@ -1832,16 +1838,26 @@ async function confirmarCobro(imprimir = true) {
     const label = esFiadoActual
       ? `Fiado registrado — ${clienteFiadoObj.value?.nombre || 'Cliente'}`
       : turnoId ? '¡Venta registrada!' : 'Venta fuera de turno registrada'
+    
     toast.add({
       severity: esFiadoActual ? 'warn' : 'success',
       summary: label,
       detail: `Total: ${formatMonto(totalCobrado || 0)}`,
       life: 4000
     })
-    if (imprimir) imprimirVentaActualGuardada()
+
+    if (imprimir) {
+       imprimirVentaActualGuardada()
+    } else {
+       setTimeout(() => {
+         mostrarConfirmacion.value = false
+       }, 800)
+    }
+    
+    planLimits.fetchVentasDelMes()
   } catch (err: any) {
     const msg = String(err?.message || '')
-    if (err.message === 'OFFLINE') {
+    if (msg === 'OFFLINE') {
       ventaActualGuardada.value = true
       ventaActualId.value = 'PENDIENTE'
       ventaActualEstado.value = 'pendiente'
@@ -1874,18 +1890,21 @@ async function confirmarCobro(imprimir = true) {
         detail: `Sin conexión. Venta (${formatMonto(totalCobrado || 0)}) guardada para sincronizar.`,
         life: 6000
       })
-      if (imprimir) imprimirVentaActualGuardada()
+      
+      if (imprimir) {
+        imprimirVentaActualGuardada()
+      } else {
+        setTimeout(() => {
+          mostrarConfirmacion.value = false
+        }, 1000)
+      }
     } else if (msg.includes('productos_stock_check') || msg.toLowerCase().includes('stock insuficiente')) {
-      // Silenciamos el toast de aviso de stock para pesables según requerimiento de usuario (reducir ruido)
-      console.warn('Aviso de stock para pesables silenciado:', msg)
+      console.warn('Aviso de stock silenciado:', msg)
     } else {
-      toast.add({ severity: 'error', summary: 'Error', detail: err.message, life: 5000 })
+      toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 5000 })
     }
   } finally {
     confirmandoCobro.value = false
-    if (ventaActualGuardada.value) {
-      planLimits.fetchVentasDelMes()
-    }
   }
 }
 
@@ -3116,6 +3135,11 @@ function tiempoDesde(isoDate: string): string {
 .pos-reserva-tiempo {
   font-size: 0.72rem;
   color: var(--text-muted);
+}
+
+.pos-reserva-cajero-nombre {
+  color: var(--text-app) !important;
+  font-weight: 700;
 }
 
 .pos-reserva-acciones {

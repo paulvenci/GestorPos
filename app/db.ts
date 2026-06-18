@@ -49,6 +49,7 @@ export interface VentaReservadaLocal {
   items: ItemCarritoLocal[];
   total: number;
   created_at: string;
+  cajero?: string;
 }
 
 export class GestorPOSDatabase extends Dexie {

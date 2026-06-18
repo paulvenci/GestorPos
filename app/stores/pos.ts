@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 import { db } from '~/db'
 import type { ProductoLocal, VentaReservadaLocal } from '~/db'
@@ -101,6 +101,9 @@ export const usePosStore = defineStore('pos', () => {
   // ─── Catálogo Local (Dexie) ───────────────────────────
   async function sincronizarCatalogo() {
     try {
+      const idEmpresa = authStore.empresaId
+      if (!idEmpresa) return
+
       let todosLosProductos: ProductoLocal[] = []
       let desde = 0
       const cantidadPorPagina = 1000
@@ -110,7 +113,7 @@ export const usePosStore = defineStore('pos', () => {
         const { data, error } = await supabase
           .from('productos')
           .select('id, empresa_id, nombre, sku, precio, costo, categoria, activo, stock, imagen_url, es_pesable, stock_minimo, margen_ganancia, updated_at')
-          .eq('empresa_id', authStore.empresaId)
+          .eq('empresa_id', idEmpresa)
           .eq('activo', true)
           .order('nombre')
           .range(desde, desde + cantidadPorPagina - 1)
@@ -156,6 +159,8 @@ export const usePosStore = defineStore('pos', () => {
       authSubscription = data.subscription
     }
 
+    const idEmpresa = authStore.empresaId // Captura local
+
     canalRealtime = supabase
       .channel('pos-productos-realtime')
       .on(
@@ -164,7 +169,7 @@ export const usePosStore = defineStore('pos', () => {
           event: '*',
           schema: 'public',
           table: 'productos',
-          filter: `empresa_id=eq.${authStore.empresaId}`
+          filter: `empresa_id=eq.${idEmpresa}`
         },
         async (payload: any) => {
           const { eventType, new: newRec, old: oldRec } = payload
@@ -247,6 +252,8 @@ export const usePosStore = defineStore('pos', () => {
   function setupRealtimeAjustes() {
     if (canalAjustes || !authStore.empresaId) return
 
+    const idEmpresa = authStore.empresaId // Captura local
+
     canalAjustes = supabase
       .channel('pos-ajustes-realtime')
       .on(
@@ -255,7 +262,7 @@ export const usePosStore = defineStore('pos', () => {
           event: 'INSERT',
           schema: 'public',
           table: 'ajustes_stock',
-          filter: `empresa_id=eq.${authStore.empresaId}`
+          filter: `empresa_id=eq.${idEmpresa}`
         },
         async (payload: any) => {
           // Si hay un ajuste de stock, es un evento relevante que merece notificación
@@ -535,7 +542,8 @@ export const usePosStore = defineStore('pos', () => {
         es_pesable: i.es_pesable
       })),
       total: total.value,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      cajero: authStore.nombreUsuario || 'Cajero'
     }
 
     const id = await db.ventas_reservadas.add(reserva)
@@ -563,12 +571,15 @@ export const usePosStore = defineStore('pos', () => {
 
   // ─── Ventas del Día ───────────────────────────────────
   async function fetchVentasDia(): Promise<any[]> {
+    const idEmpresa = authStore.empresaId
+    if (!idEmpresa) return []
+
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
     const { data, error } = await supabase
       .from('ventas')
       .select('id, fecha, total, subtotal, metodo_pago, estado, created_at, detalle_ventas(id_producto, cantidad, precio_unitario, productos(nombre))')
-      .eq('empresa_id', authStore.empresaId)
+      .eq('empresa_id', idEmpresa)
       .gte('fecha', hoy.toISOString())
       .neq('estado', 'cancelada')
       .order('fecha', { ascending: false })
