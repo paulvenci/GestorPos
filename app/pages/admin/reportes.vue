@@ -18,6 +18,7 @@
           Reporte Consolidado
           <Tag v-if="!planLimits.canUseFeature('advanced_reports')" value="PRO" severity="info" class="ml-2 !text-[9px] !px-1.5 !py-0.5" />
         </Tab>
+        <Tab value="5"><i class="pi pi-box text-orange-500 mr-2"></i>Ventas por Producto</Tab>
       </TabList>
 
       <TabPanels class="pt-6 px-0 pb-0">
@@ -500,6 +501,115 @@
           </DataTable>
         </TabPanel>
 
+        <!-- =======================
+             TAB 5: VENTAS POR PRODUCTO
+        ======================== -->
+        <TabPanel value="5">
+          <div class="flex flex-wrap justify-between items-end gap-3 mb-4">
+            <div class="flex flex-wrap gap-3 items-end">
+              <div>
+                <label class="text-xs text-muted">Desde</label>
+                <DatePicker v-model="fechaDesdeProd" showIcon date-format="dd/mm/yy" class="w-44" />
+              </div>
+              <div>
+                <label class="text-xs text-muted">Hasta</label>
+                <DatePicker v-model="fechaHastaProd" showIcon date-format="dd/mm/yy" class="w-44" />
+              </div>
+              <div class="w-48 max-w-full">
+                <label class="text-xs text-muted">Usuario</label>
+                <Select
+                  v-model="filtroCajeroProd"
+                  :options="opcionesCajeroProd"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Todos los usuarios"
+                  class="w-full"
+                />
+              </div>
+              <div class="w-64 max-w-full">
+                <label class="text-xs text-muted">Buscar Producto</label>
+                <IconField class="w-full">
+                  <InputIcon class="pi pi-search" />
+                  <InputText v-model="busquedaProducto" placeholder="Nombre de producto..." class="w-full" />
+                </IconField>
+              </div>
+              <Button icon="pi pi-search" label="Buscar" @click="fetchVentasPorProducto" :loading="loadingVentasPorProducto" size="small" />
+            </div>
+            <div class="flex gap-2">
+              <Button icon="pi pi-print" label="Imprimir" @click="imprimirVentasPorProducto" size="small" variant="outlined" severity="secondary" />
+              <Button icon="pi pi-refresh" label="Actualizar" @click="fetchVentasPorProducto" :loading="loadingVentasPorProducto" size="small" variant="outlined" />
+            </div>
+          </div>
+
+          <!-- Resumen de Ventas por Producto -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="metric-card bg-surface border border-surface rounded-xl p-4 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500">
+                <i class="pi pi-box text-xl"></i>
+              </div>
+              <div>
+                <div class="text-xs text-muted uppercase tracking-wider">Total Vendido</div>
+                <div class="flex items-baseline gap-3">
+                  <div class="text-xl font-bold text-slate-900 dark:text-slate-100">{{ totalUnidadesProd }} u.</div>
+                  <div v-if="totalKilosProd > 0" class="text-lg font-bold text-indigo-600 dark:text-indigo-400">{{ totalKilosProd.toFixed(1) }} kg</div>
+                </div>
+              </div>
+            </div>
+            <div class="metric-card bg-surface border border-surface rounded-xl p-4 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500">
+                <i class="pi pi-dollar text-xl"></i>
+              </div>
+              <div>
+                <div class="text-xs text-muted uppercase tracking-wider">Monto Total de Ventas</div>
+                <div class="text-xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatMonto(totalMontoProd) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de Ventas por Producto -->
+          <DataTable
+            :value="ventasPorProductoFiltradas"
+            :loading="loadingVentasPorProducto"
+            paginator
+            :rows="15"
+            responsiveLayout="scroll"
+            class="p-datatable-sm modern-table"
+            sortField="fecha"
+            :sortOrder="-1"
+          >
+            <Column field="productos.nombre" header="Producto" sortable>
+              <template #body="slotProps">
+                <span class="font-medium">{{ slotProps.data.productos?.nombre || 'Producto sin nombre' }}</span>
+              </template>
+            </Column>
+            <Column field="cantidad" header="Cantidad" sortable>
+              <template #body="slotProps">
+                <span class="font-bold text-slate-900 dark:text-slate-100">
+                  {{ slotProps.data.productos?.es_pesable ? slotProps.data.cantidad.toFixed(1) + ' kg' : slotProps.data.cantidad + ' u.' }}
+                </span>
+              </template>
+            </Column>
+            <Column field="subtotal" header="Monto" sortable>
+              <template #body="slotProps">
+                <span class="font-bold text-emerald-500">{{ formatMonto(slotProps.data.subtotal) }}</span>
+              </template>
+            </Column>
+            <Column field="ventas.id_usuario" header="Cajero">
+              <template #body="slotProps">
+                <span>{{ perfiles[slotProps.data.ventas?.id_usuario]?.nombre || 'Usuario Desconocido' }}</span>
+              </template>
+            </Column>
+            <Column field="ventas.fecha" header="Fecha" sortable>
+              <template #body="slotProps">
+                {{ formatFecha(slotProps.data.ventas?.fecha) }}
+              </template>
+            </Column>
+            <template #empty>
+              <div class="empty-state">No se encontraron ventas para los criterios seleccionados.</div>
+            </template>
+          </DataTable>
+        </TabPanel>
+
       </TabPanels>
     </Tabs>
   </div>
@@ -671,6 +781,14 @@ const loadingHistorialVentas = ref(false)
 const fechaDesde = ref<Date | null>(new Date(new Date().setDate(new Date().getDate() - 7)))
 const fechaHasta = ref<Date | null>(new Date())
 
+// Tab 5: Ventas por Producto
+const fechaDesdeProd = ref<Date | null>(new Date(new Date().setDate(new Date().getDate() - 7)))
+const fechaHastaProd = ref<Date | null>(new Date())
+const filtroCajeroProd = ref<string | null>(null)
+const busquedaProducto = ref<string>('')
+const ventasPorProducto = ref<any[]>([])
+const loadingVentasPorProducto = ref(false)
+
 onMounted(() => {
   // Carga inicial solo del primer tab para optimizar
   fetchTurnos()
@@ -679,6 +797,7 @@ onMounted(() => {
   fetchRotacion()
   fetchRentabilidad()
   fetchHistorialVentas()
+  fetchVentasPorProducto()
 })
 
 const opcionesCajeroHoy = computed(() => {
@@ -745,6 +864,55 @@ const resumenVentasHoy = computed(() => {
     otros: 0,
     total: 0
   })
+})
+
+const opcionesCajeroProd = computed(() => {
+  const opciones = Object.entries(perfiles.value)
+    .filter(([, perfil]) => (perfil as any)?.rol !== 'super_admin')
+    .map(([id, perfil]) => ({
+      label: (perfil as any)?.nombre || `Usuario ${String(id).substring(0, 6)}`,
+      value: id
+    }))
+
+  opciones.sort((a, b) => a.label.localeCompare(b.label, 'es'))
+
+  return [
+    { label: 'Todos los usuarios', value: null },
+    ...opciones
+  ]
+})
+
+const ventasPorProductoFiltradas = computed(() => {
+  let result = ventasPorProducto.value
+
+  if (filtroCajeroProd.value) {
+    result = result.filter((item: any) => item.ventas?.id_usuario === filtroCajeroProd.value)
+  }
+
+  const query = busquedaProducto.value.trim().toLowerCase()
+  if (query) {
+    result = result.filter((item: any) => 
+      item.productos?.nombre?.toLowerCase().includes(query)
+    )
+  }
+
+  return result
+})
+
+const totalUnidadesProd = computed(() => {
+  return ventasPorProductoFiltradas.value
+    .filter((item: any) => !item.productos?.es_pesable)
+    .reduce((sum, item) => sum + (item.cantidad || 0), 0)
+})
+
+const totalKilosProd = computed(() => {
+  return ventasPorProductoFiltradas.value
+    .filter((item: any) => item.productos?.es_pesable)
+    .reduce((sum, item) => sum + (item.cantidad || 0), 0)
+})
+
+const totalMontoProd = computed(() => {
+  return ventasPorProductoFiltradas.value.reduce((sum, item) => sum + (item.subtotal || 0), 0)
 })
 
 // === MÉTODOS DE CONSULTA ===
@@ -880,6 +1048,71 @@ async function fetchHistorialVentas() {
     toast.add({ severity: 'error', summary: 'Error Historial', detail: error.message, life: 3000 })
   } finally {
     loadingHistorialVentas.value = false
+  }
+}
+
+async function fetchVentasPorProducto() {
+  loadingVentasPorProducto.value = true
+  try {
+    const inicio = fechaDesdeProd.value 
+      ? new Date(fechaDesdeProd.value.getFullYear(), fechaDesdeProd.value.getMonth(), fechaDesdeProd.value.getDate(), 0, 0, 0) 
+      : new Date(new Date().setDate(new Date().getDate() - 7))
+    
+    const fin = fechaHastaProd.value 
+      ? new Date(fechaHastaProd.value.getFullYear(), fechaHastaProd.value.getMonth(), fechaHastaProd.value.getDate(), 23, 59, 59) 
+      : new Date()
+
+    const { data, error } = await supabase
+      .from('detalle_ventas')
+      .select(`
+        id,
+        cantidad,
+        precio_unitario,
+        subtotal,
+        id_producto,
+        id_venta,
+        productos (
+          nombre,
+          es_pesable
+        ),
+        ventas!inner (
+          fecha,
+          id_usuario,
+          estado
+        )
+      `)
+      .eq('empresa_id', authStore.empresaId)
+      .neq('ventas.estado', 'cancelada')
+      .gte('ventas.fecha', inicio.toISOString())
+      .lte('ventas.fecha', fin.toISOString())
+
+    if (error) throw error
+
+    ventasPorProducto.value = data || []
+
+    const idsCajeros = Array.from(new Set(
+      ventasPorProducto.value
+        .map((item: any) => item.ventas?.id_usuario)
+        .filter(Boolean)
+    ))
+    const idsFaltantes = idsCajeros.filter((id) => !perfiles.value[id])
+    if (idsFaltantes.length > 0) {
+      const { data: perfilesData } = await supabase
+        .from('perfiles')
+        .select('id, nombre')
+        .eq('empresa_id', authStore.empresaId)
+        .in('id', idsFaltantes)
+      
+      if (perfilesData) {
+        perfilesData.forEach((p: any) => {
+          perfiles.value[p.id] = p
+        })
+      }
+    }
+  } catch (error: any) {
+    toast.add({ severity: 'error', summary: 'Error Ventas por Producto', detail: error.message, life: 3000 })
+  } finally {
+    loadingVentasPorProducto.value = false
   }
 }
 
@@ -1132,6 +1365,47 @@ function imprimirHistorialVentas() {
     'Historial de Ventas',
     `<div class="meta">Rango: ${fechaDesde.value ? fechaDesde.value.toLocaleDateString('es-CL') : '-'} a ${fechaHasta.value ? fechaHasta.value.toLocaleDateString('es-CL') : '-'}</div>
      <table><thead><tr><th>Fecha</th><th>Boleta</th><th>Pago</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>`
+  )
+}
+
+function imprimirVentasPorProducto() {
+  const rows = ventasPorProductoFiltradas.value.map((item: any) => {
+    const cantText = item.productos?.es_pesable ? `${Number(item.cantidad).toFixed(1)} kg` : `${item.cantidad} u.`
+    return `
+    <tr>
+      <td>${item.productos?.nombre || 'Producto desconocido'}</td>
+      <td>${cantText}</td>
+      <td>${formatMonto(item.subtotal)}</td>
+      <td>${perfiles.value[item.ventas?.id_usuario]?.nombre || 'Usuario Desconocido'}</td>
+      <td>${formatDate(item.ventas?.fecha)}</td>
+    </tr>
+  `
+  }).join('')
+
+  const rangoText = `Rango: ${fechaDesdeProd.value ? fechaDesdeProd.value.toLocaleDateString('es-CL') : '-'} a ${fechaHastaProd.value ? fechaHastaProd.value.toLocaleDateString('es-CL') : '-'}`
+  const cajeroText = opcionesCajeroProd.value.find(op => op.value === filtroCajeroProd.value)?.label || 'Todos los usuarios'
+  const buscarText = busquedaProducto.value.trim() ? `Búsqueda: "${busquedaProducto.value.trim()}"` : ''
+  const metaFilters = [rangoText, `Usuario: ${cajeroText}`, buscarText].filter(Boolean).join(' | ')
+  const totalVendidoText = totalKilosProd.value > 0 ? `Total: ${totalUnidadesProd.value} u. + ${totalKilosProd.value.toFixed(1)} kg` : `Total: ${totalUnidadesProd.value} u.`
+
+  abrirVentanaReporte(
+    'Reporte de Ventas por Producto',
+    `<div class="meta">${metaFilters}</div>
+     <div class="meta">${totalVendidoText} | Monto total: ${formatMonto(totalMontoProd.value)}</div>
+     <table>
+       <thead>
+         <tr>
+           <th>Producto</th>
+           <th>Cantidad</th>
+           <th>Monto</th>
+           <th>Cajero</th>
+           <th>Fecha</th>
+         </tr>
+       </thead>
+       <tbody>
+         ${rows || '<tr><td colspan="5" style="text-align: center;">No se encontraron resultados</td></tr>'}
+       </tbody>
+     </table>`
   )
 }
 </script>
